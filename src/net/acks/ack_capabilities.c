@@ -16,8 +16,8 @@
 
 #include <glib.h>
 
-#include <net.h>
 #include <ack.h>
+#include <net_common.h>
 
 	
 

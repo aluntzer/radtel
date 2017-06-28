@@ -1,1 +1,1 @@
-SUBDIRS = server client
+SUBDIRS = net server client

@@ -7,11 +7,6 @@ server_SOURCES = main.c \
 		 net.c \
 		 cmd_proc.c \
 		 proc/proc_cmd_capabilities.c \
-		 proc/proc_cmd_invalid_pkt.c \
-		 ../net/protocol.c \
-		 ../net/cmds/cmd_invalid_pkt.c \
-		 ../net/cmds/cmd_capabilities.c \
-		 ../net/acks/ack_capabilities.c
-		
+		 proc/proc_cmd_invalid_pkt.c
 
-server_LDADD = $(server_LIBS)
+server_LDADD = $(server_LIBS) $(top_builddir)/src/net/libprotocmd.a
