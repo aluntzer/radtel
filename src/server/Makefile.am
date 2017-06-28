@@ -4,6 +4,7 @@ AM_CFLAGS = $(server_CFLAGS)
 bin_PROGRAMS = server 
 
 server_SOURCES = main.c \
+		 cfg.c \
 		 net.c \
 		 cmd_proc.c \
 		 proc/proc_cmd_capabilities.c \

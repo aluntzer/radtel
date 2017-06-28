@@ -15,10 +15,15 @@
  * @brief the server main() function
  */
 
+#include <cfg.h>
 #include <net.h>
 
 
 int main(void)
 {
-	net_server();
+	if (server_cfg_load())
+		return -1;
+
+	if (net_server())
+		return -1;
 }

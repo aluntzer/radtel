@@ -321,7 +321,7 @@ int net_client(void)
 	client = g_socket_client_new();
 
 	con = g_socket_client_connect_to_host(client, (gchar*)"localhost",
-					      PORT, NULL, &error);
+					      2345, NULL, &error);
 		
 	if (error) {
 		g_warning("%s\n", error->message);

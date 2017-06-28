@@ -21,6 +21,7 @@
  */
 
 #include <net.h>
+#include <cfg.h>
 #include <cmd.h>
 #include <cmd_proc.h>
 
@@ -327,17 +328,22 @@ int net_server(void)
 {
 	gboolean ret;
 
+	guint16 port;
+
 	GMainLoop *loop;
 	GSocketService *service;
 
 	GError *error = NULL;
 
 
+	port = server_cfg_get_port();
+	if (!port)
+		port = DEFAULT_PORT;
 
 	service = g_socket_service_new();
 
 	ret = g_socket_listener_add_inet_port(G_SOCKET_LISTENER(service),
-					      PORT, NULL, &error);
+					      port, NULL, &error);
 	if (!ret) {
 		if (error) {
 			g_error("%s", error->message);
@@ -349,11 +355,12 @@ int net_server(void)
 
 	g_signal_connect(service, "incoming", G_CALLBACK(net_incoming), NULL);
 
-	g_socket_service_start (service);
+	g_socket_service_start(service);
+
 
 	loop = g_main_loop_new(NULL, FALSE);
 
-	g_message("Server started");
+	g_message("Server started on port %d", port);
 
 	g_main_loop_run(loop);
 

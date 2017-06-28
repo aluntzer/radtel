@@ -23,7 +23,7 @@
 #include <stddef.h>
 
 
-#define PORT 2345 /* XXX add config file */
+#define DEFAULT_PORT 1420
 
 
 struct packet {
