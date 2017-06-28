@@ -1,5 +1,5 @@
 /**
- * @file    net/cmds/cmd_invalid_pkt.c
+ * @file    server/proc/proc_cmd_moveto_azel.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -17,29 +17,40 @@
 #include <glib.h>
 
 #include <cmd.h>
+#include <backend.h>
 
 
-void cmd_invalid_pkt(void)
+/**
+ * @brief process command moveto AZEL
+ */
+
+void proc_cmd_moveto_azel(struct packet *pkt)
 {
+	double az;
+	double el;
+
 	gsize pkt_size;
 
-	struct packet *pkt;
+	struct moveto *m;
+
+
+	g_message("Client requested moveto AZEL");
+
+	if (pkt->data_size != sizeof(struct moveto)) {
+		cmd_invalid_pkt();
+		return;
+	}
+
+
+	m = (struct moveto *) pkt->data;
+
+	/* convert arcseconds to degrees */
+	az = (double) m->az_arcsec / 3600.0;
+	el = (double) m->el_arcsec / 3600.0;
 
 	
-	pkt_size = sizeof(struct packet);
+	if(be_moveto_azel(az, el))
+		cmd_fail();
 
-	pkt = g_malloc(pkt_size);
-	
-	pkt->service    = CMD_INVALID_PKT;
-	pkt->data_size  = 0;
-
-	pkt_set_data_crc16(pkt);
-	
-	pkt_hdr_to_net_order(pkt);
-	
-	g_message("Signalling invalid packet");
-	net_send((void *) pkt, pkt_size);
-
-	/* clean up */	
-	g_free(pkt);
+	cmd_success();
 }

@@ -1,5 +1,5 @@
 /**
- * @file    net/cmds/cmd_invalid_pkt.c
+ * @file    server/include/backend.h
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -14,32 +14,23 @@
  *
  */
 
-#include <glib.h>
+#ifndef _SERVER_INCLUDE_BACKEND_H_
+#define _SERVER_INCLUDE_BACKEND_H_
 
-#include <cmd.h>
+#include <gmodule.h>
+
+/* backend calls */
+int be_moveto_azel(double az, double el);
 
 
-void cmd_invalid_pkt(void)
-{
-	gsize pkt_size;
+/* backend call loaders */
+int be_moveto_azel_load(GModule *mod);
 
-	struct packet *pkt;
 
-	
-	pkt_size = sizeof(struct packet);
 
-	pkt = g_malloc(pkt_size);
-	
-	pkt->service    = CMD_INVALID_PKT;
-	pkt->data_size  = 0;
+int backend_load_plugins(void);
 
-	pkt_set_data_crc16(pkt);
-	
-	pkt_hdr_to_net_order(pkt);
-	
-	g_message("Signalling invalid packet");
-	net_send((void *) pkt, pkt_size);
 
-	/* clean up */	
-	g_free(pkt);
-}
+
+#endif /* _SERVER_INCLUDE_BACKEND_H_ */
+

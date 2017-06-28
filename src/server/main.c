@@ -13,15 +13,21 @@
  * more details.
  *
  * @brief the server main() function
+ *
+ * @todo we don't clean up on exit...
  */
 
 #include <cfg.h>
+#include <backend.h>
 #include <net.h>
 
 
 int main(void)
 {
 	if (server_cfg_load())
+		return -1;
+
+	if (backend_load_plugins())
 		return -1;
 
 	if (net_server())

@@ -22,6 +22,9 @@
 
 void cmd_invalid_pkt(void);
 void cmd_capabilities(void);
+void cmd_success(void);
+void cmd_fail(void);
+void cmd_moveto_azel(double az, double el);
 
 
 #endif /* _INCLUDE_CMD_H_ */

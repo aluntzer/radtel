@@ -22,5 +22,5 @@
 
 void proc_cmd_capabilities(struct packet *pkt)
 {
-	g_message("Server sent capabilites: NOT IMPLEMENTED");
+	g_message("Server sent capabilities: NOT IMPLEMENTED");
 }

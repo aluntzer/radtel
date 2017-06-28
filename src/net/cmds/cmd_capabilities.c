@@ -43,4 +43,3 @@ void cmd_capabilities(void)
 	/* clean up */	
 	g_free(pkt);
 }
-

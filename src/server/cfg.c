@@ -12,7 +12,7 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * @note we don't check for errors on key file loads.
+ * @todo we don't check for errors on key file loads.
  *	 also, we do return copies of configuration items
  *
  */
@@ -165,7 +165,7 @@ int server_cfg_load(void)
 	flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
 
 
-	ret = g_key_file_load_from_file(kf, "cfg/server.cfg", 
+	ret = g_key_file_load_from_file(kf, "config/server.cfg", 
 					flags, &error);
 
 	if (!ret) {
@@ -180,6 +180,7 @@ int server_cfg_load(void)
 	server_cfg_load_backend(kf, server_cfg);
 	server_cfg_load_location(kf, server_cfg);
 
+	g_key_file_free(kf);
 
 	return 0;
 

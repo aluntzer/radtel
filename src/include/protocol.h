@@ -68,13 +68,13 @@ uint16_t CRC16(unsigned char *buf, size_t size);
 
 struct capabilities {
 
-	uint32_t az_min_arcsec;		/* left limit      */				
-	uint32_t az_max_arcsec;		/* right limit     */
-	uint32_t az_res_arcsec;		/* step resolution */
+	int32_t az_min_arcsec;		/* left limit      */				
+	int32_t az_max_arcsec;		/* right limit     */
+	int32_t az_res_arcsec;		/* step resolution */
 
-	uint32_t el_min_arcsec;		/* lower limit     */
-	uint32_t el_max_arcsec;		/* upper limit     */
-	uint32_t el_res_arcsec;		/* step resolution */
+	int32_t el_min_arcsec;		/* lower limit     */
+	int32_t el_max_arcsec;		/* upper limit     */
+	int32_t el_res_arcsec;		/* step resolution */
 
 	/* frequency limits */
 	uint64_t freq_min_hz;		/* lower frequency limit */
@@ -113,7 +113,10 @@ struct capabilities {
 };
 
 
-
+struct moveto {
+	int32_t az_arcsec;
+	int32_t el_arcsec;
+};
 
 
 #define CMD_INVALID_PKT		0xa001	/* invalid packet signal */
@@ -121,7 +124,9 @@ struct capabilities {
 #define CMD_CAPABILITIES	0xa002	/* capabilities of the telescope */
 #define CMD_STATIONNAME		0xa003	/* name of station */
 #define CMD_LOCATION		0xa004	/* geographical location of telescope */
-
+#define CMD_MOVETO_AZEL		0xa005	/* move to azimuth/elevation */
+#define CMD_SUCCESS		0xa006  /* last command succeded */
+#define CMD_FAIL		0xa007	/* last command failed */
 
 
 #endif /* _INCLUDE_PROTOCOL_H_ */

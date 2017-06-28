@@ -1,5 +1,5 @@
 /**
- * @file    net/cmds/cmd_invalid_pkt.c
+ * @file    client/proc/proc_cmd_fail.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -16,30 +16,11 @@
 
 #include <glib.h>
 
-#include <cmd.h>
+#include <protocol.h>
 
 
-void cmd_invalid_pkt(void)
+
+void proc_cmd_fail(struct packet *pkt)
 {
-	gsize pkt_size;
-
-	struct packet *pkt;
-
-	
-	pkt_size = sizeof(struct packet);
-
-	pkt = g_malloc(pkt_size);
-	
-	pkt->service    = CMD_INVALID_PKT;
-	pkt->data_size  = 0;
-
-	pkt_set_data_crc16(pkt);
-	
-	pkt_hdr_to_net_order(pkt);
-	
-	g_message("Signalling invalid packet");
-	net_send((void *) pkt, pkt_size);
-
-	/* clean up */	
-	g_free(pkt);
+	g_message("Server sent last command failed: NOT IMPLEMENTED");
 }

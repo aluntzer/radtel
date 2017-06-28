@@ -1,0 +1,14 @@
+# we build plugin shared objects with our own rules rather than via libtool
+plugin_CFLAGS  = $(server_CFLAGS)
+plugin_CFLAGS += -I$(top_srcdir)/src/include  -I$(top_srcdir)/src/server/include
+
+all: srt_drive.so
+
+SUFFIXES = .so
+CLEANFILES = *.so
+
+%.so: %.c
+	$(CC) $(plugin_CFLAGS) -shared -fPIC -I $(top_srcdir)/include -o $@  $<
+
+%.so: %.o
+	$(CC) $(plugin_LDFLAGS) -shared -fPIC -o $@  $<

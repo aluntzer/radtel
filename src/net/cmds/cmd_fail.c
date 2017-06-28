@@ -1,5 +1,5 @@
 /**
- * @file    net/cmds/cmd_invalid_pkt.c
+ * @file    net/cmds/cmd_fail.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -19,7 +19,7 @@
 #include <cmd.h>
 
 
-void cmd_invalid_pkt(void)
+void cmd_fail(void)
 {
 	gsize pkt_size;
 
@@ -30,14 +30,14 @@ void cmd_invalid_pkt(void)
 
 	pkt = g_malloc(pkt_size);
 	
-	pkt->service    = CMD_INVALID_PKT;
+	pkt->service    = CMD_FAIL;
 	pkt->data_size  = 0;
 
 	pkt_set_data_crc16(pkt);
 	
 	pkt_hdr_to_net_order(pkt);
 	
-	g_message("Signalling invalid packet");
+	g_message("Signalling failful command");
 	net_send((void *) pkt, pkt_size);
 
 	/* clean up */	

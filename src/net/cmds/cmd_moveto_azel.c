@@ -1,5 +1,5 @@
 /**
- * @file    net/cmds/cmd_invalid_pkt.c
+ * @file    net/cmds/cmd_moveto_azel.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -19,27 +19,39 @@
 #include <cmd.h>
 
 
-void cmd_invalid_pkt(void)
+void cmd_moveto_azel(double az, double el)
 {
 	gsize pkt_size;
 
 	struct packet *pkt;
 
-	
-	pkt_size = sizeof(struct packet);
+	struct moveto *m;
 
-	pkt = g_malloc(pkt_size);
+
+	pkt_size = sizeof(struct packet) + sizeof(struct moveto);
+
+	/* allocate zeroed packet + payload */
+	pkt = g_malloc0(pkt_size);
 	
-	pkt->service    = CMD_INVALID_PKT;
-	pkt->data_size  = 0;
+	pkt->service   = CMD_MOVETO_AZEL;
+	pkt->data_size = sizeof(struct moveto);
+
+
+	m = (struct moveto *) pkt->data;
+
+	/* convert to integer arcseconds */
+	m->az_arcsec = (int32_t) (az * 3600.0);
+	m->el_arcsec = (int32_t) (el * 3600.0);
+
 
 	pkt_set_data_crc16(pkt);
 	
 	pkt_hdr_to_net_order(pkt);
 	
-	g_message("Signalling invalid packet");
-	net_send((void *) pkt, pkt_size);
+	g_message("Sending command moveto AZ/EL %g/%g", az, el);
+	net_send((void *) pkt, pkt_size); 
 
 	/* clean up */	
 	g_free(pkt);
 }
+

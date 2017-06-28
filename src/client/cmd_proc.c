@@ -42,7 +42,15 @@ void process_cmd_pkt(struct packet *pkt)
 	case CMD_CAPABILITIES:
 		proc_cmd_capabilities();
 		break;
-
+	
+	case CMD_SUCCESS:
+		proc_cmd_success();
+		break;
+	
+	case CMD_FAIL:
+		proc_cmd_fail();
+		break;
+	
 	default:
 		g_message("Service command %x not understood\n");
 		break;

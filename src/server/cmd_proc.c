@@ -43,6 +43,11 @@ void process_cmd_pkt(struct packet *pkt)
 		proc_cmd_capabilities();
 		break;
 
+	case CMD_MOVETO_AZEL:
+		proc_cmd_moveto_azel(pkt);
+		break;
+
+
 	default:
 		g_message("Service command %x not understood\n");
 		break;

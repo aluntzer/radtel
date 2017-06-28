@@ -21,8 +21,10 @@
 
 void process_cmd_pkt(struct packet *pkt);
 
+/* command processing functions */
 void proc_cmd_invalid_pkt(void);
 void proc_cmd_capabilities(void);
+void proc_cmd_moveto_azel(struct packet *pkt);
 
 
 #endif /* _SERVER_INCLUDE_CMD_PROC_H_ */

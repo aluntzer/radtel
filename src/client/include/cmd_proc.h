@@ -23,6 +23,8 @@ void process_cmd_pkt(struct packet *pkt);
 
 void proc_cmd_invalid_pkt(void);
 void proc_cmd_capabilities(void);
+void proc_cmd_success(void);
+void proc_cmd_fail(void);
 
 
 #endif /* _CLIENT_INCLUDE_CMD_PROC_H_ */
