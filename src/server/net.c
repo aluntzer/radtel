@@ -1,0 +1,365 @@
+/**
+ * @file    server/net.c
+ * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
+ *
+ * @copyright GPLv2
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * @brief server networking 
+ *
+ * @note we typically don't check for NULL pointers since we rely on glib to
+ *	 work properly... 
+ *
+ * @todo master/slave
+ */
+
+#include <net.h>
+#include <cmd.h>
+#include <cmd_proc.h>
+
+#include <gio/gio.h>
+#include <glib.h>
+
+
+/* client connection data */
+struct con_data {
+	GSocketConnection *con;
+	gsize nbytes;
+	gboolean master;
+};
+
+/* tracks client connections */
+static GList *con_list;
+
+
+
+
+/**
+ * @brief get the total size of a packet
+ * @note this only used when we peek into the stream, when the header byte order
+ *	 conversion is not yet done
+ */
+
+static gsize get_pkt_size_peek(struct packet *pkt)
+{
+	return (gsize) g_ntohl(pkt->data_size) + sizeof(struct packet);
+}
+
+
+/**
+ * @brief drop a connection
+ */
+
+static void drop_connection(struct con_data *c)
+{
+	g_object_unref(c->con);
+	con_list = g_list_remove(con_list, c);
+}
+
+
+/**
+ * @brief send a packet on a connection
+ */
+
+static void net_send_internal(struct con_data *c, const char *pkt, gsize nbytes)
+{
+	gssize ret;
+
+	GError *error = NULL;
+
+	GIOStream *stream;
+	GOutputStream *ostream;
+
+
+	
+	stream = G_IO_STREAM(c->con);
+	ostream = g_io_stream_get_output_stream(stream);
+
+
+	if (g_io_stream_is_closed(stream)) {
+		g_message("Error sending packet: stream closed\n");
+		return;
+	}
+
+
+	if (!g_socket_connection_is_connected(c->con)) {
+		g_message("Error sending packet: socket not connected\n");
+		return;
+	}
+
+	ret = g_output_stream_write(ostream, pkt, nbytes, NULL, &error);
+
+	if (ret < 0) {
+		if (error) {
+			g_error("%s", error->message);
+			g_clear_error (&error);
+		}
+	}
+}
+
+
+/**
+ * @brief process the buffered network input
+ *
+ * @note looks like none of these can be used to detect a disconnect
+ *	 of a client:
+ *	 g_io_stream_is_closed()
+ *	 g_socket_connection_is_connected()
+ *	 g_socket_is_closed(g_socket_connection_get_socket()
+ *	 g_socket_is_connected()
+ *	 g_socket_get_available_bytes()
+ *	 tried with glib 2.52.2+9+g3245eba16-1)
+ *	 we'll just record the amount of bytes in the stream and check
+ *	whether it changed or not. if delta == 0 -> disconnected
+ *
+ */
+
+static void net_buffer_ready(GObject *source_object, GAsyncResult *res,
+			     gpointer user_data)
+{
+	gsize nbytes;
+	gsize pkt_size;
+
+	gssize ret;
+
+	const char *buf;
+
+	struct packet *pkt = NULL;
+	struct con_data *c;
+	
+	GInputStream *istream;
+	GBufferedInputStream *bistream;
+
+	GError *error = NULL;
+
+
+	c = (struct con_data *) user_data;
+
+	istream  = G_INPUT_STREAM(source_object);
+	bistream = G_BUFFERED_INPUT_STREAM(source_object);
+
+
+	buf = g_buffered_input_stream_peek_buffer(bistream, &nbytes);
+
+	if (nbytes == c->nbytes) {
+		g_message("No new bytes in client stream, dropping connection");
+		goto error;
+	}
+
+	c->nbytes = nbytes;
+	
+
+	/* enough bytes to hold a packet? */
+	if (nbytes < sizeof(struct packet)) {
+		g_message("Input stream smaller than packet size.");
+		goto exit;
+	}
+
+
+	/* check if the packet is complete/valid */
+	pkt_size = get_pkt_size_peek((struct packet *) buf);
+
+	if (pkt_size > g_buffered_input_stream_get_buffer_size(bistream)) {
+		g_message("Packet of %ld bytes is larger than input buffer of "
+			  "%ld bytes.", pkt_size,
+			  g_buffered_input_stream_get_buffer_size(bistream));
+
+		if (pkt_size < MAX_PAYLOAD_SIZE) {
+			g_message("Increasing input buffer to packet size\n");
+			g_buffered_input_stream_set_buffer_size(bistream,
+								pkt_size);
+		}
+		goto drop_pkt;
+	}
+
+
+	if (pkt_size > nbytes) {
+		g_message("Packet (%ld bytes) incomplete, %ld bytes in stream",
+			  pkt_size, nbytes);
+		goto exit;
+	}
+
+
+	/* we have a packet */
+	
+	/* the packet buffer will be released in the command processor */
+	pkt = g_malloc(pkt_size);
+
+	/* extract packet for command processing */
+	nbytes = g_input_stream_read(istream, (void *) pkt,
+				     pkt_size, NULL, &error);
+	
+	if (nbytes <= 0)
+		goto error;
+	
+	/* update stream byte count */
+	g_buffered_input_stream_peek_buffer(bistream, &c->nbytes);
+
+	pkt_hdr_to_host_order(pkt);
+
+	/* verify packet payload */
+	if (CRC16(pkt->data, pkt->data_size) == pkt->data_crc16)  {
+		process_cmd_pkt(pkt);
+		goto exit;
+	} else {
+		g_message("Invalid CRC16 %x %x",
+			  CRC16(pkt->data, pkt->data_size), pkt->data_crc16);
+	}
+
+
+drop_pkt:
+	g_message("Error occured, dropping input buffer and packet.");
+	
+	g_free(pkt);
+
+	ret = g_buffered_input_stream_fill_finish(bistream, res, &error);
+	if (ret < 0)
+		goto error;
+
+	g_bytes_unref(g_input_stream_read_bytes(istream, ret, NULL, &error));
+
+	c->nbytes = 0;
+
+	cmd_invalid_pkt();
+
+exit:
+	/* continue buffering */
+	g_buffered_input_stream_fill_async(bistream,
+			   g_buffered_input_stream_get_buffer_size(bistream),
+			   G_PRIORITY_DEFAULT,
+			   NULL,
+			   net_buffer_ready,
+			   c);
+	return;
+
+
+error:
+	g_message("Error occured, dropping connection");
+	if (error) {
+		g_error ("%s", error->message);
+		g_clear_error (&error);
+	}
+	drop_connection(c);
+	return;
+
+}
+
+
+/**
+ * @brief handle an incoming connection
+ */
+
+static gboolean net_incoming(GSocketService    *service,
+			     GSocketConnection *connection,
+			     GObject           *source_object,
+			     gpointer           user_data)
+{
+	gsize bufsize;
+
+	GInputStream *istream;
+	GBufferedInputStream *bistream;
+
+	struct con_data *c;
+       
+
+	g_message("received incoming connection");
+
+	
+	c = g_malloc0(sizeof(struct con_data));
+
+	/* set up as buffered input stream */ 
+	istream = g_io_stream_get_input_stream(G_IO_STREAM(connection));
+	istream = g_buffered_input_stream_new(istream);
+
+	bistream = G_BUFFERED_INPUT_STREAM(istream);
+
+	bufsize = g_buffered_input_stream_get_buffer_size(bistream);
+
+	/* reference, so it is not dropped by glib */
+	c->con = g_object_ref(connection);
+
+	g_socket_set_keepalive(g_socket_connection_get_socket(c->con), TRUE);
+
+	/* add to list of connections */
+	con_list = g_list_append(con_list, c);
+
+	g_buffered_input_stream_fill_async(bistream, bufsize,
+					   G_PRIORITY_DEFAULT, NULL,
+					   net_buffer_ready, c);
+
+	return FALSE;
+}
+
+
+/**
+ * @brief se3nd a packet to all connected clients
+ */
+
+void net_send(const char *pkt, gsize nbytes)
+{
+
+	GList *elem;
+	
+	struct con_data *item;
+
+
+	g_message("Broadcasting packet of %d bytes", nbytes);
+
+	for (elem = con_list; elem; elem = elem->next) {
+		item = elem->data;
+		net_send_internal(item, pkt, nbytes);
+	}
+}
+
+
+/**
+ * initialise server networking
+ */
+
+int net_server(void)
+{
+	gboolean ret;
+
+	GMainLoop *loop;
+	GSocketService *service;
+
+	GError *error = NULL;
+
+
+
+	service = g_socket_service_new();
+
+	ret = g_socket_listener_add_inet_port(G_SOCKET_LISTENER(service),
+					      PORT, NULL, &error);
+	if (!ret) {
+		if (error) {
+			g_error("%s", error->message);
+			g_clear_error(&error);
+		}
+
+		return -1;
+	}
+
+	g_signal_connect(service, "incoming", G_CALLBACK(net_incoming), NULL);
+
+	g_socket_service_start (service);
+
+	loop = g_main_loop_new(NULL, FALSE);
+
+	g_message("Server started");
+
+	g_main_loop_run(loop);
+
+	/* stop service when leaving main loop */
+	g_socket_service_stop (service);
+
+
+	return 0;
+}
