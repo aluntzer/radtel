@@ -25,6 +25,8 @@ void cmd_capabilities(void);
 void cmd_success(void);
 void cmd_fail(void);
 void cmd_moveto_azel(double az, double el);
+void cmd_recalibrate_pointing(void);
+void cmd_park_telescope(void);
 
 
 #endif /* _INCLUDE_CMD_H_ */
