@@ -728,7 +728,7 @@ static int srt_drive_move(void)
 		return 0;
 
 	be_shared_comlink_acquire();
-	srt_drive_cmd_motors((int) az_cnt, (int) el_cnt);
+	srt_drive_cmd_motors((int) d_az_cnt, (int) d_el_cnt);
 	be_shared_comlink_release();
 
 	/* update current sensor count */
