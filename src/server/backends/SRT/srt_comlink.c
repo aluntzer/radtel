@@ -37,6 +37,8 @@
 
 #define MSG "SRT COM: "
 
+#define SRT_SPEC_MSG_LEN 128
+
 
 static char *srt_tty = "/dev/ttyUSB0";
 
@@ -46,6 +48,7 @@ static GMutex readmutex;
 static GCond cond;
 static gchar *line;
 static gsize line_len;
+static gboolean raw_read;
 
 /**
  * @brief open a serial tty
@@ -185,7 +188,7 @@ static int srt_com_serial_write(int fd, const char *buf,
 	 * the input or something...
 	 */
 
-	write(fd, "0\n", 2);
+	write(fd, " \n", 2);
 
 	n = write(fd, buf, nbyte);
 
@@ -219,7 +222,22 @@ static gboolean srt_com_serial_glib_callback(GIOChannel *src,
 		g_free(line);
 	}
 
-	ret = g_io_channel_read_line(src, &line, &line_len, NULL, &err);
+
+	/* if the last command was "freq", raw_read is true */
+
+	if (raw_read) {
+		line = g_malloc(SRT_SPEC_MSG_LEN);
+		ret = g_io_channel_read_chars(src, line, SRT_SPEC_MSG_LEN,
+					      &line_len, &err);
+
+		if (line_len != SRT_SPEC_MSG_LEN)
+			g_warning(MSG "Expected %d bytes, but got %d",
+				  SRT_SPEC_MSG_LEN, line_len);
+	} else {
+		ret = g_io_channel_read_line(src, &line, &line_len, NULL, &err);
+	}
+
+
 	if (ret == G_IO_STATUS_ERROR) {
 		g_error("Error reading: %s\n", err->message);
 		g_error_free(err);
@@ -249,6 +267,14 @@ static GIOChannel *srt_com_serial_init_glib_poll(int fd)
 	 * to work properly here
 	 */
 	g_io_channel_set_line_term(g_io_ch, "\r", 1);
+
+	/* set to raw encoding */
+	g_io_channel_set_encoding(g_io_ch, NULL, NULL);
+
+	/* limit buffer size so we can read both line terminated and raw
+	 * messages
+	 */
+	g_io_channel_set_buffer_size(g_io_ch, SRT_SPEC_MSG_LEN);
 
 	g_io_add_watch (g_io_ch, (G_IO_IN | G_IO_PRI),
 			srt_com_serial_glib_callback, NULL);
@@ -347,6 +373,15 @@ gchar *be_shared_comlink_read(gsize *nbytes)
 G_MODULE_EXPORT
 int be_shared_comlink_write(const gchar *buf, gsize nbytes)
 {
+	/* switch between line termination read and binary read
+	 * based on the last command written
+	 * (note: "freq" commands start with a \0
+	 */
+	if (buf[0] == '\0')
+		raw_read = TRUE;
+	else
+		raw_read = FALSE;
+
 	return srt_com_serial_write(fd, buf, nbytes, 0);
 }
 
@@ -357,6 +392,7 @@ int be_shared_comlink_write(const gchar *buf, gsize nbytes)
 G_MODULE_EXPORT
 void be_shared_comlink_acquire(void)
 {
+	g_usleep(1000.0);
 	g_mutex_lock(&linkmutex);
 	g_message(MSG "shared comlink acquired");
 }
@@ -375,7 +411,7 @@ void be_shared_comlink_release(void)
 
 
 /**
- * @brief extra initialisation function
+  * @brief extra initialisation function
  *
  * @note if a thread is created in g_module_check_init(), the loader appears
  *       to fail, so we do that here
