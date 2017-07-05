@@ -1,5 +1,5 @@
 /**
- * @file    server/include/cmd_proc.h
+ * @file    server/proc/proc_cmd_recalibrate_pointing.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -14,19 +14,21 @@
  *
  */
 
-#ifndef _SERVER_INCLUDE_CMD_PROC_H_
-#define _SERVER_INCLUDE_CMD_PROC_H_
+#include <glib.h>
 
-#include <protocol.h>
+#include <cmd.h>
+#include <backend.h>
 
-void process_cmd_pkt(struct packet *pkt);
 
-/* command processing functions */
-void proc_cmd_invalid_pkt(void);
-void proc_cmd_capabilities(void);
-void proc_cmd_moveto_azel(struct packet *pkt);
-void proc_cmd_recalibrate_pointing(void);
-void proc_cmd_park_telescope(void);
+/**
+ * @brief process command recalibrate_pointing
+ */
 
-#endif /* _SERVER_INCLUDE_CMD_PROC_H_ */
+void proc_cmd_recalibrate_pointing(void)
+{
+	g_message("Client requested recalibrate_pointing");
 
+	be_recalibrate_pointing();
+
+	cmd_success();
+}

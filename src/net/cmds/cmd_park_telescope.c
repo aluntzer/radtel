@@ -1,5 +1,5 @@
 /**
- * @file    server/include/cmd_proc.h
+ * @file    net/cmds/cmd_park_telescope.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -14,19 +14,32 @@
  *
  */
 
-#ifndef _SERVER_INCLUDE_CMD_PROC_H_
-#define _SERVER_INCLUDE_CMD_PROC_H_
+#include <glib.h>
 
-#include <protocol.h>
+#include <cmd.h>
 
-void process_cmd_pkt(struct packet *pkt);
 
-/* command processing functions */
-void proc_cmd_invalid_pkt(void);
-void proc_cmd_capabilities(void);
-void proc_cmd_moveto_azel(struct packet *pkt);
-void proc_cmd_recalibrate_pointing(void);
-void proc_cmd_park_telescope(void);
+void cmd_park_telescope(void)
+{
+	gsize pkt_size;
 
-#endif /* _SERVER_INCLUDE_CMD_PROC_H_ */
+	struct packet *pkt;
 
+
+	pkt_size = sizeof(struct packet);
+
+	pkt = g_malloc(pkt_size);
+	
+	pkt->service   = CMD_CAPABILITIES;
+	pkt->data_size = 0; 
+
+	pkt_set_data_crc16(pkt);
+	
+	pkt_hdr_to_net_order(pkt);
+	
+	g_message("Requesting park_telescope");
+	net_send((void *) pkt, pkt_size);
+
+	/* clean up */	
+	g_free(pkt);
+}

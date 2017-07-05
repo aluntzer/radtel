@@ -46,7 +46,14 @@ void process_cmd_pkt(struct packet *pkt)
 	case CMD_MOVETO_AZEL:
 		proc_cmd_moveto_azel(pkt);
 		break;
+	
+	case CMD_RECAL_POINTING:
+		proc_cmd_recalibrate_pointing();
+		break;
 
+	case CMD_PARK_TELESCOPE:
+		proc_cmd_park_telescope();
+		break;
 
 	default:
 		g_message("Service command %x not understood\n");

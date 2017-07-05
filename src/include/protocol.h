@@ -127,6 +127,7 @@ struct moveto {
 #define CMD_MOVETO_AZEL		0xa005	/* move to azimuth/elevation */
 #define CMD_SUCCESS		0xa006  /* last command succeded */
 #define CMD_FAIL		0xa007	/* last command failed */
-
+#define CMD_RECAL_POINTING	0xa008	/* recalibrate telescope pointing */
+#define CMD_PARK_TELESCOPE	0xa009	/* park telescope */
 
 #endif /* _INCLUDE_PROTOCOL_H_ */

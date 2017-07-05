@@ -2,7 +2,7 @@
 plugin_CFLAGS  = $(server_CFLAGS)
 plugin_CFLAGS += -I$(top_srcdir)/src/include  -I$(top_srcdir)/src/server/include
 
-all: srt_drive.so
+all: srt_drive.so srt_comlink.so
 
 SUFFIXES = .so
 CLEANFILES = *.so

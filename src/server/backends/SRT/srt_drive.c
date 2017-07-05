@@ -1,5 +1,5 @@
 /**
- * @file    server/backends/SRT/srt.c
+ * @file    server/backends/SRT/srt_drive.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -24,7 +24,7 @@
 
 #include <glib.h>
 #include <gmodule.h>
-
+#include <string.h>
 
 
 #include <math.h>
@@ -171,7 +171,7 @@ static double srt_drive_cassi_set_pushdrod_zero_len_counts(void)
 
 
 /**
- * @brief load configuration keys in the network group
+ * @brief load configuration keys
  */
 
 static void srt_drive_load_keys(GKeyFile *kf)
@@ -615,26 +615,32 @@ static int srt_drive_get_el_motor_id(double cnts)
 /**
  * @brief command the drive motors via the shared com link and evaluate
  *	  the response
+ *
+ * @return 0 on success, -1 on timeout
  */
 
-static void srt_drive_motor_cmd_eval(gchar *cmd)
+static int srt_drive_motor_cmd_eval(gchar *cmd)
 {
-	gchar c       = '\0';
+	int ret = 0;
+
+	gsize len;
+
+	gchar c  = '\0';
 	int cnts = 0;
 	int f1   = 0;
 	int f2   = 0;
 
-	gchar *response = "M 15 0 2";
+	gchar *response;
 
 
-#if 0
-	be_shared_comlink_write(cmd)
+	g_message(MSG "CMD: %s", cmd);
 
-	response = be_shared_comlink_read_line();
-#endif
+	be_shared_comlink_write(cmd, strlen(cmd));
+
+	response = be_shared_comlink_read(&len);
 
 	if (sscanf(response, "%c %d %d %d", &c, &cnts, &f1, &f2) != 4)
-		goto drive_error;
+		g_warning(MSG, "error scanning com link response: %s", response);
 
 
 	switch(c) {
@@ -646,35 +652,19 @@ static void srt_drive_motor_cmd_eval(gchar *cmd)
 	case 'T':
 		g_message(MSG "CMD TIMEOUT, %d counts, motor: %d, f2: %d",
 			  cnts, f1, f2);
-
-
-		srt.pos.az_cnts = 0;
-		srt.pos.el_cnts = 0;
-
-		srt.pos.az_tgt = 0.0;
-		srt.pos.el_tgt = 0.0;
-
-		srt.pos.az_cur = 0.0;
-		srt.pos.el_cur = 0.0;
-
-		g_message(MSG "assuming stow reached\n");
-
-		/* cmd_park_position() or push az/el */
-
+		ret = -1;
 		break;
 	default:
-		goto drive_error;
+		/* issue cmd_drive_error(); */
+		g_message(MSG, "error in com link response: %s", response);
+		ret = -1;
+		break;
 	}
 
+	
+	g_free(response);
 
-	return;
-
-drive_error:
-	g_message(MSG, "error in com link response: %s", response);
-#if 0
-	cmd_drive_error();
-#endif
-
+	return ret;
 }
 
 
@@ -686,19 +676,25 @@ static void srt_drive_cmd_motors(int az_cnt, int el_cnt)
 {
 	gchar *cmd;
 
-	g_message(MSG "rotating AZ/EL counts: %g %g", az_cnt, el_cnt);
+	g_message(MSG "rotating AZ/EL counts: %d %d", az_cnt, el_cnt);
 
-	/* azimuth drive */
-	cmd = g_strdup_printf("move %d %d\n", srt_drive_get_az_motor_id(az_cnt),
-					      abs(az_cnt));
-	srt_drive_motor_cmd_eval(cmd);
-	g_free(cmd);
+	if (az_cnt) {
+		/* azimuth drive */
+		cmd = g_strdup_printf("move %d %d\n",
+				      srt_drive_get_az_motor_id(az_cnt),
+				      abs(az_cnt));
+		srt_drive_motor_cmd_eval(cmd);
+		g_free(cmd);
+	}
 
-	/* elevation drive */
-	cmd = g_strdup_printf("move %d %d\n", srt_drive_get_el_motor_id(az_cnt),
-					      abs(el_cnt));
-	srt_drive_motor_cmd_eval(cmd);
-	g_free(cmd);
+	if (el_cnt) {
+		/* elevation drive */
+		cmd = g_strdup_printf("move %d %d\n",
+				      srt_drive_get_el_motor_id(az_cnt),
+				      abs(el_cnt));
+		srt_drive_motor_cmd_eval(cmd);
+		g_free(cmd);
+	}
 }
 
 
@@ -717,9 +713,6 @@ static int srt_drive_move(void)
 	double d_el_cnt;
 
 
-#if 0
-	be_shared_comlink_acquire();
-#endif
 
 
 	/* absolute sensor counts */
@@ -734,7 +727,9 @@ static int srt_drive_move(void)
 	if (srt_drive_done(d_az_cnt, d_el_cnt))
 		return 0;
 
+	be_shared_comlink_acquire();
 	srt_drive_cmd_motors((int) az_cnt, (int) el_cnt);
+	be_shared_comlink_release();
 
 	/* update current sensor count */
 	srt.pos.az_cnts += d_az_cnt;
@@ -748,16 +743,14 @@ static int srt_drive_move(void)
 	g_message(MSG "now at telescope AZ/EL: %g %g",
 		  srt_drive_az_to_telescope_ref(srt.pos.az_cur),
 		  srt_drive_el_to_telescope_ref(srt.pos.el_cur));
-#if 0
-	be_shared_comlink_release();
-#endif
+
 
 	return 1;
 }
 
 
 /**
- * @brief thread function that does all the moving/tracking work
+ * @brief thread function that does all the regular moving/tracking work
  */
 
 static gpointer srt_drive_thread(gpointer data)
@@ -814,6 +807,98 @@ static int srt_drive_moveto(double az, double el)
 }
 
 
+/**
+ * @brief thread function to park the telescope
+ */
+
+static gpointer srt_park_thread(gpointer data)
+{
+		
+	g_mutex_lock(&mutex);
+	/* move to stow in azimuth */
+	if (srt_drive_motor_cmd_eval("move 0 5000")) {
+		srt.pos.az_cur  = 0.0;
+		srt.pos.az_tgt  = 0.0;
+		srt.pos.az_cnts = 0.0;
+	} else {
+		g_message(MSG "unexpected response while stowing in azimuth");
+	}
+
+	
+	/* move to stow in elevation */
+	if (srt_drive_motor_cmd_eval("move 2 5000")) {
+		srt.pos.el_cur  = 0.0;
+		srt.pos.el_tgt = 0.0;
+		srt.pos.el_cnts = 0.0;
+	} else {
+		g_message(MSG "unexpected response while stowing in elevation");
+	}
+
+	g_mutex_unlock(&mutex);
+	
+	g_thread_exit(NULL);
+}
+
+
+/**
+ * @brief thread function to recalibrate the telescope pointing
+ */
+
+static gpointer srt_recal_thread(gpointer data)
+{
+
+	g_mutex_lock(&mutex);
+
+	/* move to stow in azimuth */
+	if (srt_drive_motor_cmd_eval("move 0 5000")) {
+		srt.pos.az_cur  = 0.0;
+		srt.pos.az_cnts = 0.0;
+	} else {
+		g_message(MSG "unexpected response while stowing in azimuth");
+	}
+
+	
+	/* move to stow in elevation */
+	if (srt_drive_motor_cmd_eval("move 2 5000")) {
+		srt.pos.el_cur  = 0.0;
+		srt.pos.el_cnts = 0.0;
+	} else {
+		g_message(MSG "unexpected response while stowing in elevation");
+	}
+
+
+	/* rotate back to where we are supposed to be */
+	g_cond_signal(&cond);
+	g_mutex_unlock(&mutex);
+
+	g_thread_exit(NULL);
+}
+
+
+/**
+ * @brief move to parking position
+ */
+
+G_MODULE_EXPORT
+void be_park_telescope(void)
+{
+	g_message(MSG "parking telescope");
+
+	g_thread_new(NULL, srt_park_thread, NULL);
+}
+
+
+/**
+ * @brief recalibrate pointing
+ */
+
+G_MODULE_EXPORT
+void be_recalibrate_pointing(void)
+{
+	g_warning(MSG "recalibrating pointing");
+
+	g_thread_new(NULL, srt_recal_thread, NULL);
+}
 
 
 /**

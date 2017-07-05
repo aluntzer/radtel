@@ -33,6 +33,12 @@
 static void backend_try_load_symbols(GModule *mod)
 {
 	be_moveto_azel_load(mod);
+	be_shared_comlink_acquire_load(mod);
+	be_shared_comlink_release_load(mod);
+	be_shared_comlink_write_load(mod);
+	be_shared_comlink_read_load(mod);
+	be_recalibrate_pointing_load(mod);
+	be_park_telescope_load(mod);
 }
 
 

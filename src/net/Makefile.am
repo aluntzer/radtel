@@ -8,5 +8,7 @@ libprotocmd_a_SOURCES = protocol.c \
 			cmds/cmd_capabilities.c \
 			cmds/cmd_success.c \
 			cmds/cmd_fail.c \
+			cmds/cmd_recalibrate_pointing.c \
+			cmds/cmd_park_telescope.c \
 			cmds/cmd_moveto_azel.c \
 			acks/ack_capabilities.c
