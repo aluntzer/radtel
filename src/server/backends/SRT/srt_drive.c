@@ -799,9 +799,10 @@ static int srt_drive_moveto(double az, double el)
 	srt.pos.az_tgt = srt_drive_az_to_drive_ref(az);
 	srt.pos.el_tgt = srt_drive_el_to_drive_ref(el);
 
-	g_mutex_lock(&mutex);
-	g_cond_signal(&cond);
-	g_mutex_unlock(&mutex);
+	if (g_mutex_trylock(&mutex)) {
+		g_cond_signal(&cond);
+		g_mutex_unlock(&mutex);
+	}
 
 	return 0;
 }
@@ -817,6 +818,12 @@ static gpointer srt_park_thread(gpointer data)
 	g_mutex_lock(&mutex);
 
 	be_shared_comlink_acquire();
+
+
+	g_message(MSG "current sensor counts: AZ: %g EL: %g",
+		  srt.pos.az_cnts, srt.pos.el_cnts);
+
+
 	/* move to stow in azimuth */
 	if (srt_drive_motor_cmd_eval("move 0 5000\n")) {
 		srt.pos.az_cur  = 0.0;
@@ -851,6 +858,9 @@ static gpointer srt_recal_thread(gpointer data)
 {
 
 	g_mutex_lock(&mutex);
+
+	g_message(MSG "current sensor counts: AZ: %g EL: %g",
+		  srt.pos.az_cnts, srt.pos.el_cnts);
 
 	be_shared_comlink_acquire();
 	/* move to stow in azimuth */
