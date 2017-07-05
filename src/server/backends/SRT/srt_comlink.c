@@ -180,6 +180,13 @@ static int srt_com_serial_write(int fd, const char *buf,
 	int n;
 
 
+	/* always write a newline first, or the device might not detect
+	 * the command. This may be due g_io_channel_read_line not clearing
+	 * the input or something...
+	 */
+
+	write(fd, "0\n", 2);
+
 	n = write(fd, buf, nbyte);
 
 	if (drain)

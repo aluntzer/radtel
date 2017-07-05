@@ -661,7 +661,7 @@ static int srt_drive_motor_cmd_eval(gchar *cmd)
 		break;
 	}
 
-	
+
 	g_free(response);
 
 	return ret;
@@ -813,10 +813,12 @@ static int srt_drive_moveto(double az, double el)
 
 static gpointer srt_park_thread(gpointer data)
 {
-		
+
 	g_mutex_lock(&mutex);
+
+	be_shared_comlink_acquire();
 	/* move to stow in azimuth */
-	if (srt_drive_motor_cmd_eval("move 0 5000")) {
+	if (srt_drive_motor_cmd_eval("move 0 5000\n")) {
 		srt.pos.az_cur  = 0.0;
 		srt.pos.az_tgt  = 0.0;
 		srt.pos.az_cnts = 0.0;
@@ -824,9 +826,9 @@ static gpointer srt_park_thread(gpointer data)
 		g_message(MSG "unexpected response while stowing in azimuth");
 	}
 
-	
+
 	/* move to stow in elevation */
-	if (srt_drive_motor_cmd_eval("move 2 5000")) {
+	if (srt_drive_motor_cmd_eval("move 2 5000\n")) {
 		srt.pos.el_cur  = 0.0;
 		srt.pos.el_tgt = 0.0;
 		srt.pos.el_cnts = 0.0;
@@ -834,8 +836,9 @@ static gpointer srt_park_thread(gpointer data)
 		g_message(MSG "unexpected response while stowing in elevation");
 	}
 
+	be_shared_comlink_release();
 	g_mutex_unlock(&mutex);
-	
+
 	g_thread_exit(NULL);
 }
 
@@ -849,23 +852,25 @@ static gpointer srt_recal_thread(gpointer data)
 
 	g_mutex_lock(&mutex);
 
+	be_shared_comlink_acquire();
 	/* move to stow in azimuth */
-	if (srt_drive_motor_cmd_eval("move 0 5000")) {
+	if (srt_drive_motor_cmd_eval("move 0 5000\n")) {
 		srt.pos.az_cur  = 0.0;
 		srt.pos.az_cnts = 0.0;
 	} else {
 		g_message(MSG "unexpected response while stowing in azimuth");
 	}
 
-	
+
 	/* move to stow in elevation */
-	if (srt_drive_motor_cmd_eval("move 2 5000")) {
+	if (srt_drive_motor_cmd_eval("move 2 5000\n")) {
 		srt.pos.el_cur  = 0.0;
 		srt.pos.el_cnts = 0.0;
 	} else {
 		g_message(MSG "unexpected response while stowing in elevation");
 	}
 
+	be_shared_comlink_release();
 
 	/* rotate back to where we are supposed to be */
 	g_cond_signal(&cond);
