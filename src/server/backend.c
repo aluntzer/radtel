@@ -39,6 +39,7 @@ static void backend_try_load_symbols(GModule *mod)
 	be_shared_comlink_read_load(mod);
 	be_recalibrate_pointing_load(mod);
 	be_park_telescope_load(mod);
+	be_spec_acq_start_load(mod);
 }
 
 

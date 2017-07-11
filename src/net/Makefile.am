@@ -11,4 +11,5 @@ libprotocmd_a_SOURCES = protocol.c \
 			cmds/cmd_recalibrate_pointing.c \
 			cmds/cmd_park_telescope.c \
 			cmds/cmd_moveto_azel.c \
+			cmds/cmd_spec_acq_start.c \
 			acks/ack_capabilities.c

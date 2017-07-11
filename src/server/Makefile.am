@@ -15,7 +15,8 @@ server_SOURCES = main.c \
 		 proc/proc_cmd_invalid_pkt.c \
 		 proc/proc_cmd_moveto_azel.c \
 		 proc/proc_cmd_recalibrate_pointing.c \
-		 proc/proc_cmd_park_telescope.c
+		 proc/proc_cmd_park_telescope.c \
+		 proc/proc_cmd_spec_acq_start.c
 
 server_LDADD = $(server_LIBS) \
 	       $(top_builddir)/src/net/libprotocmd.a \

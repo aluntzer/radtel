@@ -55,6 +55,11 @@ void process_cmd_pkt(struct packet *pkt)
 		proc_cmd_park_telescope();
 		break;
 
+	case CMD_SPEC_ACQ_START:
+		proc_cmd_spec_acq_start(pkt);
+		break;
+
+
 	default:
 		g_message("Service command %x not understood\n");
 		break;

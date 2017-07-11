@@ -9,6 +9,5 @@ libbackend_a_SOURCES = be_moveto_azel.c \
 		       be_shared_comlink_read.c \
 		       be_shared_comlink_write.c \
 		       be_recalibrate_pointing.c \
-		       be_park_telescope.c
-
-
+		       be_park_telescope.c \
+		       be_spec_acq_start.c
