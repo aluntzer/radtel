@@ -37,7 +37,7 @@ void cmd_fail(void)
 	
 	pkt_hdr_to_net_order(pkt);
 	
-	g_message("Signalling failful command");
+	g_message("Signalling failed command");
 	net_send((void *) pkt, pkt_size);
 
 	/* clean up */	
