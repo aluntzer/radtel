@@ -46,7 +46,7 @@ static void backend_try_load_symbols(GModule *mod)
 
 /**
  * @brief load a backend module
- * @note if a module exports a symbol module_extra_init(), the 
+ * @note if a module exports a symbol module_extra_init(), the
  *       function will be executed here
  */
 
@@ -61,7 +61,8 @@ static int backend_load_module(const gchar *plugin_path)
 	mod = g_module_open(plugin_path, G_MODULE_BIND_LAZY);
 
 	if(!mod) {
-		g_error("Unable to load plugin %s", plugin_path);
+		g_error("Unable to load plugin %s: %s", plugin_path,
+							g_module_error());
 		return -1;
 	}
 
@@ -71,7 +72,7 @@ static int backend_load_module(const gchar *plugin_path)
 		mod_init();
 
 
-	
+
 	backend_try_load_symbols(mod);
 
 
