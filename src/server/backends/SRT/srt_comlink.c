@@ -276,8 +276,8 @@ static GIOChannel *srt_com_serial_init_glib_poll(int fd)
 	 */
 	g_io_channel_set_buffer_size(g_io_ch, SRT_SPEC_MSG_LEN);
 
-	g_io_add_watch (g_io_ch, (G_IO_IN | G_IO_PRI),
-			srt_com_serial_glib_callback, NULL);
+	g_io_add_watch(g_io_ch, (G_IO_IN | G_IO_PRI),
+		       srt_com_serial_glib_callback, NULL);
 
 	return g_io_ch;
 }
@@ -442,10 +442,12 @@ void module_extra_init(void)
  */
 
 G_MODULE_EXPORT
-void g_module_check_init(void)
+const gchar *g_module_check_init(void)
 {
         g_message(MSG "initialising module");
 
 	if (srt_com_load_config())
 		g_warning(MSG "Error loading module configuration, this plugin may not function properly.");
+
+	return NULL;
 }

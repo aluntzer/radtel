@@ -230,11 +230,13 @@ void module_extra_init(void)
  */
 
 G_MODULE_EXPORT
-void g_module_check_init(void)
+const gchar *g_module_check_init(void)
 {
 
         g_message(MSG "initialising module");
 
 	if (srt_drive_load_config())
 		g_warning(MSG "Error loading module configuration, this plugin may not function properly.");
+
+	return NULL;
 }

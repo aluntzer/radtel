@@ -959,7 +959,7 @@ void module_extra_init(void)
  */
 
 G_MODULE_EXPORT
-void g_module_check_init(void)
+const gchar *g_module_check_init(void)
 {
 
         g_message(MSG "initialising module");
@@ -970,5 +970,5 @@ void g_module_check_init(void)
 	srt_drive_cassi_set_pushdrod_zero_len_counts();
 	srt_drive_set_az_center();
 
-
+	return NULL;
 }
