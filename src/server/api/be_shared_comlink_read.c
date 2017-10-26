@@ -32,10 +32,14 @@ static gchar *(*p_shared_comlink_read)(gsize *nbytes);
 
 gchar *be_shared_comlink_read(gsize *nbytes)
 {
+	gchar *buf = NULL;
+
 	if (p_shared_comlink_read)
-		p_shared_comlink_read(nbytes);
+		buf = p_shared_comlink_read(nbytes);
 	else
 		g_message("BACKEND: function %s not available\n", __func__);
+
+	return buf;
 }
 
 

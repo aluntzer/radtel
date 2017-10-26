@@ -29,9 +29,11 @@ static int (*p_shared_comlink_write)(const gchar *buf, gsize nbytes);
 int be_shared_comlink_write(const gchar *buf, gsize nbytes)
 {
 	if (p_shared_comlink_write)
-		p_shared_comlink_write(buf, nbytes);
+		return p_shared_comlink_write(buf, nbytes);
 	else
 		g_message("BACKEND: function %s not available\n", __func__);
+
+	return -1;
 }
 
 
