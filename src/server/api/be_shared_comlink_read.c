@@ -28,6 +28,8 @@ static gchar *(*p_shared_comlink_read)(gsize *nbytes);
  * @returns the result of the read
  *
  * @note this function may block
+ *
+ * @note g_free() the returned buffer to deallocate
  */
 
 gchar *be_shared_comlink_read(gsize *nbytes)
