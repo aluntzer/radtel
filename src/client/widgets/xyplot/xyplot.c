@@ -1448,12 +1448,12 @@ GtkWidget *xyplot_new(void)
 }
 
 
-
+#if 0
 int main(int argc, char *argv[])
 {
 	GtkWidget *window;
 	GtkWidget *plot;
-	
+
 #define LEN   8
 #define X0   -3.0
 #define INC   1.0
@@ -1463,8 +1463,8 @@ int main(int argc, char *argv[])
 
 	gdouble d = X0;
 	int i;
-	
-	
+
+
 	gtk_init( &argc, &argv );
 
 	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -1500,4 +1500,5 @@ int main(int argc, char *argv[])
 
 	return 0;
 }
+#endif
 

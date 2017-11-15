@@ -1,5 +1,5 @@
 /**
- * @file    client/include/net.h
+ * @file    client/include/gui.h
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -14,15 +14,10 @@
  *
  */
 
-#ifndef _CLIENT_INCLUDE_NET_H_
-#define _CLIENT_INCLUDE_NET_H_
+#ifndef _CLIENT_INCLUDE_GUI_H_
+#define _CLIENT_INCLUDE_GUI_H_
 
-#include <protocol.h>
-#include <net_common.h>
+int gui_client(int argc, char *argv[]);
 
-int net_client_init(void);
-
-
-
-#endif /* _CLIENT_INCLUDE_NET_H_ */
+#endif /* _CLIENT_INCLUDE_GUI_H_ */
 

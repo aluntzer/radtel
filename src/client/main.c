@@ -16,9 +16,23 @@
  */
 
 #include <net.h>
+#include <gui.h>
+#include <signals.h>
 
-
-int main(void)
+int main(int argc, char *argv[])
 {
-	net_client();
+	GMainLoop *loop;
+
+	loop = g_main_loop_new(NULL, FALSE);
+
+	/* initialise the signal server */
+	sig_init();
+
+	/* build the gui */
+	gui_client(argc, argv);
+
+	/* initialise networking */
+	net_client_init();
+
+	g_main_loop_run(loop);
 }

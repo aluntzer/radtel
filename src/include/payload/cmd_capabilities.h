@@ -23,11 +23,11 @@
 /*
  * Digital SRT radiometer values:
  *
- * freq_min_hz		1370 0000 0000	(1370 MHz)
- * freq_max_hz		1800 0000 0000  (1800 MHz)
- * freq_inc_hz		      40  0000  (  40 kHź)
+ * freq_min_hz		 1370 000 000	(1370 MHz)
+ * freq_max_hz		 1800 000 000  (1800 MHz)
+ * freq_inc_hz		       40 000  (  40 kHź)
  *
- * bw_max_hz		      500 0000	(500 kHz)
+ * bw_max_hz		      500 000	(500 kHz)
  *
  * bw_max_div_lin;	             0  (unused)
  * bw_max_div_rad2		     2  (0 = 500 kHz, 1 = 250 kHz, 2 = 125 kHz)
