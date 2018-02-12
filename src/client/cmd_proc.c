@@ -1,5 +1,5 @@
 /**
- * @file    server/cmd_proc.c
+ * @file    client/cmd_proc.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -40,19 +40,23 @@ void process_cmd_pkt(struct packet *pkt)
 		break;
 
 	case CMD_CAPABILITIES:
-		proc_cmd_capabilities();
+		proc_cmd_capabilities(pkt);
 		break;
-	
+
 	case CMD_SUCCESS:
 		proc_cmd_success();
 		break;
-	
+
 	case CMD_FAIL:
 		proc_cmd_fail();
 		break;
-	
+
+	case CMD_SPEC_DATA:
+		proc_cmd_spec_data(pkt);
+		break;
+
 	default:
-		g_message("Service command %x not understood\n");
+		g_message("Service command %x not understood\n", pkt->service);
 		break;
 	}
 

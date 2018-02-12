@@ -21,6 +21,7 @@
 
 void sig_cmd_success(void);
 void sig_cmd_capabilities(const struct capabilities *c);
+void sig_cmd_spec_data(const struct spec_data *c);
 
 
 

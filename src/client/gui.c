@@ -20,7 +20,41 @@
 #include <sky.h>
 #include <xyplot.h>
 #include <radio.h>
+#include <signals.h>
 
+
+static gboolean gui_spec_data_cb(gpointer instance, struct spec_data *s, gpointer *data)
+{
+	GtkWidget *plot;
+
+	gdouble *xdata;
+	gdouble *ydata;
+
+	uint64_t f;
+	uint64_t i;
+
+	plot = GTK_WIDGET(data);
+
+	xdata = g_malloc(s->n * sizeof(gdouble));
+	ydata = g_malloc(s->n * sizeof(gdouble));
+
+
+	s->freq_min_hz = 1420000000;
+	s->freq_inc_hz = 150;
+
+	s->freq_max_hz = s->freq_min_hz + s->freq_inc_hz * s->n;
+
+	for (i = 0, f = s->freq_min_hz; i < s->n; i++, f += s->freq_inc_hz) {
+		xdata[i] = (gdouble) f;
+		ydata[i] = (gdouble) s->spec[i];
+	}
+
+	xyplot_set_data(plot, xdata, ydata, s->n);
+
+	g_message("spec data CB!");
+
+	return TRUE;
+}
 
 
 
@@ -35,7 +69,7 @@ static GtkWidget *gui_create_specplot(void)
 
 	xyplot_set_xlabel(plot, "Frequency");
 	xyplot_set_ylabel(plot, "Amplitude");
-
+#if 0
 
 	{ /* dummy */
 	#define LEN   8
@@ -60,6 +94,10 @@ static GtkWidget *gui_create_specplot(void)
 
 	xyplot_set_data(plot, xdata, ydata, LEN);
 	}
+#endif
+	g_signal_connect(sig_get_instance(), "cmd-spec-data",
+			  (GCallback) gui_spec_data_cb,
+			  (gpointer) plot);
 
 	return plot;
 }

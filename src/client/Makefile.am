@@ -11,8 +11,10 @@ client_SOURCES = main.c \
 		 proc/proc_cmd_invalid_pkt.c \
 		 proc/proc_cmd_fail.c \
 		 proc/proc_cmd_success.c \
+		 proc/proc_cmd_spec_data.c \
 		 sig/sig_cmd_success.c \
 		 sig/sig_cmd_capabilities.c \
+		 sig/sig_cmd_spec_data.c \
 		 sig/signals.c \
 		 widgets/xyplot/xyplot.c \
 		 widgets/sky/sky.c \
