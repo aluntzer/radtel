@@ -17,173 +17,11 @@
 
 #include <gtk/gtk.h>
 
+#include <sky.h>
 #include <xyplot.h>
+#include <radio.h>
 
 
-/**
- * @brief create a label with a description in smaller text
- */
-
-static GtkWidget *gui_create_desclabel(const gchar *text, const gchar *desc)
-{
-	GtkWidget *box;
-	GtkWidget *label;
-
-	gchar *str;
-
-
-
-	box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-
-	label = gtk_label_new(text);
-	gtk_label_set_xalign(GTK_LABEL(label), 0.0);
-
-	gtk_box_pack_start(GTK_BOX(box), label, FALSE, FALSE, 0);
-
-	label = gtk_label_new(NULL);
-	str = g_strconcat ("<span size='small'>", desc, "</span>", NULL);
-	gtk_label_set_markup(GTK_LABEL(label), str);
-	gtk_label_set_xalign(GTK_LABEL(label), 0.0);
-
-	gtk_box_pack_start(GTK_BOX(box), label, FALSE, FALSE, 0);
-
-	return box;
-}
-
-
-
-
-static GtkWidget *gui_create_radio_controls(void)
-{
-	GtkWidget *vbox;
-	GtkWidget *hbox;
-	GtkWidget *box;
-	GtkWidget *box2;
-
-	GtkWidget *w;
-	GtkWidget *tmp;
-
-
-	vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 18);
-
-	/* row 1 */
-	box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
-	gtk_box_pack_start(GTK_BOX(vbox), box, FALSE, FALSE, 0);
-
-	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-	gtk_box_pack_start(GTK_BOX(box), hbox, FALSE, FALSE, 0);
-
-	w = gui_create_desclabel("Spectral Acquisition",
-				 "Enable persistent acquisition of spectral data by the server");
-
-	gtk_box_pack_start(GTK_BOX(hbox), w, FALSE, FALSE, 18);
-
-	w = gtk_switch_new();
-	gtk_box_pack_end(GTK_BOX(hbox), w, FALSE, FALSE, 18);
-
-
-	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-	gtk_box_pack_start(GTK_BOX(box), hbox, FALSE, FALSE, 0);
-	w = gtk_button_new_with_label("Single Shot");
-	gtk_box_pack_end(GTK_BOX(hbox), w, FALSE, FALSE, 18);
-
-
-	/* row 2 */
-	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
-
-	w = gui_create_desclabel("Acquisition Frequency Range",
-				 "Configure the upper and lower frequency limits of the receiver");
-
-	gtk_box_pack_start(GTK_BOX(hbox), w, FALSE, FALSE, 18);
-
-
-	box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
-	gtk_box_pack_end(GTK_BOX(hbox), box, FALSE, FALSE, 18);
-
-
-	box2 = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
-	gtk_box_pack_end(GTK_BOX(box), box2, FALSE, FALSE, 0);
-
-	w = gtk_spin_button_new_with_range(0.0, 10.0, 1.0);
-	gtk_box_pack_end(GTK_BOX(box2), w, FALSE, FALSE, 0);
-	w = gtk_label_new("Lower");
-	gtk_box_pack_end(GTK_BOX(box2), w, FALSE, FALSE, 12);
-
-
-	box2 = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
-	gtk_box_pack_end(GTK_BOX(box), box2, FALSE, FALSE, 0);
-	w = gtk_spin_button_new_with_range(0.0, 10.0, 1.0);
-	gtk_box_pack_end(GTK_BOX(box2), w, FALSE, FALSE, 0 );
-	w = gtk_label_new("Upper");
-	gtk_box_pack_end(GTK_BOX(box2), w, FALSE, FALSE, 12);
-
-
-	/* row 3 */
-	box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
-	gtk_box_pack_start(GTK_BOX(vbox), box, FALSE, FALSE, 0);
-
-	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-	gtk_box_pack_start(GTK_BOX(box), hbox, FALSE, FALSE, 0);
-
-	w = gui_create_desclabel("Reference Rest Frequency",
-				 "Used to calculate the radial (Doppler) velocity to the Local Standard of Rest");
-
-	gtk_box_pack_start(GTK_BOX(hbox), w, FALSE, FALSE, 18);
-
-
-
-	/* note: for easier selection, always give J (total electronic angular
-	 * momentum quantum number) and F (transitions between hyperfine
-	 * levels)
-	 *
-	 * note on OH: the ground rotational state splits into a lambda-doublet
-	 * sub-levels due to the interaction between the rotational and electronic
-	 * angular momenta of the molecule. The sub-levels further split into
-	 * two hyperfine levels as a result of the interaction between the
-	 * electron and nuclear spins of the hydrogen atom. The transitions that
-	 * connect sub-levels with the same F-values are called the main lines,
-	 * whereas the transitions between sub-levels of different F-values are
-	 * called the satellite lines. (See DICKE'S SUPERRADIANCE IN
-	 * ASTROPHYSICS. II. THE OH 1612 MHz LINE, F. Rajabi and M. Houde,
-	 * The Astrophysical Journal, Volume 828, Number 1.)
-	 * The main lines are stronger than the satellite lines. In star
-	 * forming regions, the 1665 MHz line exceeds the 1667 MHz line in
-	 * intensity, while in equilibirium conditions, it is generally weaker.
-	 * In late-type starts, the 1612 MHz line may sometimes be equal or
-	 * even exceed the intensity of the main lines.
-	 */
-
-	w = gtk_combo_box_text_new();
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(w), "1420.406", "Hydrogen (HI) J=1/2 F=1-0");
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(w), "1612.231", "Hydroxyl Radical (OH) J=3/2 F=1-2");
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(w), "1665.402", "Hydroxyl Radical (OH) J=3/2 F=1-1");
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(w), "1667.359", "Hydroxyl Radical (OH) J=3/2 F=2-2");
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(w), "1720.530", "Hydroxyl Radical (OH) J=3/2 F=2-1");
-
-	tmp = gtk_button_new_with_label("Set");
-	gtk_box_pack_end(GTK_BOX(hbox), tmp, FALSE, FALSE, 18);
-
-	tmp = gtk_entry_new();
-	g_object_bind_property(w, "active-id", tmp,
-			       "text", G_BINDING_BIDIRECTIONAL);
-	gtk_box_pack_end(GTK_BOX(hbox), tmp, FALSE, FALSE, 18);
-
-
-	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-	gtk_box_pack_start(GTK_BOX(box), hbox, FALSE, FALSE, 0);
-
-
-	gtk_box_pack_end(GTK_BOX(hbox), tmp, FALSE, FALSE, 18);
-	gtk_box_pack_end(GTK_BOX(hbox), w, FALSE, FALSE, 18);
-	w = gtk_label_new("Presets:");
-	gtk_box_pack_end(GTK_BOX(hbox), w, FALSE, FALSE, 12);
-
-
-
-
-	return vbox;
-}
 
 
 static GtkWidget *gui_create_specplot(void)
@@ -227,6 +65,95 @@ static GtkWidget *gui_create_specplot(void)
 }
 
 
+static GtkWidget *gui_create_chat(void)
+{
+	GtkWidget *vbox;
+	GtkWidget *hbox;
+	GtkWidget *textview;
+
+	GtkWidget *w;
+	GtkWidget *tmp;
+
+
+
+	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 12);
+
+	/* vbox for chat, text input, log */
+	vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 12);
+	gtk_box_pack_start(GTK_BOX(hbox), vbox, TRUE, TRUE, 12);
+
+	/* chat output */
+	w = gtk_scrolled_window_new(NULL, NULL);
+	gtk_box_pack_start(GTK_BOX(vbox), w, TRUE, TRUE, 0);
+	textview = gtk_text_view_new();
+	gtk_container_add(GTK_CONTAINER(w), textview);
+
+	/* chat input */
+	tmp = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
+	gtk_box_pack_start(GTK_BOX(vbox), tmp, FALSE, FALSE, 0);
+
+	w = gtk_entry_new();
+	gtk_box_pack_start(GTK_BOX(tmp), w, TRUE, TRUE, 0);
+	w = gtk_button_new_with_label("Send");
+	gtk_box_pack_start(GTK_BOX(tmp), w, FALSE, FALSE, 0);
+
+	/** TODO general signals AND: send chat text on enter */
+
+	/* user list */
+	w = gtk_scrolled_window_new(NULL, NULL);
+	gtk_box_pack_start(GTK_BOX(hbox), w, TRUE, TRUE, 12);
+	textview = gtk_text_view_new();
+	gtk_container_add(GTK_CONTAINER(w), textview);
+
+	return hbox;
+}
+
+
+static GtkWidget *gui_create_log(void)
+{
+	GtkWidget *vbox;
+
+	GtkWidget *w;
+	GtkWidget *textview;
+
+	vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 12);
+
+	/* add event log to vbox */
+	w = gtk_scrolled_window_new(NULL, NULL);
+	gtk_box_pack_start(GTK_BOX(vbox), w, FALSE, FALSE, 0);
+
+	textview = gtk_text_view_new();
+	gtk_container_add(GTK_CONTAINER(w), textview);
+
+	w = gtk_button_new_with_label("Save Log");
+	gtk_widget_set_hexpand(w, FALSE);
+	gtk_box_pack_start(GTK_BOX(vbox), w, FALSE, FALSE, 0);
+
+	/* TODO add callbacks */
+
+	return vbox;
+}
+
+static GtkWidget *gui_create_chatlog(void)
+{
+	GtkWidget *vbox;
+
+	GtkWidget *w;
+
+
+	vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 18);
+
+	w = gui_create_chat();
+	gtk_box_pack_start(GTK_BOX(vbox), w, TRUE, TRUE, 0);
+
+	w = gui_create_log();
+	gtk_box_pack_start(GTK_BOX(vbox), w, FALSE, FALSE, 0);
+
+	return vbox;
+}
+
+
+
 static GtkWidget *gui_create_stack_switcher(void)
 {
 	GtkWidget *stack;
@@ -245,19 +172,24 @@ static GtkWidget *gui_create_stack_switcher(void)
 	gtk_stack_switcher_set_stack(GTK_STACK_SWITCHER(stack_sw),
 				     GTK_STACK(stack));
 
-	w = gui_create_radio_controls();
+	w = sky_new();
+	gtk_stack_add_named(GTK_STACK(stack), w, "SKY");
+	gtk_container_child_set(GTK_CONTAINER(stack), w, "title", "SKY", NULL);
+	w = radio_new();
+
 	gtk_stack_add_named(GTK_STACK(stack), w, "RADIO");
 	gtk_container_child_set(GTK_CONTAINER(stack), w, "title", "RADIO", NULL);
 
-	w = gtk_label_new("SKY");
-	gtk_stack_add_named(GTK_STACK(stack), w, "SKY");
-	gtk_container_child_set(GTK_CONTAINER(stack), w, "title", "SKY", NULL);
+	w = gui_create_chatlog();
+	gtk_stack_add_named(GTK_STACK(stack), w, "LOG");
+	gtk_container_child_set(GTK_CONTAINER(stack), w, "title", "LOG", NULL);
+
+
 
 
 	w = gui_create_specplot();
 	gtk_stack_add_named(GTK_STACK(stack), w, "SPEC");
 	gtk_container_child_set(GTK_CONTAINER(stack), w, "title", "SPEC", NULL);
-
 
 
 
