@@ -1,5 +1,5 @@
 /**
- * @file    client/include/net.h
+ * @file    widgets/util/desclabel.h
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -14,15 +14,11 @@
  *
  */
 
-#ifndef _CLIENT_INCLUDE_NET_H_
-#define _CLIENT_INCLUDE_NET_H_
+#ifndef _WIDGETS_UTIL_DESCLABEL_H_
+#define _WIDGETS_UTIL_DESCLABEL_H_
 
-#include <protocol.h>
-#include <net_common.h>
+#include <gtk/gtk.h>
 
-int net_client_init(void);
+GtkWidget *gui_create_desclabel(const gchar *text, const gchar *desc);
 
-
-
-#endif /* _CLIENT_INCLUDE_NET_H_ */
-
+#endif /* _WIDGETS_UTIL_DESCLABEL_H_ */

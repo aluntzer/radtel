@@ -17,10 +17,25 @@
 #include <glib.h>
 
 #include <protocol.h>
+#include <signals.h>
 
 
 
 void proc_cmd_capabilities(struct packet *pkt)
 {
-	g_message("Server sent capabilities: NOT IMPLEMENTED");
+	const struct capabilities *c;
+
+	
+	g_message("Server sent capabilities");
+
+	if (pkt->data_size != sizeof(struct capabilities)) {
+		g_message("\tcapabilities payload size mismatch %d != %d",
+			  sizeof(struct capabilities), pkt->data_size);
+		return;
+	}
+
+	c = (const struct capabilities *) pkt->data;
+	
+
+	sig_cmd_capabilities(c);
 }

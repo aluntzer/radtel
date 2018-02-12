@@ -1,5 +1,5 @@
 /**
- * @file    client/include/net.h
+ * @file    client/sig/sig_cmd_capabilities.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -14,15 +14,18 @@
  *
  */
 
-#ifndef _CLIENT_INCLUDE_NET_H_
-#define _CLIENT_INCLUDE_NET_H_
-
-#include <protocol.h>
-#include <net_common.h>
-
-int net_client_init(void);
+#include <glib.h>
+#include <glib-object.h>
+#include <signals.h>
 
 
+/**
+ * @brief emit cmd-capabilities signal
+ */
 
-#endif /* _CLIENT_INCLUDE_NET_H_ */
+void sig_cmd_capabilities(const struct capabilities *c)
+{
+	g_message("Emit signal \"cmd-capabilities\"");
 
+	g_signal_emit_by_name(sig_get_instance(), "cmd-capabilities", c);
+}

@@ -17,10 +17,11 @@
 #include <glib.h>
 
 #include <protocol.h>
-
+#include <signals.h>
 
 
 void proc_cmd_success(struct packet *pkt)
 {
 	g_message("Server sent last command success: NOT IMPLEMENTED");
+	sig_cmd_success();
 }

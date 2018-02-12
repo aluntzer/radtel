@@ -1,5 +1,5 @@
 /**
- * @file    client/include/net.h
+ * @file    client/include/signals.h
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -14,15 +14,18 @@
  *
  */
 
-#ifndef _CLIENT_INCLUDE_NET_H_
-#define _CLIENT_INCLUDE_NET_H_
+#ifndef _CLIENT_INCLUDE_SIGNALS_H_
+#define _CLIENT_INCLUDE_SIGNALS_H_
 
 #include <protocol.h>
-#include <net_common.h>
 
-int net_client_init(void);
+void sig_cmd_success(void);
+void sig_cmd_capabilities(const struct capabilities *c);
 
 
 
-#endif /* _CLIENT_INCLUDE_NET_H_ */
+gpointer *sig_get_instance(void);
+void sig_init(void);
+
+#endif /* _CLIENT_INCLUDE_SIGNALS_H_ */
 

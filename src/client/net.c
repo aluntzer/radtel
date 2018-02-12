@@ -12,10 +12,10 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * @brief server networking 
+ * @brief server networking
  *
  * @note we typically don't check for NULL pointers since we rely on glib to
- *	 work properly... 
+ *	 work properly...
  *
  * @todo master/slave
  */
@@ -103,7 +103,7 @@ static void net_buffer_ready(GObject *source_object, GAsyncResult *res,
 
 	struct packet *pkt = NULL;
 	struct con_data *c;
-	
+
 	GInputStream *istream;
 	GBufferedInputStream *bistream;
 
@@ -122,9 +122,9 @@ static void net_buffer_ready(GObject *source_object, GAsyncResult *res,
 		g_message("No new bytes in client stream, dropping connection");
 		goto error;
 	}
-	
+
 	c->nbytes = nbytes;
-	
+
 
 	/* enough bytes to hold a packet? */
 	if (nbytes < sizeof(struct packet)) {
@@ -141,7 +141,7 @@ static void net_buffer_ready(GObject *source_object, GAsyncResult *res,
 			  "%ld bytes.", pkt_size,
 			  g_buffered_input_stream_get_buffer_size(bistream));
 
-	
+
 		if (pkt_size < MAX_PAYLOAD_SIZE) {
 			g_message("Increasing input buffer to packet size\n");
 			g_buffered_input_stream_set_buffer_size(bistream,
@@ -160,17 +160,17 @@ static void net_buffer_ready(GObject *source_object, GAsyncResult *res,
 
 
 	/* we have a packet */
-	
+
 	/* the packet buffer will be released in the command processor */
 	pkt = g_malloc(pkt_size);
 
 	/* extract packet for command processing */
 	nbytes = g_input_stream_read(istream, (void *) pkt,
 				     pkt_size, NULL, &error);
-	
+
 	if (nbytes <= 0)
 		goto error;
-	
+
 	/* update stream byte count */
 	g_buffered_input_stream_peek_buffer(bistream, &c->nbytes);
 
@@ -188,7 +188,7 @@ static void net_buffer_ready(GObject *source_object, GAsyncResult *res,
 
 drop_pkt:
 	g_message("Error occured, dropping input buffer and packet.");
-	
+
 	g_free(pkt);
 
 	ret = g_buffered_input_stream_fill_finish(bistream, res, &error);
@@ -239,10 +239,10 @@ static void net_setup_recv(GSocketConnection *con)
 
 
 	server_con.con = con;
-	server_con.nbytes = 0;	
-	/* set up as buffered input stream with default size 
+	server_con.nbytes = 0;
+	/* set up as buffered input stream with default size
 	 * the server will tell us the maximum packet size on connect
-	 */	
+	 */
 
 	istream = g_io_stream_get_input_stream(G_IO_STREAM(con));
 	istream = g_buffered_input_stream_new(istream);
@@ -276,7 +276,7 @@ void net_send(const char *pkt, gsize nbytes)
 
 
 	g_message("Sending packet of %d bytes", nbytes);
-	
+
 	stream = G_IO_STREAM(server_con.con);
 	ostream = g_io_stream_get_output_stream(stream);
 
@@ -303,15 +303,46 @@ void net_send(const char *pkt, gsize nbytes)
 }
 
 
+#include <signals.h>
+
+void handle_cmd_success_event1(gpointer instance)
+{
+	g_message("Event \"cmd-success\" signalled (1)");
+}
+
+void handle_cmd_success_event2(gpointer instance)
+{
+	g_message("Event \"cmd-success\" signalled (2)");
+	cmd_capabilities();
+}
+
+void handle_cmd_capabilities_event(gpointer instance, const struct capabilities *c)
+{
+	g_message("Event \"cmd-capabilities\" signalled");
+
+	g_message("c->freq_min_hz %lu", c->freq_min_hz);
+	g_message("c->freq_max_hz %lu", c->freq_max_hz);
+	g_message("c->freq_inc_hz %d", c->freq_inc_hz);
+	g_message("c->bw_max_hz %d", c->bw_max_hz);
+	g_message("c->bw_max_div_lin %d", c->bw_max_div_lin);
+	g_message("c->bw_max_div_rad2 %d", c->bw_max_div_rad2);
+	g_message("c->bw_max_bins %d", c->bw_max_bins);
+	g_message("c->bw_max_bin_div_lin %d", c->bw_max_bin_div_lin);
+	g_message("c->bw_max_bin_div_rad2 %d", c->bw_max_bin_div_rad2);
+
+
+}
+
 /**
  * initialise client networking
+ *
+ * @note requires signal server to be initialised
  */
 
-int net_client(void)
+int net_client_init(void)
 {
 	gboolean ret;
 
-	GMainLoop *loop;
 	GSocketClient *client;
 	GSocketConnection *con;
 
@@ -319,10 +350,15 @@ int net_client(void)
 
 
 	client = g_socket_client_new();
-
-	con = g_socket_client_connect_to_host(client, (gchar*)"localhost",
+#if 0
+	con = g_socket_client_connect_to_host(client,
+					      (gchar*)"radtel.astro.univie.ac.at",
 					      2345, NULL, &error);
-		
+#else
+	con = g_socket_client_connect_to_host(client,
+					      (gchar*)"localhost",
+					      2345, NULL, &error);
+#endif
 	if (error) {
 		g_warning("%s\n", error->message);
 		g_clear_error(&error);
@@ -331,13 +367,31 @@ int net_client(void)
 
 	net_setup_recv(con);
 
-	loop = g_main_loop_new(NULL, FALSE);
 
 	g_message("Client started");
 
-	cmd_capabilities();
+	g_signal_connect(sig_get_instance(), "cmd-success",
+			  (GCallback) handle_cmd_success_event1,
+			  NULL);
 
-	g_main_loop_run(loop);
+	g_signal_connect(sig_get_instance(), "cmd-success",
+			  (GCallback) handle_cmd_success_event2,
+			  NULL);
+	g_signal_connect(sig_get_instance(), "cmd-capabilities",
+			  (GCallback) handle_cmd_capabilities_event,
+			  NULL);
+
+
+
+#if 0
+	cmd_capabilities();
+	cmd_recalibrate_pointing();
+	cmd_park_telescope();
+	cmd_moveto_azel(20., 20.);
+#endif
+
+	cmd_spec_acq_start(1420400000, 1420900000, 1, 1, 1, 2);
+
 
 
 	return 0;

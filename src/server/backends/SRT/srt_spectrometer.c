@@ -53,7 +53,8 @@ static struct {
 
 } srt = {.freq_inc_hz = 40000.0};
 
-
+/* XXX */
+struct spec_acq g_acq;
 
 
 /**
@@ -165,41 +166,119 @@ static int srt_drive_load_config(void)
 	return 0;
 }
 
+
+
+
 /**
- * @brief thread function that does all the spectrum readout work
+ * @brief acquire spectrea 
+ *
+ * @returns 0 on completion, 1 if more acquisitions are pending
  */
 
-static gpointer srt_spec_thread(gpointer data)
+static int srt_spec_acquire(void)
 {
 	gsize len;
 	gchar *response;
 	gchar *cmd;
 	int refdiv;
 
+
+	be_shared_comlink_acquire();
+
+	refdiv = 1420.4 * ( 1.0 / 0.04 ) + 0.5;
+
+	g_message(MSG "refdiv: %x", refdiv);
+	cmd = g_strdup_printf("%cfreq%c%c%c%c\n",0,
+			      ( refdiv >> 14 ) & 0xff,
+			      ( refdiv >>  6 ) & 0xff,
+			      ( refdiv       ) & 0x3f,
+			      0);
+
+	//g_message(MSG "CMD: %s", &cmd[1]);
+	/* give size explicitly, as command starts with '\0' */
+	be_shared_comlink_write(cmd, 10);
+
+	response = be_shared_comlink_read(&len);
+
+	be_shared_comlink_release();
+
+	g_message(MSG "response: (%d)", len);
+	g_free(response);
+
+	g_acq.acq_max--;
+
+	return g_acq.acq_max;
+}
+
+
+/**
+ * @brief thread function that does all the spectrum readout work
+ */
+
+static gpointer srt_spec_thread(gpointer data)
+{
+
 	while (1) {
-		be_shared_comlink_acquire();
 
-		refdiv = 1420.4 * ( 1.0 / 0.04 ) + 0.5;
+		g_mutex_lock(&mutex);
 
-		g_message(MSG "refdiv: %x", refdiv);
-		cmd = g_strdup_printf("%cfreq%c%c%c%c\n",0,
-				      ( refdiv >> 14 ) & 0xff,
-				      ( refdiv >>  6 ) & 0xff,
-				      ( refdiv       ) & 0x3f,
-				      0);
+		g_message(MSG "spectrum acquisition paused");
+		
+		g_cond_wait(&cond, &mutex);
 
-		//g_message(MSG "CMD: %s", &cmd[1]);
-		/* give size explicitly, as command starts with '\0' */
-		be_shared_comlink_write(cmd, 10);
+		g_message(MSG "spectrum acquisition running");
 
-		response = be_shared_comlink_read(&len);
+		while(srt_spec_acquire());
+	
 
-		be_shared_comlink_release();
-
-		g_message(MSG "response: (%d)", len);
-		g_free(response);
+		g_mutex_unlock(&mutex);
 	}
 
+}
+
+
+
+/**
+ * @brief start radio acquisition
+ *
+ * @returns -1 on error, 0 otherwise
+ */
+
+static int srt_spec_acquisition_start(struct spec_acq *acq)
+{
+	g_message(MSG "configuring spectrum acquisition to "
+		      "FREQ range: %g - %g MHz, BW div: %d, BIN div %d,"
+		      "STACK: %d, ACQ %d",
+		      acq->freq_start_hz / 1e6,
+		      acq->freq_stop_hz / 1e6,
+		      acq->bw_div,
+		      acq->bin_div,
+		      acq->n_stack,
+		      acq->acq_max);
+
+	memcpy(&g_acq, acq, sizeof(struct spec_acq));
+
+	if (g_mutex_trylock(&mutex)) {
+		g_cond_signal(&cond);
+		g_mutex_unlock(&mutex);
+	}
+
+	return 0;
+}
+
+
+
+/**
+ * @brief start spectrum acquisition 
+ */
+
+G_MODULE_EXPORT
+int be_spec_acq_start(struct spec_acq *acq)
+{
+	if (srt_spec_acquisition_start(acq))
+		return -1;
+
+	return 0;
 }
 
 

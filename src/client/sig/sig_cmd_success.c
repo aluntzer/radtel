@@ -1,5 +1,5 @@
 /**
- * @file    client/include/net.h
+ * @file    client/sig/sig_cmd_success.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -14,15 +14,17 @@
  *
  */
 
-#ifndef _CLIENT_INCLUDE_NET_H_
-#define _CLIENT_INCLUDE_NET_H_
+#include <glib.h>
+#include <glib-object.h>
+#include <signals.h>
 
-#include <protocol.h>
-#include <net_common.h>
+/**
+ * @brief emit cmd-success signal
+ */
 
-int net_client_init(void);
+void sig_cmd_success(void)
+{
+	g_message("Emit signal \"cmd-success\"");
 
-
-
-#endif /* _CLIENT_INCLUDE_NET_H_ */
-
+	g_signal_emit_by_name(sig_get_instance(), "cmd-success");
+}

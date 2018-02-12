@@ -9,15 +9,16 @@ PKG_CHECK_MODULES(server, "glib-2.0 gio-2.0 gmodule-2.0 gthread-2.0")
 AC_SUBST(server_CFLAGS)
 AC_SUBST(server_LIBS)
 
-PKG_CHECK_MODULES(client, "glib-2.0 gio-2.0")
+AC_SEARCH_LIBS([log10], [m])
+PKG_CHECK_MODULES(client, "glib-2.0 gio-2.0 gtk+-3.0")
 AC_SUBST(client_CFLAGS)
 AC_SUBST(client_LIBS)
-
 
 
 AC_OUTPUT([Makefile])
 AC_OUTPUT([src/Makefile])
 AC_OUTPUT([src/net/Makefile])
+AC_OUTPUT([src/util/Makefile])
 AC_OUTPUT([src/client/Makefile])
 AC_OUTPUT([src/server/Makefile])
 AC_OUTPUT([src/server/api/Makefile])

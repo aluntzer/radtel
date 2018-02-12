@@ -1,5 +1,5 @@
 /**
- * @file    client/include/net.h
+ * @file    widgets/util/std_grid.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -12,17 +12,27 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
+ * @brief create labels with descriptions
+ *
  */
 
-#ifndef _CLIENT_INCLUDE_NET_H_
-#define _CLIENT_INCLUDE_NET_H_
-
-#include <protocol.h>
-#include <net_common.h>
-
-int net_client_init(void);
+#include <default_grid.h>
 
 
+/**
+ * @brief create a new grid with default margins and spacings
+ */
 
-#endif /* _CLIENT_INCLUDE_NET_H_ */
+GtkWidget *new_default_grid(void)
+{
+	GtkWidget *w;
 
+
+	w = gtk_grid_new();
+
+	g_object_set(w, "margin", 18, NULL);
+	gtk_grid_set_column_spacing(GTK_GRID(w), 12);
+	gtk_grid_set_row_spacing(GTK_GRID(w), 6);
+
+	return w;
+}
