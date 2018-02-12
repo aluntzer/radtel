@@ -1,8 +1,10 @@
 SUBDIRS = backends api
 AM_CPPFLAGS = -I$(top_srcdir)/src/include -Iinclude
 AM_CFLAGS = $(server_CFLAGS)
-
 AM_LDFLAGS = -lm
+# force symbols from the .a that we absolutely need
+# it's a bit hackish, but who cares...
+AM_LDFLAGS += -u cmd_spec_data
 
 bin_PROGRAMS = server 
 

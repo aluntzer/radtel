@@ -1,0 +1,59 @@
+/**
+ * @file    net/cmds/cmd_spec_data.c
+ * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
+ *
+ * @copyright GPLv2
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ */
+
+#include <glib.h>
+#include <string.h>
+
+#include <cmd.h>
+
+
+/**
+ * @brief send spectral data
+ *
+ * @note the caller must take care to clean the spectral data supplied
+ */
+
+void cmd_spec_data(struct spec_data *s)
+{
+	gsize pkt_size;
+	gsize data_size;
+
+	struct packet *pkt;
+
+
+	data_size = sizeof(struct spec_data)
+		    + s->n * sizeof(sizeof(typeof(*s->spec)));
+
+	pkt_size = sizeof(struct packet) + data_size;
+
+	pkt = g_malloc(pkt_size);
+	
+	pkt->service   = CMD_SPEC_DATA;
+	pkt->data_size = data_size; 
+
+	memcpy(pkt->data, s, data_size);
+
+	pkt_set_data_crc16(pkt);
+	
+	pkt_hdr_to_net_order(pkt);
+	
+	g_message("Transmitting spectral data");
+
+	net_send((void *) pkt, pkt_size);
+
+	/* clean up packet */	
+	g_free(pkt);
+}

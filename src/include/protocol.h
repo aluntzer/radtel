@@ -25,6 +25,7 @@
 #include <payload/cmd_capabilities.h>
 #include <payload/cmd_moveto.h>
 #include <payload/cmd_spec_acq.h>
+#include <payload/cmd_spec_data.h>
 
 
 #define DEFAULT_PORT 1420
@@ -44,6 +45,7 @@
 #define CMD_RECAL_POINTING	0xa008	/* recalibrate telescope pointing */
 #define CMD_PARK_TELESCOPE	0xa009	/* park telescope */
 #define CMD_SPEC_ACQ_START	0xa00a	/* start spectrum acquisition */
+#define CMD_SPEC_DATA		0xa00b	/* spectral data */
 
 
 
