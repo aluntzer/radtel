@@ -1,4 +1,4 @@
-SUBDIRS = backends api
+SUBDIRS = ../util ../net backends api
 AM_CPPFLAGS = -I$(top_srcdir)/src/include -Iinclude
 AM_CFLAGS = $(server_CFLAGS)
 AM_LDFLAGS = -lm

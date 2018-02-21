@@ -1,3 +1,4 @@
+SUBDIRS = ../util ../net
 AM_CPPFLAGS  = -I$(top_srcdir)/src/include -Iinclude -Iwidgets/include
 AM_CFLAGS = $(client_CFLAGS)
 
