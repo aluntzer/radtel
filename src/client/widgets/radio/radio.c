@@ -219,7 +219,7 @@ static GtkWidget *gui_create_acq_res_ctrl(void)
 
 	w = gui_create_desclabel("Bandwith Resolution",
 				 "Configure the revceiver's acquisition mode\n"
-				 "Note that this configures the acquisition size from which spectrae are are assembled");
+				 "Note that this configures the acquisition size from which spectrae are assembled");
 	gtk_widget_set_halign(w, GTK_ALIGN_START);
 	gtk_widget_set_hexpand(w, TRUE);
 	gtk_grid_attach(GTK_GRID(grid), w, 0, 0, 1, 3);
@@ -232,7 +232,7 @@ static GtkWidget *gui_create_acq_res_ctrl(void)
 	snprintf(buf, 256,
 		 "<span foreground='#7AAA7E'"
 		 "	size = 'small'>"
-		 "Currently configured: bins: %d res %d khz"
+		 "Currently configured: bins: %d res %d kHz"
 		 "</span>",
 		 64, 500);
 
@@ -326,7 +326,6 @@ static GtkWidget *gui_create_ref_vrest_ctrl(void)
 	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(cb), "1667.359", "Hydroxyl Radical (OH) J=3/2 F=2-2");
 	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(cb), "1720.530", "Hydroxyl Radical (OH) J=3/2 F=2-1");
 
-	gtk_combo_box_set_active(GTK_COMBO_BOX(cb), 0);
 
 	w = gtk_entry_new();
 	g_object_bind_property(cb, "active-id", w, "text",
@@ -341,6 +340,7 @@ static GtkWidget *gui_create_ref_vrest_ctrl(void)
 	w = gtk_button_new_with_label("Set");
 	gtk_grid_attach(GTK_GRID(grid), w, 4, 1, 1, 1);
 
+	gtk_combo_box_set_active(GTK_COMBO_BOX(cb), 0);
 
 	return grid;
 }
