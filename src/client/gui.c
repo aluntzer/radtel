@@ -213,8 +213,12 @@ static GtkWidget *gui_create_stack_switcher(void)
 	w = sky_new();
 	gtk_stack_add_named(GTK_STACK(stack), w, "SKY");
 	gtk_container_child_set(GTK_CONTAINER(stack), w, "title", "SKY", NULL);
-	w = radio_new();
 
+	w = gtk_scrolled_window_new(NULL, NULL);
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(w),
+				       GTK_POLICY_AUTOMATIC,
+				       GTK_POLICY_AUTOMATIC);
+	gtk_container_add(GTK_CONTAINER(w), radio_new());
 	gtk_stack_add_named(GTK_STACK(stack), w, "RADIO");
 	gtk_container_child_set(GTK_CONTAINER(stack), w, "title", "RADIO", NULL);
 
