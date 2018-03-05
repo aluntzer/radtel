@@ -146,9 +146,9 @@ static void net_buffer_ready(GObject *source_object, GAsyncResult *res,
 			g_message("Increasing input buffer to packet size\n");
 			g_buffered_input_stream_set_buffer_size(bistream,
 								pkt_size);
+		} else {
+			goto drop_pkt;
 		}
-
-		goto drop_pkt;
 	}
 
 
@@ -185,7 +185,10 @@ static void net_buffer_ready(GObject *source_object, GAsyncResult *res,
 			  CRC16(pkt->data, pkt->data_size), pkt->data_crc16);
 	}
 
-
+	/* Attempt to drop the current packet at this point. Since there may
+	 * be more data in the pipeline, we may subsequently receive a couple
+	 * of invalid packets.
+	 */
 drop_pkt:
 	g_message("Error occured, dropping input buffer and packet.");
 
@@ -350,7 +353,7 @@ int net_client_init(void)
 
 
 	client = g_socket_client_new();
-#if 0
+#if 1
 	con = g_socket_client_connect_to_host(client,
 					      (gchar*)"radtel.astro.univie.ac.at",
 					      2345, NULL, &error);
@@ -390,7 +393,7 @@ int net_client_init(void)
 	cmd_moveto_azel(20., 20.);
 #endif
 
-	cmd_spec_acq_start(1420400000, 1420900000, 1, 1, 1, 2);
+	cmd_spec_acq_start(1420400000, 1420900000, 1, 1, 1, 50);
 
 
 
