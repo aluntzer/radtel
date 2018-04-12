@@ -616,19 +616,19 @@ static int srt_drive_get_el_motor_id(double cnts)
  * @brief command the drive motors via the shared com link and evaluate
  *	  the response
  *
- * @return 0 on success, -1 on timeout
+ * @return total number of counts + halfcounts driven (see also SRT MEMO #022)
  */
 
-static int srt_drive_motor_cmd_eval(gchar *cmd)
+static double srt_drive_motor_cmd_eval(gchar *cmd)
 {
-	int ret = 0;
-
 	gsize len;
 
 	gchar c  = '\0';
 	int cnts = 0;
 	int f1   = 0;
 	int f2   = 0;
+
+	double ret;
 
 	gchar *response;
 
@@ -647,17 +647,18 @@ static int srt_drive_motor_cmd_eval(gchar *cmd)
 	case 'M':
 		g_message(MSG "CMD OK, %d counts, f1: %d, motor: %d",
 			  cnts, f1, f2);
+		ret = (double) cnts + (double) f1 * 0.5;
 		break;
 
 	case 'T':
 		g_message(MSG "CMD TIMEOUT, %d counts, motor: %d, f2: %d",
 			  cnts, f1, f2);
-		ret = -1;
+		ret = 0.0;
 		break;
 	default:
-		/* issue cmd_drive_error(); */
+		/* XXX: issue cmd_drive_error(); */
 		g_message(MSG, "error in com link response: %s", response);
-		ret = -1;
+		ret = 0.0;
 		break;
 	}
 
@@ -672,27 +673,31 @@ static int srt_drive_motor_cmd_eval(gchar *cmd)
  * @brief command the drive motors
  */
 
-static void srt_drive_cmd_motors(int az_cnt, int el_cnt)
+static void srt_drive_cmd_motors(double *az_cnt, double *el_cnt)
 {
+	const int azc = (int) (*az_cnt);
+	const int elc = (int) (*el_cnt);
+
 	gchar *cmd;
 
-	g_message(MSG "rotating AZ/EL counts: %d %d", az_cnt, el_cnt);
 
-	if (az_cnt) {
-		/* azimuth drive */
+	g_message(MSG "rotating AZ/EL counts: %d %d", azc, elc);
+
+	/* azimuth drive */
+	if (azc) {
 		cmd = g_strdup_printf("move %d %d\n",
-				      srt_drive_get_az_motor_id(az_cnt),
-				      abs(az_cnt));
-		srt_drive_motor_cmd_eval(cmd);
+				      srt_drive_get_az_motor_id(azc),
+				      abs(azc));
+		(*az_cnt) = copysign(srt_drive_motor_cmd_eval(cmd), azc);
 		g_free(cmd);
 	}
 
-	if (el_cnt) {
-		/* elevation drive */
+	/* elevation drive */
+	if (elc) {
 		cmd = g_strdup_printf("move %d %d\n",
-				      srt_drive_get_el_motor_id(az_cnt),
-				      abs(el_cnt));
-		srt_drive_motor_cmd_eval(cmd);
+				      srt_drive_get_el_motor_id(elc),
+				      abs(elc));
+		(*el_cnt) = copysign(srt_drive_motor_cmd_eval(cmd), elc);
 		g_free(cmd);
 	}
 }
@@ -713,22 +718,20 @@ static int srt_drive_move(void)
 	double d_el_cnt;
 
 
-
-
 	/* absolute sensor counts */
 	az_cnt = srt_drive_az_counts(srt.pos.az_tgt);
 	el_cnt = srt_drive_cassi_el_counts(srt.pos.el_tgt);
 
 	/* delta counts rounded to nearest integer*/
-	d_az_cnt = nearbyint(srt_drive_adjust_counts(az_cnt - srt.pos.az_cnts));
-	d_el_cnt = nearbyint(srt_drive_adjust_counts(el_cnt - srt.pos.el_cnts));
+	d_az_cnt = (int) (srt_drive_adjust_counts(az_cnt - srt.pos.az_cnts));
+	d_el_cnt = (int) (srt_drive_adjust_counts(el_cnt - srt.pos.el_cnts));
 
 	/* already there? */
 	if (srt_drive_done(d_az_cnt, d_el_cnt))
 		return 0;
 
 	be_shared_comlink_acquire();
-	srt_drive_cmd_motors((int) d_az_cnt, (int) d_el_cnt);
+	srt_drive_cmd_motors(&d_az_cnt, &d_el_cnt);
 	be_shared_comlink_release();
 
 	/* update current sensor count */
