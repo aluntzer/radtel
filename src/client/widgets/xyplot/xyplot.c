@@ -35,6 +35,32 @@
 
 G_DEFINE_TYPE(XYPlot, xyplot, GTK_TYPE_DRAWING_AREA)
 
+#define BG_R	0.200
+#define BG_G	0.224
+#define BG_B	0.231
+
+#define BASE_R	0.7
+#define BASE_G	0.7
+#define BASE_B	0.7
+
+#define GRD_R	1.0
+#define GRD_G	1.0
+#define GRD_B	1.0
+
+#define LIN_R	0.0
+#define LIN_G	0.0
+#define LIN_B	1.0
+
+#define ST_R	0.804
+#define ST_G	0.592
+#define ST_B	0.047
+
+#define CRC_R	0.0
+#define CRC_G	1.0
+#define CRC_B	0.0
+
+
+
 
 
 static void xyplot_save_pdf(GtkWidget *widget, gpointer data)
@@ -58,10 +84,10 @@ static void xyplot_build_popup_menu(GtkWidget *widget)
 	p->menu = gtk_menu_new();
 
 	menuitem = gtk_menu_item_new_with_label("Export as PDF");
-	
+
 	g_signal_connect(menuitem, "activate",
 			 G_CALLBACK(xyplot_save_pdf), widget);
-	
+
 	gtk_menu_shell_append(GTK_MENU_SHELL(p->menu), menuitem);
 
 	gtk_widget_show_all(p->menu);
@@ -76,7 +102,7 @@ static void xyplot_popup_menu(GtkWidget *widget)
 {
 	XYPlot *p;
 
-	
+
 	p = XYPLOT(widget);
 
 	gtk_menu_popup_at_pointer(GTK_MENU(p->menu), NULL);
@@ -101,7 +127,7 @@ static PangoLayout *xyplot_create_layout(cairo_t *cr,
 
 	layout = pango_cairo_create_layout(cr);
 	pango_layout_set_markup(layout, buf, len);
-	
+
 	return layout;
 }
 
@@ -135,10 +161,10 @@ static void xyplot_draw_bg(cairo_t *cr)
 {
 	cairo_save(cr);
 
-	cairo_set_source_rgba(cr, 1.0, 1.0, 1.0, 1.0);
+	cairo_set_source_rgba(cr, BG_R, BG_G, BG_B, 1.0);
 	cairo_paint(cr);
 
-	cairo_set_source_rgba(cr,1.0, 1.0, 1.0, 1.0);
+	cairo_set_source_rgba(cr, BG_R, BG_G, BG_B, 1.0);
 	cairo_stroke(cr);
 
 	cairo_restore(cr);
@@ -359,8 +385,8 @@ static void xyplot_draw_ticks_x(GtkWidget *widget, cairo_t *cr,
 
 	p = XYPLOT(widget);
 
-	/* background to white */
-	cairo_set_source_rgba(cr, 0.0, 0.0, 0.0, 1.0);
+	/* background color */
+	cairo_set_source_rgba(cr, BASE_R, BASE_G, BASE_B, 1.0);
 
 	/* disable antialiasing for sharper line */
 	cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
@@ -416,8 +442,8 @@ static void xyplot_draw_ticks_y(GtkWidget *widget, cairo_t *cr,
 
 	p = XYPLOT(widget);
 
-	/* background to white */
-	cairo_set_source_rgba(cr, 0.0, 0.0, 0.0, 1.0);
+	/* background color */
+	cairo_set_source_rgba(cr, BASE_R, BASE_G, BASE_B, 1.0);
 
 	/* disable antialiasing for sharper line */
 	cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
@@ -583,8 +609,8 @@ static void xyplot_draw_grid_y(GtkWidget *widget, cairo_t *cr,
 
 	xyplot_transform_origin(widget, cr);
 
-	/* background to white */
-	cairo_set_source_rgba(cr, 0.0, 0.0, 0.0, 1.0);
+	/* background color */
+	cairo_set_source_rgba(cr, BASE_R, BASE_G, BASE_B, 1.0);
 
 	/* disable antialiasing for sharper line */
 	cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
@@ -642,8 +668,8 @@ static void xyplot_draw_grid_x(GtkWidget *widget, cairo_t *cr,
 
 	xyplot_transform_origin(widget, cr);
 
-	/* background to white */
-	cairo_set_source_rgba(cr, 0.0, 0.0, 0.0, 1.0);
+	/* background color */
+	cairo_set_source_rgba(cr, BASE_R, BASE_G, BASE_B, 1.0);
 
 	/* disable antialiasing for sharper line */
 	cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
@@ -700,11 +726,11 @@ static void xyplot_draw_stairs(GtkWidget *widget, cairo_t *cr)
 	cairo_save(cr);
 
 	xyplot_transform_origin(widget, cr);
-	
+
 	cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-	cairo_set_source_rgba(cr, 1.0, 0.0, 0.0, 1.0);
+	cairo_set_source_rgba(cr, ST_R, ST_G, ST_B, 1.0);
 	cairo_set_line_width(cr, 2.0);
-	
+
 	cairo_move_to(cr, (x[0] - (x[1] - x[0]) * 0.5 -  p->x_ax.min) * sx, 0.0);
 
 	cairo_rel_line_to(cr, 0.0, (y[0] - p->y_ax.min) * sy);
@@ -751,13 +777,13 @@ static void xyplot_draw_circles(GtkWidget *widget, cairo_t *cr)
 
 	xyplot_transform_origin(widget, cr);
 
-	cairo_set_source_rgba(cr, 0.0, 1.0, 0.0, 1.0);
-	
+	cairo_set_source_rgba(cr, CRC_R, CRC_G, CRC_B, 1.0);
+
         for(i = 0; i < p->data_len; i++) {
 		cairo_arc(cr, (x[i] - p->x_ax.min) * sx,
 			      (y[i] - p->y_ax.min) * sy,
 			       4.0, 0.0, 2.0 * M_PI);
-		cairo_fill(cr);    			    
+		cairo_fill(cr);
 	}
 
 	cairo_restore(cr);
@@ -793,11 +819,11 @@ static void xyplot_draw_lines(GtkWidget *widget, cairo_t *cr)
 	cairo_save(cr);
 
 	xyplot_transform_origin(widget, cr);
-	
+
 	cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-	cairo_set_source_rgba(cr, 0.0, 0.0, 1.0, 1.0);
+	cairo_set_source_rgba(cr, LIN_R, LIN_G, LIN_B, 1.0);
 	cairo_set_line_width(cr, 2.0);
-	
+
 	cairo_move_to(cr, (x[0] - p->x_ax.min) * sx, (y[0] - p->y_ax.min) * sy);
 
         for(i = 1; i < p->data_len; i++) {
@@ -805,9 +831,9 @@ static void xyplot_draw_lines(GtkWidget *widget, cairo_t *cr)
 				      (y[i] - y[i - 1]) * sy);
 	}
 
-	
+
 	cairo_stroke(cr);
-	
+
 	cairo_restore(cr);
 }
 
@@ -1033,14 +1059,17 @@ static void xyplot_plot(GtkWidget *widget)
 
 
 	p = XYPLOT(widget);
-	
-	
+
+
 	cr = cairo_create(p->plot);
 
 	width  = gtk_widget_get_allocated_width(widget);
 	height = gtk_widget_get_allocated_height(widget);
 
 	xyplot_draw_bg(cr);
+
+	/* base color */
+	cairo_set_source_rgba(cr, BASE_R, BASE_G, BASE_B, 1.0);
 
 	xyplot_draw_plot_frame(widget, cr, width, height);
 
@@ -1049,8 +1078,10 @@ static void xyplot_plot(GtkWidget *widget)
 		xyplot_draw_grid_x(widget, cr, width, height);
 		xyplot_draw_grid_y(widget, cr, width, height);
 		xyplot_draw_stairs(widget, cr);
+#if 0
 		xyplot_draw_lines(widget, cr);
 		xyplot_draw_circles(widget, cr);
+#endif
 		xyplot_draw_ticks_x(widget, cr, width, height);
 		xyplot_draw_ticks_y(widget, cr, width, height);
 		xyplot_draw_tickslabels_x(widget, cr, width, height);
@@ -1068,7 +1099,7 @@ static void xyplot_plot(GtkWidget *widget)
 	cairo_paint(cr);
 	cairo_destroy(cr);
 
-	
+
 	gtk_widget_queue_draw(widget);
 }
 
@@ -1106,10 +1137,10 @@ static gboolean xyplot_pointer_crossing_cb(GtkWidget *widget,
 	GdkDisplay *display;
 	GdkCursor  *cursor;
 
-       	
+
 	display = gtk_widget_get_display(widget);
 	window  = gtk_widget_get_window(widget);
-		
+
 
 	switch (event->type) {
 	case GDK_ENTER_NOTIFY:
@@ -1142,14 +1173,14 @@ static gboolean xyplot_motion_notify_event_cb(GtkWidget *widget,
 
 	int x0, y0;
 
-	gdouble x, y; 
+	gdouble x, y;
 	gdouble px, py;
-	
+
 	XYPlot *p;
 	cairo_t *cr;
 	PangoLayout *layout;
 	GdkDisplay *display;
-	
+
 
 	char buf[256];
 
@@ -1157,13 +1188,13 @@ static gboolean xyplot_motion_notify_event_cb(GtkWidget *widget,
 	if (!event->is_hint)
 		goto exit;
 
-	
+
 
 	p = XYPLOT(widget);
 
 	cr = cairo_create(p->render);
 
-	/* paint plot surface to render surface */	
+	/* paint plot surface to render surface */
 	cairo_set_source_surface(cr, p->plot, 0, 0);
 	cairo_paint(cr);
 	cairo_set_source_surface(cr, p->render, 0, 0);
@@ -1182,7 +1213,7 @@ static gboolean xyplot_motion_notify_event_cb(GtkWidget *widget,
 
 	if (py < 0.0)
 		goto cleanup;
-	
+
 	if (py > p->plot_h)
 		goto cleanup;
 
@@ -1191,10 +1222,9 @@ static gboolean xyplot_motion_notify_event_cb(GtkWidget *widget,
 	x = px / p->scale_x + p->x_ax.min;
 	y = py / p->scale_y + p->y_ax.min;
 
-	
+
 	snprintf(buf, ARRAY_SIZE(buf),
-		 "<span foreground='#000000'"
-		 "	background='#FFFFFF'"
+		 "<span foreground='#dddddd'"
 		 "	font_desc='Sans Bold 8'>"
 		 "<tt>"
 		 "X: %+2.2g\n"
@@ -1212,15 +1242,15 @@ static gboolean xyplot_motion_notify_event_cb(GtkWidget *widget,
 
 	/* left or right of cursor ? */
 	if (w < ((int) (p->plot_w - px) - off))
-		x0 = event->x + off; 
+		x0 = event->x + off;
 	else
-		x0 = event->x - w - off; 
-	
-	/* below or above cursor? */	
+		x0 = event->x - w - off;
+
+	/* below or above cursor? */
 	if (h > ((int) (p->plot_h - py) - off))
-		y0 = event->y; 
+		y0 = event->y;
 	else
-		y0 = event->y - off; 
+		y0 = event->y - off;
 
 
 	xyplot_render_layout(cr, layout, x0, y0);
@@ -1240,7 +1270,7 @@ exit:
 
 
 
-/** 
+/**
  * @brief button press events
  */
 
@@ -1263,7 +1293,7 @@ exit:
 }
 
 
-/** 
+/**
  * @brief create a new surface on configure event
  */
 
@@ -1282,7 +1312,7 @@ static gboolean xyplot_configure_event_cb(GtkWidget *widget,
 	if (!win)
 		goto exit;
 
-	
+
 	p = XYPLOT(widget);
 
 	if (p->render)
@@ -1294,10 +1324,10 @@ static gboolean xyplot_configure_event_cb(GtkWidget *widget,
 
 	p->plot = gdk_window_create_similar_surface(win, CAIRO_CONTENT_COLOR,
 						       width, height);
-	
+
 	p->render = gdk_window_create_similar_surface(win, CAIRO_CONTENT_COLOR,
 						       width, height);
-	
+
 	xyplot_plot(widget);
 
 exit:
@@ -1334,22 +1364,22 @@ static void xyplot_init(XYPlot *p)
 	/* connect the relevant signals of the DrawingArea */
 	g_signal_connect(G_OBJECT(&p->parent), "draw",
 			  G_CALLBACK(xyplot_draw_cb), NULL);
-	
+
 	g_signal_connect(G_OBJECT(&p->parent), "motion-notify-event",
 			 G_CALLBACK(xyplot_motion_notify_event_cb), NULL);
-	
+
 	g_signal_connect(G_OBJECT(&p->parent), "configure-event",
 			 G_CALLBACK(xyplot_configure_event_cb), NULL);
 
 	g_signal_connect (G_OBJECT(&p->parent), "enter-notify-event",
 			  G_CALLBACK (xyplot_pointer_crossing_cb), NULL);
-	
+
 	g_signal_connect (G_OBJECT(&p->parent), "leave-notify-event",
 			  G_CALLBACK (xyplot_pointer_crossing_cb), NULL);
-	
+
 	g_signal_connect (G_OBJECT(&p->parent), "button-press-event",
 			  G_CALLBACK (xyplot_button_press_cb), NULL);
-	
+
 
 	gtk_widget_set_events(GTK_WIDGET(&p->parent), GDK_EXPOSURE_MASK
 			       | GDK_LEAVE_NOTIFY_MASK
@@ -1411,7 +1441,7 @@ void xyplot_set_data(GtkWidget *widget, gdouble *x, gdouble *y, gsize size)
 
 	g_free(plot->data_x);
 	g_free(plot->data_y);
-	
+
 	plot->data_x    = x;
 	plot->data_y    = y;
 	plot->data_len = size;

@@ -28,14 +28,14 @@
 #define IS_RADIO_CLASS(klass)       (G_TYPE_CHECK_CLASS_TYPE((klass),  TYPE_RADIO))
 #define RADIO_GET_CLASS(obj)        (G_TYPE_INSTANCE_GET_CLASS((obj),  TYPE_RADIO, RadioClass))
 
-typedef struct _Radio      Radio;
-typedef struct _RadioClass RadioClass;
-typedef struct _RadioConfig  RadioConfig;
+typedef struct _Radio		Radio;
+typedef struct _RadioClass	RadioClass;
+typedef struct _RadioConfig	RadioPrivate;
 
 
 struct _Radio {
 	GtkBox parent;
-	RadioConfig *cfg;
+	RadioPrivate *cfg;
 };
 
 struct _RadioClass {

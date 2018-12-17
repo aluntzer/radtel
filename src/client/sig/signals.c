@@ -22,6 +22,19 @@
 static gpointer *sig_server;
 
 
+/**
+ * special signal to notify of any internal updates
+ */
+
+static void setup_sig_update(void)
+{
+	g_signal_new("update",
+		     G_TYPE_OBJECT, G_SIGNAL_RUN_FIRST,
+		     0, NULL, NULL, NULL,
+		     G_TYPE_NONE, 0);
+}
+
+
 static void setup_sig_cmd_success(void)
 {
 	g_signal_new("cmd-success",
@@ -59,6 +72,8 @@ gpointer *sig_get_instance(void)
 void sig_init(void)
 {
 	sig_server = g_object_new(G_TYPE_OBJECT, NULL);
+
+//	setup_sig_update();
 
 	setup_sig_cmd_success();
 	setup_sig_cmd_capabilities();

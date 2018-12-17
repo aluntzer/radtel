@@ -268,7 +268,7 @@ static void net_setup_recv(GSocketConnection *con)
  * @brief send a packet to the server
  */
 
-void net_send(const char *pkt, gsize nbytes)
+void net_send(const char *pkt, size_t nbytes)
 {
 	gssize ret;
 
@@ -281,6 +281,12 @@ void net_send(const char *pkt, gsize nbytes)
 	g_message("Sending packet of %d bytes", nbytes);
 
 	stream = G_IO_STREAM(server_con.con);
+
+	if (!stream) {
+		g_warning("Remote not connected, cannot send packet");
+		return;
+	}
+
 	ostream = g_io_stream_get_output_stream(stream);
 
 
@@ -316,25 +322,9 @@ void handle_cmd_success_event1(gpointer instance)
 void handle_cmd_success_event2(gpointer instance)
 {
 	g_message("Event \"cmd-success\" signalled (2)");
-	cmd_capabilities();
 }
 
-void handle_cmd_capabilities_event(gpointer instance, const struct capabilities *c)
-{
-	g_message("Event \"cmd-capabilities\" signalled");
 
-	g_message("c->freq_min_hz %lu", c->freq_min_hz);
-	g_message("c->freq_max_hz %lu", c->freq_max_hz);
-	g_message("c->freq_inc_hz %d", c->freq_inc_hz);
-	g_message("c->bw_max_hz %d", c->bw_max_hz);
-	g_message("c->bw_max_div_lin %d", c->bw_max_div_lin);
-	g_message("c->bw_max_div_rad2 %d", c->bw_max_div_rad2);
-	g_message("c->bw_max_bins %d", c->bw_max_bins);
-	g_message("c->bw_max_bin_div_lin %d", c->bw_max_bin_div_lin);
-	g_message("c->bw_max_bin_div_rad2 %d", c->bw_max_bin_div_rad2);
-
-
-}
 
 /**
  * initialise client networking
@@ -380,20 +370,30 @@ int net_client_init(void)
 	g_signal_connect(sig_get_instance(), "cmd-success",
 			  (GCallback) handle_cmd_success_event2,
 			  NULL);
-	g_signal_connect(sig_get_instance(), "cmd-capabilities",
-			  (GCallback) handle_cmd_capabilities_event,
-			  NULL);
 
-
-
-#if 0
 	cmd_capabilities();
-	cmd_recalibrate_pointing();
-	cmd_park_telescope();
-	cmd_moveto_azel(20., 20.);
+	cmd_spec_acq_start(1420100000 - 20000*10, 1420800000 + 20000 , 0, 0, 1, 5);
+	cmd_spec_acq_start(1420100000 - 20000*10, 1420800000 + 20000 , 0, 0, 1, 5);
+
+
+#if 1
+//	cmd_recalibrate_pointing();
+//	cmd_park_telescope();
+
+		//cmd_moveto_azel(20., 20.);
+#if 0
+	while (1) {
+		cmd_moveto_azel(20., 20.);
+		sleep(3);
+		cmd_moveto_azel(18., 20.);
+		cmd_moveto_azel(17., 20.);
+		cmd_moveto_azel(16., 20.);
+		cmd_moveto_azel(21., 20.);
+		cmd_moveto_azel(15., 20.);
+	}
+#endif
 #endif
 
-	cmd_spec_acq_start(1420400000, 1420900000, 1, 1, 1, 50);
 
 
 
