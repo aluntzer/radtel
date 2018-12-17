@@ -1008,7 +1008,7 @@ static int srt_spec_acquire(struct observation *obs)
 
 	s->freq_min_hz = (typeof(s->freq_min_hz)) acs[0].fq[acs[0].offset];
 	s->freq_max_hz = (typeof(s->freq_max_hz)) acs[n - 1].fq[acs[n - 1].offset + acs[n - 1].nbins];
-	s->freq_inc_hz = (typeof(s->freq_inc_hz)) srt_get_bin_bw(obs->acq.bin_div);
+	s->freq_inc_hz = (typeof(s->freq_inc_hz)) srt_get_bin_bw(obs->acq.bw_div);
 
 
 	/* construct final spectrum from the selected bins of each raw spectrum */

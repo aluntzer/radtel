@@ -47,10 +47,10 @@ void ack_capabilities(void)
 
 
 	/* now fill capabilites somehow (would call backend plugin here) */
-	c->freq_min_hz		= 137000000000;
-	c->freq_max_hz		= 180000000000;
-	c->freq_inc_hz		= 400000;
-	c->bw_max_hz		= 5000000;
+	c->freq_min_hz		= 1370000000;
+	c->freq_max_hz		= 1800000000;
+	c->freq_inc_hz		= 40000;
+	c->bw_max_hz		= 500000;
 	c->bw_max_div_lin	= 0;
 	c->bw_max_div_rad2	= 2;
 	c->bw_max_bins		= 64;
