@@ -13,4 +13,6 @@ libprotocmd_a_SOURCES = protocol.c \
 			cmds/cmd_moveto_azel.c \
 			cmds/cmd_spec_acq_start.c \
 			cmds/cmd_spec_data.c \
-			acks/ack_capabilities.c
+			cmds/cmd_getpos_azel.c \
+			acks/ack_capabilities.c \
+			acks/ack_getpos_azel.c

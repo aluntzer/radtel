@@ -373,8 +373,8 @@ int net_client_init(void)
 
 	cmd_capabilities();
 	cmd_spec_acq_start(1420100000 - 20000*10, 1420800000 + 20000 , 0, 0, 1, 5);
-	cmd_spec_acq_start(1420100000 - 20000*10, 1420800000 + 20000 , 0, 0, 1, 5);
 
+	cmd_getpos_azel();
 
 #if 1
 //	cmd_recalibrate_pointing();

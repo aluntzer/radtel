@@ -1,5 +1,5 @@
 /**
- * @file    client/include/cmd_proc.h
+ * @file    net/cmds/cmd_getpos_azel.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -14,20 +14,32 @@
  *
  */
 
-#ifndef _CLIENT_INCLUDE_CMD_PROC_H_
-#define _CLIENT_INCLUDE_CMD_PROC_H_
+#include <glib.h>
 
-#include <protocol.h>
-
-void process_cmd_pkt(struct packet *pkt);
-
-void proc_cmd_invalid_pkt(void);
-void proc_cmd_capabilities(struct packet *pkt);
-void proc_cmd_success(void);
-void proc_cmd_fail(void);
-void proc_cmd_spec_data(struct packet *pkt);
-void proc_cmd_getpos_azel(struct packet *pkt);
+#include <cmd.h>
 
 
-#endif /* _CLIENT_INCLUDE_CMD_PROC_H_ */
+void cmd_getpos_azel(void)
+{
+	gsize pkt_size;
 
+	struct packet *pkt;
+
+
+	pkt_size = sizeof(struct packet);
+
+	pkt = g_malloc(pkt_size);
+	
+	pkt->service   = CMD_GETPOS_AZEL;
+	pkt->data_size = 0; 
+
+	pkt_set_data_crc16(pkt);
+	
+	pkt_hdr_to_net_order(pkt);
+	
+	g_message("Requesting telescope AZEL");
+	net_send((void *) pkt, pkt_size);
+
+	/* clean up */	
+	g_free(pkt);
+}

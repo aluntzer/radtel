@@ -60,7 +60,13 @@ static void setup_sig_cmd_spec_data(void)
 		     G_TYPE_NONE, 1, G_TYPE_POINTER);
 }
 
-
+static void setup_sig_cmd_getpos_azel(void)
+{
+	g_signal_new("cmd-getpos-azel",
+		     G_TYPE_OBJECT, G_SIGNAL_RUN_FIRST,
+		     0, NULL, NULL, NULL,
+		     G_TYPE_NONE, 1, G_TYPE_POINTER);
+}
 
 
 gpointer *sig_get_instance(void)
@@ -78,4 +84,5 @@ void sig_init(void)
 	setup_sig_cmd_success();
 	setup_sig_cmd_capabilities();
 	setup_sig_cmd_spec_data();
+	setup_sig_cmd_getpos_azel();
 }

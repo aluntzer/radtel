@@ -1,5 +1,5 @@
 /**
- * @file    client/include/cmd_proc.h
+ * @file    client/proc/proc_cmd_getpos_azel.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -14,20 +14,27 @@
  *
  */
 
-#ifndef _CLIENT_INCLUDE_CMD_PROC_H_
-#define _CLIENT_INCLUDE_CMD_PROC_H_
+#include <glib.h>
+#include <string.h>
 
 #include <protocol.h>
-
-void process_cmd_pkt(struct packet *pkt);
-
-void proc_cmd_invalid_pkt(void);
-void proc_cmd_capabilities(struct packet *pkt);
-void proc_cmd_success(void);
-void proc_cmd_fail(void);
-void proc_cmd_spec_data(struct packet *pkt);
-void proc_cmd_getpos_azel(struct packet *pkt);
+#include <signals.h>
 
 
-#endif /* _CLIENT_INCLUDE_CMD_PROC_H_ */
 
+void proc_cmd_getpos_azel(struct packet *pkt)
+{
+	struct getpos *pos;
+
+
+	g_message("Server sent spectral data");
+
+	pos = g_malloc(pkt->data_size);
+
+	memcpy(pos, pkt->data, pkt->data_size);
+
+	sig_cmd_getpos_azel(pos);
+
+	/* cleanup */
+	g_free(pos);
+}

@@ -14,14 +14,14 @@
  *
  */
 
-#ifndef _INCLUDE_CMD_H_
-#define _INCLUDE_CMD_H_
+#ifndef _INCLUDE_ACK_H_
+#define _INCLUDE_ACK_H_
 
 #include <protocol.h>
 
 void ack_invalid_pkt(void);
 void ack_capabilities(void);
+void ack_getpos_azel(struct getpos *pos);
 
-
-#endif /* _INCLUDE_CMD_H_ */
+#endif /* _INCLUDE_ACK_H_ */
 

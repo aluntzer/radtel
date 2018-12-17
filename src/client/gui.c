@@ -51,6 +51,16 @@ static gboolean gui_spec_data_cb(gpointer instance, struct spec_data *s, gpointe
 }
 
 
+static gboolean gui_getpos_azel_cb(gpointer instance, struct getpos *pos, gpointer *data)
+{
+
+	g_message("getpos azel CB! %g %g", (gdouble) pos->az_arcsec / 3600.0,
+					   (gdouble) pos->el_arcsec / 3600.0);
+
+	return TRUE;
+}
+
+
 
 static GtkWidget *gui_create_specplot(void)
 {
@@ -93,6 +103,10 @@ static GtkWidget *gui_create_specplot(void)
 			  (GCallback) gui_spec_data_cb,
 			  (gpointer) plot);
 
+	/*** XXX POSITION DUMMY ***/
+	g_signal_connect(sig_get_instance(), "cmd-getpos-azel",
+			  (GCallback) gui_getpos_azel_cb,
+			  (gpointer) NULL);
 	return plot;
 }
 

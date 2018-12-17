@@ -74,7 +74,9 @@ static struct {
 					 */
 	double pushrod_collar;		/* pushrod collar offset */
 	double pushrod_horizon_angle;	/* angle of the rigid arm at horizon */
-	double pushrod_counts;		/* sensor count per inch of pushrod movement */
+	double pushrod_counts;		/* sensor count per inch of pushrod
+					 * movement
+					 */
 
 	enum {AZ_CENTER_NORTH, AZ_CENTER_SOUTH} az_center;
 
@@ -246,7 +248,8 @@ static void srt_drive_load_keys(GKeyFile *kf)
 	tmp = g_key_file_get_double_list(kf, model,
 					   "az_axis_tilt", &len, &error);
 	if (len != 2)
-		g_error(MSG "Invalid number of azimuth tilt corrections configured");
+		g_error(MSG "Invalid number of azimuth tilt corrections "
+			     "configured");
 	if (error)
 		g_error(error->message);
 
@@ -936,6 +939,20 @@ int be_moveto_azel(double az, double el)
 
 
 /**
+ * @brief get telescope azimuth and elevation
+ */
+
+G_MODULE_EXPORT
+int be_getpos_azel(double *az, double *el)
+{
+	(*az) = srt_drive_az_to_telescope_ref(srt.pos.az_cur);
+	(*el) = srt_drive_el_to_telescope_ref(srt.pos.el_cur);
+
+	return 0;
+}
+
+
+/**
  * @brief extra initialisation function
  *
  * @note if a thread is created in g_module_check_init(), the loader appears
@@ -968,7 +985,8 @@ const gchar *g_module_check_init(void)
         g_message(MSG "initialising module");
 
 	if (srt_drive_load_config())
-		g_warning(MSG "Error loading module configuration, this plugin may not function properly.");
+		g_warning(MSG "Error loading module configuration, "
+			      "this plugin may not function properly.");
 
 	srt_drive_cassi_set_pushdrod_zero_len_counts();
 	srt_drive_set_az_center();

@@ -55,6 +55,10 @@ void process_cmd_pkt(struct packet *pkt)
 		proc_cmd_spec_data(pkt);
 		break;
 
+	case CMD_GETPOS_AZEL:
+		proc_cmd_getpos_azel(pkt);
+		break;
+
 	default:
 		g_message("Service command %x not understood\n", pkt->service);
 		break;

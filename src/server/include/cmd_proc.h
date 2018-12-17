@@ -28,6 +28,7 @@ void proc_cmd_moveto_azel(struct packet *pkt);
 void proc_cmd_recalibrate_pointing(void);
 void proc_cmd_park_telescope(void);
 void proc_cmd_spec_acq_start(struct packet *pkt);
+void proc_cmd_getpos_azel(void);
 
 #endif /* _SERVER_INCLUDE_CMD_PROC_H_ */
 

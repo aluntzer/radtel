@@ -1,0 +1,98 @@
+
+A quick and dirty reminder of how to create new server/client commands and
+acknowledgements:
+
+
+GENERAL:
+=======
+
+* define the command payload in include/payload, e.g. include/payload/cmd_getpos.h
+  and add the proper payload structure
+
+
+* define command identifier in include/protocol.h, e.g.
+	#define CMD_GETPOS_AZEL         0xa00c  /* get azimuth/elevation */
+  and add an include for the payload (if any), e.g.
+  	#include <payload/cmd_getpos.h>
+
+  NOTE: cmd/acks of the same type share the identifier
+
+
+* define a command function in include/cmd.h, e.g.
+	void cmd_getpos_azel(void);
+
+  and optionally a acknowledge function in include/ack.h, e.g.
+	void ack_getpos_azel(struct getpos *pos);
+
+* create the appropriate ack/cmd functions to handle the network transfer, e.g.
+	net/acks/ack_getpos_azel.c
+	net/cmds/cmd_getpos_azel.c
+
+  and add the files to net/Makefile.am
+
+
+
+SERVER SIDE:
+============
+
+* if a cmd/ack requires a call to a backend, create it first if it does not
+  exist, e.g. add
+	int be_getpos_azel(double *az, double *el);
+  to
+	server/include/backend.h
+
+* create the backend wrapper and setup functions, e.g.
+	server/api/be_getpos_azel.c
+  and add the file to server/api/Makefile.am
+
+* add the setup function to server/backend.c
+
+* implement the function in the desired backends, e.g.
+	server/backends/SRT/srt_drive.c
+
+* define the server-side command processing function, e.g.
+	void proc_cmd_getpos_azel(void)
+  in
+	server/include/cmd_proc.h
+  
+* implement the function in
+	server/proc/proc_cmd_getpos_azel.c
+
+  and add the file to server/Makefile.am
+
+* finally, add the call to the command processing function to
+	server/cmd_proc.c
+
+
+
+CLIENT SIDE:
+============
+
+
+* in order to implement cmd/ack processing on the client, follow the same steps
+  as for the server in the client subdirectory
+
+* since data in the client are passed via GLIB signalling, you may want to
+  create a new signal for your command/ack data
+
+* define a new signal emission function that may be called from the
+  corresponding command processing function (e.g. proc_cmd_getpos_azel())
+  in client/include/signals.h:
+
+	void sig_cmd_getpos_azel(const struct getpos *pos);
+
+* implement the signal emission function in client/sig/sig_cmd_getpos_azel.c
+
+* create a signal setup function in client/sig/signals.c and use
+	g_signal_connect(sig_get_instance(), "cmd-getpos-azel", ...);
+
+  to connect to the signal
+
+
+
+  
+
+ 
+
+
+

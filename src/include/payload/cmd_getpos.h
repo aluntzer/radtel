@@ -1,5 +1,5 @@
 /**
- * @file    client/include/cmd_proc.h
+ * @file    include/payload/cmd_getpos.h
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -12,22 +12,23 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
+ * @brief payload structure for CMD_GETPOS_*
+ *
  */
 
-#ifndef _CLIENT_INCLUDE_CMD_PROC_H_
-#define _CLIENT_INCLUDE_CMD_PROC_H_
-
-#include <protocol.h>
-
-void process_cmd_pkt(struct packet *pkt);
-
-void proc_cmd_invalid_pkt(void);
-void proc_cmd_capabilities(struct packet *pkt);
-void proc_cmd_success(void);
-void proc_cmd_fail(void);
-void proc_cmd_spec_data(struct packet *pkt);
-void proc_cmd_getpos_azel(struct packet *pkt);
+#ifndef _INCLUDE_PAYLOAD_CMD_GETPOS_H_
+#define _INCLUDE_PAYLOAD_CMD_GETPOS_H_
 
 
-#endif /* _CLIENT_INCLUDE_CMD_PROC_H_ */
+/**
+ * CMD_GETPOS_* packet payload structure
+ */
 
+struct getpos {
+	int32_t az_arcsec;
+	int32_t el_arcsec;
+};
+
+
+
+#endif /* _INCLUDE_PAYLOAD_CMD_GETPOS_H_ */

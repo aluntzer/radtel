@@ -1,5 +1,5 @@
 /**
- * @file    client/include/cmd_proc.h
+ * @file    server/proc/proc_cmd_getpos_azel.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -14,20 +14,31 @@
  *
  */
 
-#ifndef _CLIENT_INCLUDE_CMD_PROC_H_
-#define _CLIENT_INCLUDE_CMD_PROC_H_
+#include <glib.h>
 
-#include <protocol.h>
-
-void process_cmd_pkt(struct packet *pkt);
-
-void proc_cmd_invalid_pkt(void);
-void proc_cmd_capabilities(struct packet *pkt);
-void proc_cmd_success(void);
-void proc_cmd_fail(void);
-void proc_cmd_spec_data(struct packet *pkt);
-void proc_cmd_getpos_azel(struct packet *pkt);
+#include <cmd.h>
+#include <ack.h>
+#include <backend.h>
 
 
-#endif /* _CLIENT_INCLUDE_CMD_PROC_H_ */
+void proc_cmd_getpos_azel(void)
+{
+	double az;
+	double el;
 
+	struct getpos pos;
+
+
+	g_message("Client requested AZEL, acknowledging");
+
+	
+	if (be_getpos_azel(&az, &el)) {
+		cmd_fail();
+		return;
+	}
+
+	pos.az_arcsec = (typeof(pos.az_arcsec)) (az * 3600.0);
+	pos.el_arcsec = (typeof(pos.el_arcsec)) (el * 3600.0);
+	
+	ack_getpos_azel(&pos);
+}

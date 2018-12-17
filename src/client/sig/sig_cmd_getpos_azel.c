@@ -1,5 +1,5 @@
 /**
- * @file    client/include/cmd_proc.h
+ * @file    client/sig/sig_cmd_getpos_azel.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -14,20 +14,18 @@
  *
  */
 
-#ifndef _CLIENT_INCLUDE_CMD_PROC_H_
-#define _CLIENT_INCLUDE_CMD_PROC_H_
-
-#include <protocol.h>
-
-void process_cmd_pkt(struct packet *pkt);
-
-void proc_cmd_invalid_pkt(void);
-void proc_cmd_capabilities(struct packet *pkt);
-void proc_cmd_success(void);
-void proc_cmd_fail(void);
-void proc_cmd_spec_data(struct packet *pkt);
-void proc_cmd_getpos_azel(struct packet *pkt);
+#include <glib.h>
+#include <glib-object.h>
+#include <signals.h>
 
 
-#endif /* _CLIENT_INCLUDE_CMD_PROC_H_ */
+/**
+ * @brief emit cmd-getpos-azel signal
+ */
 
+void sig_cmd_getpos_azel(const struct getpos *pos)
+{
+	g_message("Emit signal \"cmd-getpos-azel\"");
+
+	g_signal_emit_by_name(sig_get_instance(), "cmd-getpos-azel", pos);
+}
