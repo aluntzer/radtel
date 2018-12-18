@@ -89,12 +89,14 @@ static void drop_connection(struct con_data *c)
  *	 we'll just record the amount of bytes in the stream and check
  *	whether it changed or not. if delta == 0 -> disconnected
  *
+ * XXX after fixing up all bugs, this function has really nasty jump logic and
+ *     needs rework asap
  */
 
 static void net_buffer_ready(GObject *source_object, GAsyncResult *res,
 			     gpointer user_data)
 {
-	gsize nbytes = 0;
+	gsize nbytes;
 	gsize pkt_size;
 
 	gssize ret;
@@ -115,7 +117,7 @@ static void net_buffer_ready(GObject *source_object, GAsyncResult *res,
 	istream  = G_INPUT_STREAM(source_object);
 	bistream = G_BUFFERED_INPUT_STREAM(source_object);
 
-
+pending:
 	buf = g_buffered_input_stream_peek_buffer(bistream, &nbytes);
 
 	if (nbytes == c->nbytes) {
@@ -141,11 +143,11 @@ static void net_buffer_ready(GObject *source_object, GAsyncResult *res,
 			  "%ld bytes.", pkt_size,
 			  g_buffered_input_stream_get_buffer_size(bistream));
 
-
 		if (pkt_size < MAX_PAYLOAD_SIZE) {
 			g_message("Increasing input buffer to packet size\n");
 			g_buffered_input_stream_set_buffer_size(bistream,
 								pkt_size);
+			goto exit;
 		} else {
 			goto drop_pkt;
 		}
@@ -171,24 +173,33 @@ static void net_buffer_ready(GObject *source_object, GAsyncResult *res,
 	if (nbytes <= 0)
 		goto error;
 
+#if 0
 	/* update stream byte count */
 	g_buffered_input_stream_peek_buffer(bistream, &c->nbytes);
-
+#endif
 	pkt_hdr_to_host_order(pkt);
 
 	/* verify packet payload */
 	if (CRC16(pkt->data, pkt->data_size) == pkt->data_crc16)  {
 		process_cmd_pkt(pkt);
+		c->nbytes = 0;
+		g_buffered_input_stream_peek_buffer(bistream, &nbytes);
+		if (nbytes)
+			goto pending;
+
 		goto exit;
+
 	} else {
 		g_message("Invalid CRC16 %x %x",
 			  CRC16(pkt->data, pkt->data_size), pkt->data_crc16);
 	}
 
+
 	/* Attempt to drop the current packet at this point. Since there may
 	 * be more data in the pipeline, we may subsequently receive a couple
 	 * of invalid packets.
 	 */
+
 drop_pkt:
 	g_message("Error occured, dropping input buffer and packet.");
 
@@ -205,6 +216,7 @@ drop_pkt:
 	cmd_invalid_pkt();
 
 exit:
+
 	/* continue buffering */
 	g_buffered_input_stream_fill_async(bistream,
 			   g_buffered_input_stream_get_buffer_size(bistream),
@@ -223,9 +235,7 @@ error:
 	}
 	drop_connection(c);
 	return;
-
 }
-
 
 
 /**
@@ -372,9 +382,13 @@ int net_client_init(void)
 			  NULL);
 
 	cmd_capabilities();
-	cmd_spec_acq_start(1420100000 - 20000*10, 1420800000 + 20000 , 0, 0, 1, 5);
-
 	cmd_getpos_azel();
+	cmd_capabilities();
+	cmd_getpos_azel();
+	cmd_capabilities();
+//	cmd_spec_acq_start(1420100000 - 20000*10, 1420800000 + 20000 , 0, 0, 1, 5);
+
+//	cmd_getpos_azel();
 
 #if 1
 //	cmd_recalibrate_pointing();
