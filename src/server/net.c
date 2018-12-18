@@ -12,10 +12,10 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * @brief server networking 
+ * @brief server networking
  *
  * @note we typically don't check for NULL pointers since we rely on glib to
- *	 work properly... 
+ *	 work properly...
  *
  * @todo master/slave
  */
@@ -79,7 +79,7 @@ static void net_send_internal(struct con_data *c, const char *pkt, gsize nbytes)
 	GOutputStream *ostream;
 
 
-	
+
 	stream = G_IO_STREAM(c->con);
 	ostream = g_io_stream_get_output_stream(stream);
 
@@ -120,6 +120,8 @@ static void net_send_internal(struct con_data *c, const char *pkt, gsize nbytes)
  *	 we'll just record the amount of bytes in the stream and check
  *	whether it changed or not. if delta == 0 -> disconnected
  *
+ * XXX after fixing up all bugs, this function has really nasty jump logic and
+ *     needs rework asap
  */
 
 static void net_buffer_ready(GObject *source_object, GAsyncResult *res,
@@ -134,7 +136,7 @@ static void net_buffer_ready(GObject *source_object, GAsyncResult *res,
 
 	struct packet *pkt = NULL;
 	struct con_data *c;
-	
+
 	GInputStream *istream;
 	GBufferedInputStream *bistream;
 
@@ -146,7 +148,7 @@ static void net_buffer_ready(GObject *source_object, GAsyncResult *res,
 	istream  = G_INPUT_STREAM(source_object);
 	bistream = G_BUFFERED_INPUT_STREAM(source_object);
 
-
+pending:
 	buf = g_buffered_input_stream_peek_buffer(bistream, &nbytes);
 
 	if (nbytes == c->nbytes) {
@@ -155,7 +157,7 @@ static void net_buffer_ready(GObject *source_object, GAsyncResult *res,
 	}
 
 	c->nbytes = nbytes;
-	
+
 
 	/* enough bytes to hold a packet? */
 	if (nbytes < sizeof(struct packet)) {
@@ -189,26 +191,33 @@ static void net_buffer_ready(GObject *source_object, GAsyncResult *res,
 
 
 	/* we have a packet */
-	
+
 	/* the packet buffer will be released in the command processor */
 	pkt = g_malloc(pkt_size);
 
 	/* extract packet for command processing */
 	nbytes = g_input_stream_read(istream, (void *) pkt,
 				     pkt_size, NULL, &error);
-	
+
 	if (nbytes <= 0)
 		goto error;
-	
+
+#if 0
 	/* update stream byte count */
 	g_buffered_input_stream_peek_buffer(bistream, &c->nbytes);
-
+#endif
 	pkt_hdr_to_host_order(pkt);
 
 	/* verify packet payload */
 	if (CRC16(pkt->data, pkt->data_size) == pkt->data_crc16)  {
 		process_cmd_pkt(pkt);
+		c->nbytes = 0;
+		g_buffered_input_stream_peek_buffer(bistream, &nbytes);
+		if (nbytes)
+			goto pending;
+
 		goto exit;
+
 	} else {
 		g_message("Invalid CRC16 %x %x",
 			  CRC16(pkt->data, pkt->data_size), pkt->data_crc16);
@@ -217,7 +226,7 @@ static void net_buffer_ready(GObject *source_object, GAsyncResult *res,
 
 drop_pkt:
 	g_message("Error occured, dropping input buffer and packet.");
-	
+
 	g_free(pkt);
 
 	ret = g_buffered_input_stream_fill_finish(bistream, res, &error);
@@ -231,6 +240,7 @@ drop_pkt:
 	cmd_invalid_pkt();
 
 exit:
+
 	/* continue buffering */
 	g_buffered_input_stream_fill_async(bistream,
 			   g_buffered_input_stream_get_buffer_size(bistream),
@@ -268,14 +278,14 @@ static gboolean net_incoming(GSocketService    *service,
 	GBufferedInputStream *bistream;
 
 	struct con_data *c;
-       
+
 
 	g_message("received incoming connection");
 
-	
+
 	c = g_malloc0(sizeof(struct con_data));
 
-	/* set up as buffered input stream */ 
+	/* set up as buffered input stream */
 	istream = g_io_stream_get_input_stream(G_IO_STREAM(connection));
 	istream = g_buffered_input_stream_new(istream);
 
@@ -307,7 +317,7 @@ void net_send(const char *pkt, gsize nbytes)
 {
 
 	GList *elem;
-	
+
 	struct con_data *item;
 
 
