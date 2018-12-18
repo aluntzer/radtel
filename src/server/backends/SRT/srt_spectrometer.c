@@ -120,9 +120,10 @@ struct observation {
 
 /* let's make our lives easier... */
 static GThread *thread;
-static GCond    cond;
-static GMutex   mutex;
-static GRWLock  rwlock;
+static GCond	acq_cond;
+static GMutex   acq_lock;
+static GMutex   acq_abort;
+static GRWLock  obs_rwlock;
 
 static struct observation g_obs;
 
@@ -966,12 +967,12 @@ static int srt_spec_acquire(struct observation *obs)
 	const struct acq_strategy *acs = obs->acs;
 	const gsize n                  = obs->n_acs;
 
-	guint16 **raw;
+	guint16 **raw = NULL;
 	gsize    len;
 	gsize    total = 0;
 
 
-	struct spec_data *s;
+	struct spec_data *s = NULL;
 
 	typeof(*s->spec) *p;
 
@@ -986,6 +987,14 @@ static int srt_spec_acquire(struct observation *obs)
 
 
 	for (i = 0; i < n; i++) {
+
+		if (!g_mutex_trylock(&acq_abort)) {
+			g_message(MSG "acquisition loop abort indicated\n");
+			goto cleanup;
+		}
+
+		g_mutex_unlock(&acq_abort);
+
 		raw[i] = srt_spec_acquire_raw(acs[i].refdiv,
 					      obs->acq.bw_div, &len);
 
@@ -1091,22 +1100,22 @@ static gpointer srt_spec_thread(gpointer data)
 
 	while (1) {
 
-		g_mutex_lock(&mutex);
+		g_mutex_lock(&acq_lock);
 
 		g_message(MSG "spectrum acquisition paused");
 
-		g_cond_wait(&cond, &mutex);
+		g_cond_wait(&acq_cond, &acq_lock);
 
 		g_message(MSG "spectrum acquisition running");
 
 		do {
-			g_rw_lock_reader_lock(&rwlock);
+			g_rw_lock_reader_lock(&obs_rwlock);
 			run = srt_spec_acquire(&g_obs);
-			g_rw_lock_reader_unlock(&rwlock);
+			g_rw_lock_reader_unlock(&obs_rwlock);
 		} while (run);
 
 
-		g_mutex_unlock(&mutex);
+		g_mutex_unlock(&acq_lock);
 	}
 }
 
@@ -1120,7 +1129,12 @@ static gpointer srt_acquisition_update(gpointer data)
 	struct observation *obs = (struct observation *) data;
 
 
-	g_rw_lock_writer_lock(&rwlock);
+	/* wait for mutex lock to indicate abort to a single acquisition cycle
+	 * this is needed if a very wide frequency span had been selected
+	 */
+	g_mutex_lock(&acq_abort);
+
+	g_rw_lock_writer_lock(&obs_rwlock);
 
 	memcpy(&g_obs.acq, &obs->acq, sizeof(struct spec_acq));
 
@@ -1129,14 +1143,15 @@ static gpointer srt_acquisition_update(gpointer data)
 	g_obs.n_acs = obs->n_acs;
 	g_obs.acs   = obs->acs;
 
-	g_rw_lock_writer_unlock(&rwlock);
+	g_rw_lock_writer_unlock(&obs_rwlock);
 
 	/* signal the acquisition thread if isn't running already */
-	if (g_mutex_trylock(&mutex)) {
-		g_cond_signal(&cond);
-		g_mutex_unlock(&mutex);
+	if (g_mutex_trylock(&acq_lock)) {
+		g_cond_signal(&acq_cond);
+		g_mutex_unlock(&acq_lock);
 	}
 
+	g_mutex_unlock(&acq_abort);
 
 	g_free(obs);
 }
