@@ -112,7 +112,7 @@ struct acq_strategy {
  */
 
 struct observation {
-	struct spec_acq      acq;
+	struct spec_acq_cfg  acq;
 	struct acq_strategy *acs;
 	gsize  n_acs;
 };
@@ -690,7 +690,7 @@ static gsize srt_get_frequencies(guint32 refdiv, guint bw_div, gdouble **p)
  * @returns the number of steps
  */
 
-static gsize srt_determine_refdivs(struct spec_acq *acq,
+static gsize srt_determine_refdivs(struct spec_acq_cfg  *acq,
 				   struct acq_strategy **acs)
 {
 	guint rd;
@@ -788,7 +788,7 @@ static gsize srt_determine_refdivs(struct spec_acq *acq,
  * @param n the number of steps
  */
 
-static void srt_calculate_bin_frequencies(struct spec_acq *acq,
+static void srt_calculate_bin_frequencies(struct spec_acq_cfg  *acq,
 					  struct acq_strategy **acs, gsize n)
 {
 	gsize i;
@@ -811,7 +811,7 @@ static void srt_calculate_bin_frequencies(struct spec_acq *acq,
  * @param n the number of steps
  */
 
-static void srt_determine_bin_selection(struct spec_acq *acq,
+static void srt_determine_bin_selection(struct spec_acq_cfg  *acq,
 					struct acq_strategy **acs, gsize n)
 {
 	gsize i;
@@ -886,7 +886,7 @@ static void srt_determine_bin_selection(struct spec_acq *acq,
  * @returns the number of steps
  */
 
-static gsize srt_comp_obs_strategy(struct spec_acq *acq,
+static gsize srt_comp_obs_strategy(struct spec_acq_cfg  *acq,
 				   struct acq_strategy **acs)
 {
 	gsize i;
@@ -1054,7 +1054,7 @@ cleanup:
  * @brief check acquisiton paramters for validity
  */
 
-static int srt_spec_check_param(struct spec_acq *acq)
+static int srt_spec_check_param(struct spec_acq_cfg *acq)
 {
 	if (acq->freq_start_hz < srt.freq_min_hz) {
 		g_warning(MSG "start frequency %d too low, min %d",
@@ -1136,7 +1136,7 @@ static gpointer srt_acquisition_update(gpointer data)
 
 	g_rw_lock_writer_lock(&obs_rwlock);
 
-	memcpy(&g_obs.acq, &obs->acq, sizeof(struct spec_acq));
+	memcpy(&g_obs.acq, &obs->acq, sizeof(struct spec_acq_cfg));
 
 	srt_comp_obs_strategy_dealloc(&g_obs.acs, g_obs.n_acs);
 
@@ -1163,7 +1163,7 @@ static gpointer srt_acquisition_update(gpointer data)
  * @returns -1 on error, 0 otherwise
  */
 
-static int srt_spec_acquisition_start(struct spec_acq *acq)
+static int srt_spec_acquisition_start(struct spec_acq_cfg *acq)
 {
 	struct observation *obs;
 
@@ -1190,7 +1190,7 @@ static int srt_spec_acquisition_start(struct spec_acq *acq)
 	}
 
 
-	memcpy(&obs->acq, acq, sizeof(struct spec_acq));
+	memcpy(&obs->acq, acq, sizeof(struct spec_acq_cfg));
 
 	obs->n_acs = srt_comp_obs_strategy(&obs->acq, &obs->acs);
 
@@ -1213,11 +1213,11 @@ static int srt_spec_acquisition_start(struct spec_acq *acq)
 
 
 /**
- * @brief start spectrum acquisition
+ * @brief spectrum acquisition configuration
  */
 
 G_MODULE_EXPORT
-int be_spec_acq_start(struct spec_acq *acq)
+int be_spec_acq_cfg(struct spec_acq_cfg *acq)
 {
 	if (srt_spec_acquisition_start(acq))
 		return -1;

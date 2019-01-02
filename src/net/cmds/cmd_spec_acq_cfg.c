@@ -1,5 +1,5 @@
 /**
- * @file    net/cmds/cmd_spec_acq_start.c
+ * @file    net/cmds/cmd_spec_acq_cfg.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -31,26 +31,26 @@
  *
  */
 
-void cmd_spec_acq_start(uint64_t f0, uint64_t f1, uint32_t bw_div,
-			uint32_t bin_div, uint32_t n_stack, uint32_t acq_max)
+void cmd_spec_acq_cfg(uint64_t f0, uint64_t f1, uint32_t bw_div,
+		      uint32_t bin_div, uint32_t n_stack, uint32_t acq_max)
 {
 	gsize pkt_size;
 
 	struct packet *pkt;
 
-	struct spec_acq *acq;
+	struct spec_acq_cfg *acq;
 
 
-	pkt_size = sizeof(struct packet) + sizeof(struct spec_acq);
+	pkt_size = sizeof(struct packet) + sizeof(struct spec_acq_cfg);
 
 	/* allocate zeroed packet + payload */
 	pkt = g_malloc0(pkt_size);
-	
-	pkt->service   = CMD_SPEC_ACQ_START;
-	pkt->data_size = sizeof(struct spec_acq);
+
+	pkt->service   = CMD_SPEC_ACQ_CFG;
+	pkt->data_size = sizeof(struct spec_acq_cfg);
 
 
-	acq = (struct spec_acq *) pkt->data;
+	acq = (struct spec_acq_cfg *) pkt->data;
 
 
 	acq->freq_start_hz = f0;
@@ -61,23 +61,23 @@ void cmd_spec_acq_start(uint64_t f0, uint64_t f1, uint32_t bw_div,
 	acq->acq_max       = acq_max;
 
 	pkt_set_data_crc16(pkt);
-	
+
 	pkt_hdr_to_net_order(pkt);
-	
+
 	g_message("Sending command acquire spectrum "
-		      "FREQ range: %g - %g MHz, BW div: %d, BIN div %d,"
-		      "STACK: %d, ACQ %d",
-		      acq->freq_start_hz / 1e6,
-		      acq->freq_stop_hz / 1e6,
-		      acq->bw_div,
-		      acq->bin_div,
-		      acq->n_stack,
-		      acq->acq_max);
+		  "FREQ range: %g - %g MHz, BW div: %d, BIN div %d,"
+		  "STACK: %d, ACQ %d",
+		  acq->freq_start_hz / 1e6,
+		  acq->freq_stop_hz / 1e6,
+		  acq->bw_div,
+		  acq->bin_div,
+		  acq->n_stack,
+		  acq->acq_max);
 
 
-	net_send((void *) pkt, pkt_size); 
+	net_send((void *) pkt, pkt_size);
 
-	/* clean up */	
+	/* clean up */
 	g_free(pkt);
 }
 

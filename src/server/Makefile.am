@@ -18,7 +18,7 @@ server_SOURCES = main.c \
 		 proc/proc_cmd_moveto_azel.c \
 		 proc/proc_cmd_recalibrate_pointing.c \
 		 proc/proc_cmd_park_telescope.c \
-		 proc/proc_cmd_spec_acq_start.c \
+		 proc/proc_cmd_spec_acq_cfg.c \
 		 proc/proc_cmd_getpos_azel.c
 
 server_LDADD = $(server_LIBS) \

@@ -1,5 +1,5 @@
 /**
- * @file    include/payload/cmd_spec_acq.h
+ * @file    include/payload/cmd_spec_acq_cfg.h
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -12,18 +12,18 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * @brief payload structure for CMD_SPEC_ACQ
+ * @brief payload structure for CMD_SPEC_ACQ_CFG
  *
  */
 
-#ifndef _INCLUDE_PAYLOAD_CMD_SPEC_ACQ_H_
-#define _INCLUDE_PAYLOAD_CMD_SPEC_ACQ_H_
+#ifndef _INCLUDE_PAYLOAD_CMD_SPEC_ACQ_CFG_H_
+#define _INCLUDE_PAYLOAD_CMD_SPEC_ACQ_CFG_H_
 
 /**
- * CMD_SPEC_ACQ_START packet payload structure
+ * CMD_SPEC_ACQ_cfg packet payload structure
  */
 
-struct spec_acq {
+struct spec_acq_cfg {
 
 	uint64_t freq_start_hz;		/* start frequency */
 	uint64_t freq_stop_hz;		/* stop frequency */
@@ -39,4 +39,4 @@ struct spec_acq {
 					 */
 };
 
-#endif /* _INCLUDE_PAYLOAD_CMD_SPEC_ACQ_H_ */
+#endif /* _INCLUDE_PAYLOAD_CMD_SPEC_ACQ_CFG_H_ */

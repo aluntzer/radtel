@@ -1,5 +1,5 @@
 /**
- * @file    server/api/be_be_spec_acq_start.c
+ * @file    server/api/be_be_spec_acq_cfg.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -17,7 +17,7 @@
 #include <backend.h>
 
 
-static int (*p_be_spec_acq_start)(struct spec_acq *acq);
+static int (*p_be_spec_acq_cfg)(struct spec_acq_cfg *acq);
 
 
 /**
@@ -26,10 +26,10 @@ static int (*p_be_spec_acq_start)(struct spec_acq *acq);
  * @returns -1 on failure, 0 on success
  */
 
-int be_spec_acq_start(struct spec_acq *acq)
+int be_spec_acq_cfg(struct spec_acq_cfg *acq)
 {
-	if (p_be_spec_acq_start)
-		return p_be_spec_acq_start(acq);
+	if (p_be_spec_acq_cfg)
+		return p_be_spec_acq_cfg(acq);
 	
 	g_message("BACKEND: function %s not available\n", __func__);
 
@@ -38,21 +38,21 @@ int be_spec_acq_start(struct spec_acq *acq)
 
 
 /**
- * @brief try to load the be_be_spec_acq_start symbol in a backend plugin
+ * @brief try to load the be_be_spec_acq_cfg symbol in a backend plugin
  */
 
-int be_spec_acq_start_load(GModule *mod)
+int be_spec_acq_cfg_load(GModule *mod)
 {
 	gboolean ret;
 
 	gpointer func;
 
 
-	ret = g_module_symbol(mod, "be_spec_acq_start", &func);
+	ret = g_module_symbol(mod, "be_spec_acq_cfg", &func);
 	if(!ret)
 		return -1;
 	
         g_message("BACKEND: found symbol %s", __func__);
 
-	p_be_spec_acq_start = (typeof(p_be_spec_acq_start)) func;
+	p_be_spec_acq_cfg = (typeof(p_be_spec_acq_cfg)) func;
 }

@@ -28,7 +28,7 @@ int be_shared_comlink_write(const gchar *buf, gsize nbytes);
 gchar *be_shared_comlink_read(gsize *nbytes);
 void be_recalibrate_pointing(void);
 void be_park_telescope(void);
-int be_spec_acq_start(struct spec_acq *acq);
+int be_spec_acq_cfg(struct spec_acq_cfg *acq);
 int be_getpos_azel(double *az, double *el);
 
 /* backend call loaders */
@@ -39,7 +39,7 @@ int be_shared_comlink_write_load(GModule *mod);
 int be_shared_comlink_read_load(GModule *mod);
 int be_recalibrate_pointing_load(GModule *mod);
 int be_park_telescope_load(GModule *mod);
-int be_spec_acq_start_load(GModule *mod);
+int be_spec_acq_cfg_load(GModule *mod);
 int be_getpos_azel_load(GModule *mod);
 
 

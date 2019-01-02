@@ -1,5 +1,5 @@
 /**
- * @file    server/proc/proc_cmd_spec_acq_start.c
+ * @file    server/proc/proc_cmd_spec_acq_cfg.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -19,25 +19,25 @@
 #include <cmd.h>
 #include <backend.h>
 
-void proc_cmd_spec_acq_start(struct packet *pkt)
+void proc_cmd_spec_acq_cfg(struct packet *pkt)
 {
 	gsize pkt_size;
 
-	struct spec_acq *acq;
+	struct spec_acq_cfg *acq;
 
 
-	g_message("Client requested start spectrum acquisition");
+	g_message("Client sent spectrum readout configuration");
 
-	if (pkt->data_size != sizeof(struct spec_acq)) {
+	if (pkt->data_size != sizeof(struct spec_acq_cfg)) {
 		cmd_invalid_pkt();
 		return;
 	}
 
 
-	acq = (struct spec_acq *) pkt->data;
+	acq = (struct spec_acq_cfg *) pkt->data;
 
 	
-	if(be_spec_acq_start(acq))
+	if(be_spec_acq_cfg(acq))
 		cmd_fail();
 
 	cmd_success();

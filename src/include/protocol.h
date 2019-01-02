@@ -24,7 +24,7 @@
 
 #include <payload/cmd_capabilities.h>
 #include <payload/cmd_moveto.h>
-#include <payload/cmd_spec_acq.h>
+#include <payload/cmd_spec_acq_cfg.h>
 #include <payload/cmd_spec_data.h>
 #include <payload/cmd_getpos.h>
 
@@ -45,7 +45,7 @@
 #define CMD_FAIL		0xa007	/* last command failed */
 #define CMD_RECAL_POINTING	0xa008	/* recalibrate telescope pointing */
 #define CMD_PARK_TELESCOPE	0xa009	/* park telescope */
-#define CMD_SPEC_ACQ_START	0xa00a	/* start spectrum acquisition */
+#define CMD_SPEC_ACQ_CFG	0xa00a	/* spectrum acquisition configuration */
 #define CMD_SPEC_DATA		0xa00b	/* spectral data */
 #define CMD_GETPOS_AZEL		0xa00c	/* get azimuth/elevation */
 
