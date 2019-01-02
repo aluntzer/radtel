@@ -41,7 +41,7 @@ void cmd_spec_data(struct spec_data *s)
 
 	pkt = g_malloc(pkt_size);
 	
-	pkt->service   = CMD_SPEC_DATA;
+	pkt->service   = PR_SPEC_DATA;
 	pkt->data_size = data_size; 
 
 	memcpy(pkt->data, s, data_size);

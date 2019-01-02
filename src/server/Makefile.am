@@ -5,6 +5,8 @@ AM_LDFLAGS = -lm
 # force symbols from the .a that we absolutely need
 # it's a bit hackish, but who cares...
 AM_LDFLAGS += -u cmd_spec_data
+AM_LDFLAGS += -u ack_spec_acq_disable
+AM_LDFLAGS += -u ack_spec_acq_enable
 
 bin_PROGRAMS = server 
 
@@ -19,7 +21,9 @@ server_SOURCES = main.c \
 		 proc/proc_cmd_recalibrate_pointing.c \
 		 proc/proc_cmd_park_telescope.c \
 		 proc/proc_cmd_spec_acq_cfg.c \
-		 proc/proc_cmd_getpos_azel.c
+		 proc/proc_cmd_getpos_azel.c \
+		 proc/proc_cmd_spec_acq_enable.c \
+		 proc/proc_cmd_spec_acq_disable.c
 
 server_LDADD = $(server_LIBS) \
 	       $(top_builddir)/src/net/libprotocmd.a \

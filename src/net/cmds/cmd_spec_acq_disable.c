@@ -1,5 +1,5 @@
 /**
- * @file    client/include/signals.h
+ * @file    net/cmds/cmd_spec_acq_disable.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -14,21 +14,32 @@
  *
  */
 
-#ifndef _CLIENT_INCLUDE_SIGNALS_H_
-#define _CLIENT_INCLUDE_SIGNALS_H_
+#include <glib.h>
 
-#include <protocol.h>
-
-void sig_cmd_success(void);
-void sig_cmd_capabilities(const struct capabilities *c);
-void sig_cmd_spec_data(const struct spec_data *c);
-void sig_cmd_getpos_azel(const struct getpos *pos);
-void sig_cmd_spec_acq_enable(void);
-void sig_cmd_spec_acq_disable(void);
+#include <cmd.h>
 
 
-gpointer *sig_get_instance(void);
-void sig_init(void);
+void cmd_spec_acq_disable(void)
+{
+	gsize pkt_size;
 
-#endif /* _CLIENT_INCLUDE_SIGNALS_H_ */
+	struct packet *pkt;
 
+
+	pkt_size = sizeof(struct packet);
+
+	pkt = g_malloc(pkt_size);
+
+	pkt->service   = PR_SPEC_ACQ_DISABLE;
+	pkt->data_size = 0;
+
+	pkt_set_data_crc16(pkt);
+
+	pkt_hdr_to_net_order(pkt);
+
+	g_message("Requesting disable of spectral acquisition");
+	net_send((void *) pkt, pkt_size);
+
+	/* clean up */
+	g_free(pkt);
+}

@@ -30,7 +30,7 @@ void cmd_invalid_pkt(void)
 
 	pkt = g_malloc(pkt_size);
 	
-	pkt->service    = CMD_INVALID_PKT;
+	pkt->service    = PR_INVALID_PKT;
 	pkt->data_size  = 0;
 
 	pkt_set_data_crc16(pkt);

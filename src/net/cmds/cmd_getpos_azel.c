@@ -30,7 +30,7 @@ void cmd_getpos_azel(void)
 
 	pkt = g_malloc(pkt_size);
 	
-	pkt->service   = CMD_GETPOS_AZEL;
+	pkt->service   = PR_GETPOS_AZEL;
 	pkt->data_size = 0; 
 
 	pkt_set_data_crc16(pkt);

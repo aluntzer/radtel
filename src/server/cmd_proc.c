@@ -35,31 +35,39 @@ void process_cmd_pkt(struct packet *pkt)
 {
 	switch(pkt->service) {
 
-	case CMD_INVALID_PKT:
+	case PR_INVALID_PKT:
 		proc_cmd_invalid_pkt();
 		break;
 
-	case CMD_CAPABILITIES:
+	case PR_CAPABILITIES:
 		proc_cmd_capabilities();
 		break;
 
-	case CMD_MOVETO_AZEL:
+	case PR_MOVETO_AZEL:
 		proc_cmd_moveto_azel(pkt);
 		break;
-	
-	case CMD_RECAL_POINTING:
+
+	case PR_RECAL_POINTING:
 		proc_cmd_recalibrate_pointing();
 		break;
 
-	case CMD_PARK_TELESCOPE:
+	case PR_PARK_TELESCOPE:
 		proc_cmd_park_telescope();
 		break;
 
-	case CMD_SPEC_ACQ_CFG:
+	case PR_SPEC_ACQ_CFG:
 		proc_cmd_spec_acq_cfg(pkt);
 		break;
 
-	case CMD_GETPOS_AZEL:
+	case PR_SPEC_ACQ_ENABLE:
+		proc_cmd_spec_acq_enable();
+		break;
+
+	case PR_SPEC_ACQ_DISABLE:
+		proc_cmd_spec_acq_disable();
+		break;
+
+	case PR_GETPOS_AZEL:
 		proc_cmd_getpos_azel();
 		break;
 

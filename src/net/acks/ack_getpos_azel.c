@@ -19,7 +19,7 @@
 #include <ack.h>
 #include <net_common.h>
 
-	
+
 
 /**
  * @brief acknowledge backend getpos_azel command
@@ -37,18 +37,18 @@ void ack_getpos_azel(struct getpos *pos)
 
 	/* allocate zeroed packet + payload */
 	pkt = g_malloc0(pkt_size);
-	
-	pkt->service   = CMD_GETPOS_AZEL;
+
+	pkt->service   = PR_GETPOS_AZEL;
 	pkt->data_size = sizeof(struct getpos);
 
 	memcpy(pkt->data, pos, pkt->data_size);
 
 	pkt_set_data_crc16(pkt);
-	
+
 	pkt_hdr_to_net_order(pkt);
-	
+
 	g_message("Sending AZEL");
-	net_send((void *) pkt, pkt_size); 
+	net_send((void *) pkt, pkt_size);
 
 cleanup:
 	g_free(pkt);

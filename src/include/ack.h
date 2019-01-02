@@ -22,6 +22,8 @@
 void ack_invalid_pkt(void);
 void ack_capabilities(void);
 void ack_getpos_azel(struct getpos *pos);
+void ack_spec_acq_enable(void);
+void ack_spec_acq_disable(void);
 
 #endif /* _INCLUDE_ACK_H_ */
 

@@ -27,6 +27,8 @@ void proc_cmd_success(void);
 void proc_cmd_fail(void);
 void proc_cmd_spec_data(struct packet *pkt);
 void proc_cmd_getpos_azel(struct packet *pkt);
+void proc_cmd_spec_acq_enable(void);
+void proc_cmd_spec_acq_disable(void);
 
 
 #endif /* _CLIENT_INCLUDE_CMD_PROC_H_ */

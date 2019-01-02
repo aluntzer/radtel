@@ -33,7 +33,7 @@ void cmd_moveto_azel(double az, double el)
 	/* allocate zeroed packet + payload */
 	pkt = g_malloc0(pkt_size);
 	
-	pkt->service   = CMD_MOVETO_AZEL;
+	pkt->service   = PR_MOVETO_AZEL;
 	pkt->data_size = sizeof(struct moveto);
 
 

@@ -41,6 +41,7 @@ static void backend_try_load_symbols(GModule *mod)
 	be_park_telescope_load(mod);
 	be_spec_acq_cfg_load(mod);
 	be_getpos_azel_load(mod);
+	be_spec_acq_enable_load(mod);
 }
 
 

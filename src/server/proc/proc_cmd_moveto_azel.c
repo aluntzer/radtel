@@ -48,9 +48,11 @@ void proc_cmd_moveto_azel(struct packet *pkt)
 	az = (double) m->az_arcsec / 3600.0;
 	el = (double) m->el_arcsec / 3600.0;
 
-	
+
 	if(be_moveto_azel(az, el))
 		cmd_fail();
+	else
+		cmd_success();
 
-	cmd_success();
+	return;
 }

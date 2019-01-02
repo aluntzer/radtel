@@ -1,5 +1,5 @@
 /**
- * @file    client/include/signals.h
+ * @file    client/proc/proc_cmd_spec_acq_enable.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -14,21 +14,14 @@
  *
  */
 
-#ifndef _CLIENT_INCLUDE_SIGNALS_H_
-#define _CLIENT_INCLUDE_SIGNALS_H_
+#include <glib.h>
 
 #include <protocol.h>
-
-void sig_cmd_success(void);
-void sig_cmd_capabilities(const struct capabilities *c);
-void sig_cmd_spec_data(const struct spec_data *c);
-void sig_cmd_getpos_azel(const struct getpos *pos);
-void sig_cmd_spec_acq_enable(void);
-void sig_cmd_spec_acq_disable(void);
+#include <signals.h>
 
 
-gpointer *sig_get_instance(void);
-void sig_init(void);
-
-#endif /* _CLIENT_INCLUDE_SIGNALS_H_ */
-
+void proc_cmd_spec_acq_enable(void)
+{
+	g_message("Server sent SPEC_ACQ_ENABLE");
+	sig_cmd_spec_acq_enable();
+}

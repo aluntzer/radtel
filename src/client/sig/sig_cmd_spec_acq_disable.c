@@ -1,5 +1,5 @@
 /**
- * @file    client/include/signals.h
+ * @file    client/sig/sig_cmd_spec_acq_disable.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -14,21 +14,17 @@
  *
  */
 
-#ifndef _CLIENT_INCLUDE_SIGNALS_H_
-#define _CLIENT_INCLUDE_SIGNALS_H_
+#include <glib.h>
+#include <glib-object.h>
+#include <signals.h>
 
-#include <protocol.h>
+/**
+ * @brief emit cmd-spec-acq-disable signal
+ */
 
-void sig_cmd_success(void);
-void sig_cmd_capabilities(const struct capabilities *c);
-void sig_cmd_spec_data(const struct spec_data *c);
-void sig_cmd_getpos_azel(const struct getpos *pos);
-void sig_cmd_spec_acq_enable(void);
-void sig_cmd_spec_acq_disable(void);
+void sig_cmd_spec_acq_disable(void)
+{
+	g_message("Emit signal \"cmd-spec-acq-disable\"");
 
-
-gpointer *sig_get_instance(void);
-void sig_init(void);
-
-#endif /* _CLIENT_INCLUDE_SIGNALS_H_ */
-
+	g_signal_emit_by_name(sig_get_instance(), "cmd-spec-acq-disable");
+}

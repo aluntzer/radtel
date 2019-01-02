@@ -35,28 +35,36 @@ void process_cmd_pkt(struct packet *pkt)
 {
 	switch(pkt->service) {
 
-	case CMD_INVALID_PKT:
+	case PR_INVALID_PKT:
 		proc_cmd_invalid_pkt();
 		break;
 
-	case CMD_CAPABILITIES:
+	case PR_CAPABILITIES:
 		proc_cmd_capabilities(pkt);
 		break;
 
-	case CMD_SUCCESS:
+	case PR_SUCCESS:
 		proc_cmd_success();
 		break;
 
-	case CMD_FAIL:
+	case PR_FAIL:
 		proc_cmd_fail();
 		break;
 
-	case CMD_SPEC_DATA:
+	case PR_SPEC_DATA:
 		proc_cmd_spec_data(pkt);
 		break;
 
-	case CMD_GETPOS_AZEL:
+	case PR_GETPOS_AZEL:
 		proc_cmd_getpos_azel(pkt);
+		break;
+
+	case PR_SPEC_ACQ_ENABLE:
+		proc_cmd_spec_acq_enable();
+		break;
+
+	case PR_SPEC_ACQ_DISABLE:
+		proc_cmd_spec_acq_disable();
 		break;
 
 	default:

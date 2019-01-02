@@ -315,18 +315,23 @@ static gboolean net_incoming(GSocketService    *service,
 
 void net_send(const char *pkt, gsize nbytes)
 {
-
 	GList *elem;
 
 	struct con_data *item;
 
+	static GMutex lock;
+
 
 	g_message("Broadcasting packet of %d bytes", nbytes);
+
+	g_mutex_lock(&lock);
 
 	for (elem = con_list; elem; elem = elem->next) {
 		item = elem->data;
 		net_send_internal(item, pkt, nbytes);
 	}
+
+	g_mutex_unlock(&lock);
 }
 
 

@@ -31,6 +31,9 @@ void cmd_spec_acq_cfg(uint64_t f0, uint64_t f1, uint32_t bw_div,
 		      uint32_t bin_div, uint32_t n_stack, uint32_t acq_max);
 void cmd_spec_data(struct spec_data *s);
 void cmd_getpos_azel(void);
+void cmd_spec_acq_enable(void);
+void cmd_spec_acq_disable(void);
+
 
 #endif /* _INCLUDE_CMD_H_ */
 

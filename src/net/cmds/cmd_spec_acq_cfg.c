@@ -46,7 +46,7 @@ void cmd_spec_acq_cfg(uint64_t f0, uint64_t f1, uint32_t bw_div,
 	/* allocate zeroed packet + payload */
 	pkt = g_malloc0(pkt_size);
 
-	pkt->service   = CMD_SPEC_ACQ_CFG;
+	pkt->service   = PR_SPEC_ACQ_CFG;
 	pkt->data_size = sizeof(struct spec_acq_cfg);
 
 

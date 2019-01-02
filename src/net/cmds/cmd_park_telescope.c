@@ -30,7 +30,7 @@ void cmd_park_telescope(void)
 
 	pkt = g_malloc(pkt_size);
 	
-	pkt->service   = CMD_PARK_TELESCOPE;
+	pkt->service   = PR_PARK_TELESCOPE;
 	pkt->data_size = 0; 
 
 	pkt_set_data_crc16(pkt);

@@ -30,7 +30,7 @@ void cmd_success(void)
 
 	pkt = g_malloc(pkt_size);
 	
-	pkt->service    = CMD_SUCCESS;
+	pkt->service    = PR_SUCCESS;
 	pkt->data_size  = 0;
 
 	pkt_set_data_crc16(pkt);

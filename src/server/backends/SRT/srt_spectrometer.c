@@ -31,6 +31,7 @@
 #include <math.h>
 #include <backend.h>
 #include <cmd.h>
+#include <ack.h>
 
 
 #define MSG "SRT SPEC: "
@@ -128,11 +129,12 @@ struct observation {
 };
 
 
-/* let's make our lives easier... */
+/* I'm beginning to suspect that we use too many locks :D */
 static GThread *thread;
 static GCond	acq_cond;
 static GMutex   acq_lock;
 static GMutex   acq_abort;
+static GMutex   acq_pause;
 static GRWLock  obs_rwlock;
 
 static struct observation g_obs;
@@ -999,7 +1001,7 @@ static uint32_t srt_spec_acquire(struct observation *obs)
 	for (i = 0; i < n; i++) {
 
 		if (!g_mutex_trylock(&acq_abort)) {
-			g_message(MSG "acquisition loop abort indicated\n");
+			g_message(MSG "acquisition loop abort indicated");
 			goto cleanup;
 		}
 
@@ -1111,13 +1113,20 @@ static gpointer srt_spec_thread(gpointer data)
 
 		g_mutex_lock(&acq_lock);
 
-		g_message(MSG "spectrum acquisition paused");
+		ack_spec_acq_disable();
+		g_message(MSG "spectrum acquisition stopped");
 
 		g_cond_wait(&acq_cond, &acq_lock);
 
+		ack_spec_acq_enable();
 		g_message(MSG "spectrum acquisition running");
 
 		do {
+			if (!g_mutex_trylock(&acq_pause))
+				break;
+
+			g_mutex_unlock(&acq_pause);
+
 			g_rw_lock_reader_lock(&obs_rwlock);
 			run = srt_spec_acquire(&g_obs);
 			g_rw_lock_reader_unlock(&obs_rwlock);
@@ -1135,7 +1144,10 @@ static gpointer srt_spec_thread(gpointer data)
 
 static gpointer srt_acquisition_update(gpointer data)
 {
-	struct observation *obs = (struct observation *) data;
+	struct observation *obs;
+
+
+	obs = (struct observation *) data;
 
 
 	/* wait for mutex lock to indicate abort to a single acquisition cycle
@@ -1154,25 +1166,20 @@ static gpointer srt_acquisition_update(gpointer data)
 
 	g_rw_lock_writer_unlock(&obs_rwlock);
 
-	/* signal the acquisition thread if isn't running already */
-	if (g_mutex_trylock(&acq_lock)) {
-		g_cond_signal(&acq_cond);
-		g_mutex_unlock(&acq_lock);
-	}
-
 	g_mutex_unlock(&acq_abort);
 
-	g_free(obs);
+
+	g_free(data);
 }
 
 
 /**
- * @brief start radio acquisition
+ * @brief configure radio acquisition
  *
  * @returns -1 on error, 0 otherwise
  */
 
-static int srt_spec_acquisition_start(struct spec_acq_cfg *acq)
+static int srt_spec_acquisition_configure(struct spec_acq_cfg *acq)
 {
 	struct observation *obs;
 
@@ -1222,16 +1229,67 @@ static int srt_spec_acquisition_start(struct spec_acq_cfg *acq)
 
 
 /**
+ * @brief pause/unpause radio acquisition
+ *
+ */
+
+static void srt_spec_acq_enable(gboolean mode)
+{
+	static gboolean last = TRUE;
+
+
+	/* see if we currently hold the lock */
+	if (mode == last)
+		return;
+
+	last = mode;
+
+
+	if (!mode) {
+		g_mutex_lock(&acq_pause);
+		return;
+	}
+
+
+	g_mutex_unlock(&acq_pause);
+
+	/* signal the acquisition thread outer loop */
+	if (g_mutex_trylock(&acq_lock)) {
+		g_cond_signal(&acq_cond);
+		g_mutex_unlock(&acq_lock);
+	}
+
+	return;
+}
+
+
+
+/**
  * @brief set a default configuration
  */
 
 static void srt_spec_cfg_defaults(void)
 {
-	g_obs.acq.freq_start_hz = SRT_INIT_FREQ_START_HZ;
-	g_obs.acq.freq_stop_hz  = SRT_INIT_FREQ_STOP_HZ;
-	g_obs.acq.bw_div        = SRT_INIT_BW_DIV;
-	g_obs.acq.bin_div       = SRT_INIT_BIN_DIV;
-	g_obs.acq.n_stack       = SRT_INIT_NSTACK;
+	struct observation *obs;
+
+
+	obs = g_malloc(sizeof(struct observation));
+	if (!obs) {
+		g_error(MSG "memory allocation failed: %s: %d",
+			__func__, __LINE__);
+		return;
+	}
+
+	obs->acq.freq_start_hz = SRT_INIT_FREQ_START_HZ;
+	obs->acq.freq_stop_hz  = SRT_INIT_FREQ_STOP_HZ;
+	obs->acq.bw_div        = SRT_INIT_BW_DIV;
+	obs->acq.bin_div       = SRT_INIT_BIN_DIV;
+	obs->acq.n_stack       = SRT_INIT_NSTACK;
+	obs->acq.acq_max       = ~0;
+
+	obs->n_acs = srt_comp_obs_strategy(&obs->acq, &obs->acs);
+
+	g_thread_new(NULL, srt_acquisition_update, (gpointer) obs);
 }
 
 
@@ -1242,10 +1300,21 @@ static void srt_spec_cfg_defaults(void)
 G_MODULE_EXPORT
 int be_spec_acq_cfg(struct spec_acq_cfg *acq)
 {
-	if (srt_spec_acquisition_start(acq))
+	if (srt_spec_acquisition_configure(acq))
 		return -1;
 
-	srt_spec_cfg_defaults();
+	return 0;
+}
+
+
+/**
+ * @brief spectrum acquisition enable/disable
+ */
+
+G_MODULE_EXPORT
+int be_spec_acq_enable(gboolean mode)
+{
+	srt_spec_acq_enable(mode);
 
 	return 0;
 }
@@ -1269,6 +1338,11 @@ void module_extra_init(void)
 	g_message(MSG "starting spectrum acquisition thread");
 
 	thread = g_thread_new(NULL, srt_spec_thread, NULL);
+
+	/* always start paused */
+	srt_spec_acq_enable(FALSE);
+
+	srt_spec_cfg_defaults();
 }
 
 

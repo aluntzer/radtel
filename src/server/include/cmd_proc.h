@@ -29,6 +29,8 @@ void proc_cmd_recalibrate_pointing(void);
 void proc_cmd_park_telescope(void);
 void proc_cmd_spec_acq_cfg(struct packet *pkt);
 void proc_cmd_getpos_azel(void);
+void proc_cmd_spec_acq_enable(void);
+void proc_cmd_spec_acq_disable(void);
 
 #endif /* _SERVER_INCLUDE_CMD_PROC_H_ */
 

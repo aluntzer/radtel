@@ -33,21 +33,23 @@
 
 
 /**
- * service commands
+ * service command/response protocol identifiers
  */
 
-#define CMD_INVALID_PKT		0xa001	/* invalid packet signal */
-#define CMD_CAPABILITIES	0xa002	/* capabilities of the telescope */
-#define CMD_STATIONNAME		0xa003	/* name of station */
-#define CMD_LOCATION		0xa004	/* geographical location of telescope */
-#define CMD_MOVETO_AZEL		0xa005	/* move to azimuth/elevation */
-#define CMD_SUCCESS		0xa006  /* last command succeded */
-#define CMD_FAIL		0xa007	/* last command failed */
-#define CMD_RECAL_POINTING	0xa008	/* recalibrate telescope pointing */
-#define CMD_PARK_TELESCOPE	0xa009	/* park telescope */
-#define CMD_SPEC_ACQ_CFG	0xa00a	/* spectrum acquisition configuration */
-#define CMD_SPEC_DATA		0xa00b	/* spectral data */
-#define CMD_GETPOS_AZEL		0xa00c	/* get azimuth/elevation */
+#define PR_INVALID_PKT		0xa001	/* invalid packet signal */
+#define PR_CAPABILITIES		0xa002	/* capabilities of the telescope */
+#define PR_STATIONNAME		0xa003	/* name of station */
+#define PR_LOCATION		0xa004	/* geographical location of telescope */
+#define PR_MOVETO_AZEL		0xa005	/* move to azimuth/elevation */
+#define PR_SUCCESS		0xa006  /* last command succeded */
+#define PR_FAIL			0xa007	/* last command failed */
+#define PR_RECAL_POINTING	0xa008	/* recalibrate telescope pointing */
+#define PR_PARK_TELESCOPE	0xa009	/* park telescope */
+#define PR_SPEC_ACQ_CFG		0xa00a	/* spectrum acquisition configuration */
+#define PR_SPEC_DATA		0xa00b	/* spectral data */
+#define PR_GETPOS_AZEL		0xa00c	/* get azimuth/elevation */
+#define PR_SPEC_ACQ_ENABLE	0xa00d  /* enable spectrum acquisition */
+#define PR_SPEC_ACQ_DISABLE	0xa00e  /* disable spectrum acquisition */
 
 
 

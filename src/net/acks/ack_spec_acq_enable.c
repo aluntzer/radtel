@@ -1,5 +1,5 @@
 /**
- * @file    net/cmds/cmd_capabilities.c
+ * @file    acks/ack_spec_acq_enable.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -16,10 +16,16 @@
 
 #include <glib.h>
 
-#include <cmd.h>
+#include <ack.h>
+#include <net_common.h>
 
 
-void cmd_capabilities(void)
+
+/**
+ * @brief acknowledge backend spec_acq_enable command
+ */
+
+void ack_spec_acq_enable(void)
 {
 	gsize pkt_size;
 
@@ -28,18 +34,20 @@ void cmd_capabilities(void)
 
 	pkt_size = sizeof(struct packet);
 
-	pkt = g_malloc(pkt_size);
-	
-	pkt->service   = PR_CAPABILITIES;
-	pkt->data_size = 0; 
+	/* allocate zeroed packet + payload */
+	pkt = g_malloc0(pkt_size);
+
+	pkt->service   = PR_SPEC_ACQ_ENABLE;
+	pkt->data_size = 0;
+
 
 	pkt_set_data_crc16(pkt);
-	
+
 	pkt_hdr_to_net_order(pkt);
-	
-	g_message("Requesting capabilities");
+
+	g_message("Sending SPEC ACQ ENABLE");
 	net_send((void *) pkt, pkt_size);
 
-	/* clean up */	
+cleanup:
 	g_free(pkt);
 }

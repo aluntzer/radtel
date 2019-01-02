@@ -14,5 +14,9 @@ libprotocmd_a_SOURCES = protocol.c \
 			cmds/cmd_spec_acq_cfg.c \
 			cmds/cmd_spec_data.c \
 			cmds/cmd_getpos_azel.c \
+			cmds/cmd_spec_acq_enable.c \
+			cmds/cmd_spec_acq_disable.c \
 			acks/ack_capabilities.c \
-			acks/ack_getpos_azel.c
+			acks/ack_getpos_azel.c \
+			acks/ack_spec_acq_enable.c \
+			acks/ack_spec_acq_disable.c

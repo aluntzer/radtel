@@ -39,7 +39,7 @@ void ack_capabilities(void)
 	/* allocate zeroed packet + payload */
 	pkt = g_malloc0(pkt_size);
 	
-	pkt->service   = CMD_CAPABILITIES;
+	pkt->service   = PR_CAPABILITIES;
 	pkt->data_size = sizeof(struct capabilities);
 
 
