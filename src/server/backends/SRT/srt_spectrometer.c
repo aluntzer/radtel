@@ -50,6 +50,16 @@
 #define SRT_DIGITAL_BIN_CUT_HI		 9
 #define SRT_DIGITAL_BW_DIV_MAX		 2
 
+
+/* initial receiver configuration */
+#define SRT_INIT_FREQ_START_HZ	1420242187
+#define SRT_INIT_FREQ_STOP_HZ	1420570312
+#define SRT_INIT_BW_DIV			 0
+#define SRT_INIT_BIN_DIV		 0
+#define SRT_INIT_NSTACK			 1
+
+
+
 /**
  * @brief the configuration of the digital spectrometer
  */
@@ -954,7 +964,7 @@ static void srt_apply_calibration(struct spec_data *s)
  *
  */
 
-static int srt_spec_acquire(struct observation *obs)
+static uint32_t srt_spec_acquire(struct observation *obs)
 {
 	int i, j;
 	guint refdiv;
@@ -1034,8 +1044,9 @@ static int srt_spec_acquire(struct observation *obs)
 	/* handover for transmission */
 	cmd_spec_data(s);
 
+	obs->acq.acq_max--;
+
 cleanup:
-	/* clean up */
 
 	for (i = 0; i < n; i++)
 		g_free(raw[i]);
@@ -1043,8 +1054,6 @@ cleanup:
 	g_free(raw);
 	g_free(s);
 
-
-	obs->acq.acq_max--;
 
 	return obs->acq.acq_max;
 }
@@ -1172,8 +1181,8 @@ static int srt_spec_acquisition_start(struct spec_acq_cfg *acq)
 		return -1;
 
 	g_message(MSG "configuring spectrum acquisition to "
-		      "FREQ range: %g - %g MHz, BW div: %d, BIN div %d,"
-		      "STACK: %d, ACQ %d",
+		      "FREQ range: %g - %g MHz, BW div: %u, BIN div %u,"
+		      "STACK: %u, ACQ %u",
 		      acq->freq_start_hz / 1e6,
 		      acq->freq_stop_hz / 1e6,
 		      acq->bw_div,
@@ -1213,6 +1222,20 @@ static int srt_spec_acquisition_start(struct spec_acq_cfg *acq)
 
 
 /**
+ * @brief set a default configuration
+ */
+
+static void srt_spec_cfg_defaults(void)
+{
+	g_obs.acq.freq_start_hz = SRT_INIT_FREQ_START_HZ;
+	g_obs.acq.freq_stop_hz  = SRT_INIT_FREQ_STOP_HZ;
+	g_obs.acq.bw_div        = SRT_INIT_BW_DIV;
+	g_obs.acq.bin_div       = SRT_INIT_BIN_DIV;
+	g_obs.acq.n_stack       = SRT_INIT_NSTACK;
+}
+
+
+/**
  * @brief spectrum acquisition configuration
  */
 
@@ -1221,6 +1244,8 @@ int be_spec_acq_cfg(struct spec_acq_cfg *acq)
 {
 	if (srt_spec_acquisition_start(acq))
 		return -1;
+
+	srt_spec_cfg_defaults();
 
 	return 0;
 }
