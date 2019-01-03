@@ -213,7 +213,7 @@ drop_pkt:
 
 	c->nbytes = 0;
 
-	cmd_invalid_pkt();
+	cmd_invalid_pkt(PKT_TRANS_ID_UNDEF);
 
 exit:
 
@@ -358,8 +358,8 @@ int net_client_init(void)
 
 	g_message("Client started");
 
-	cmd_capabilities();
-	cmd_getpos_azel();
+	cmd_capabilities(PKT_TRANS_ID_UNDEF);
+	cmd_getpos_azel(PKT_TRANS_ID_UNDEF);
 
 
 

@@ -25,7 +25,7 @@
  * @brief acknowledge backend spec_acq_disable command
  */
 
-void ack_spec_acq_disable(void)
+void ack_spec_acq_disable(uint16_t trans_id)
 {
 	gsize pkt_size;
 
@@ -34,10 +34,10 @@ void ack_spec_acq_disable(void)
 
 	pkt_size = sizeof(struct packet);
 
-	/* allocate zeroed packet + payload */
-	pkt = g_malloc0(pkt_size);
+	pkt = g_malloc(pkt_size);
 
 	pkt->service   = PR_SPEC_ACQ_DISABLE;
+	pkt->trans_id  = trans_id;
 	pkt->data_size = 0;
 
 
@@ -48,6 +48,5 @@ void ack_spec_acq_disable(void)
 	g_message("Sending SPEC ACQ DISABLE");
 	net_send((void *) pkt, pkt_size);
 
-cleanup:
 	g_free(pkt);
 }

@@ -1,5 +1,5 @@
 /**
- * @file    net/cmds/cmd_spec_data.c
+ * @file    net/acks/ack_spec_data.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -17,7 +17,7 @@
 #include <glib.h>
 #include <string.h>
 
-#include <cmd.h>
+#include <ack.h>
 
 
 /**
@@ -26,7 +26,7 @@
  * @note the caller must take care to clean the spectral data supplied
  */
 
-void cmd_spec_data(struct spec_data *s)
+void ack_spec_data(uint16_t trans_id, struct spec_data *s)
 {
 	gsize pkt_size;
 	gsize data_size;
@@ -40,20 +40,21 @@ void cmd_spec_data(struct spec_data *s)
 	pkt_size = sizeof(struct packet) + data_size;
 
 	pkt = g_malloc(pkt_size);
-	
+
 	pkt->service   = PR_SPEC_DATA;
-	pkt->data_size = data_size; 
+	pkt->trans_id  = trans_id;
+	pkt->data_size = data_size;
 
 	memcpy(pkt->data, s, data_size);
 
 	pkt_set_data_crc16(pkt);
-	
+
 	pkt_hdr_to_net_order(pkt);
-	
+
 	g_message("Transmitting spectral data");
 
 	net_send((void *) pkt, pkt_size);
 
-	/* clean up packet */	
+	/* clean up packet */
 	g_free(pkt);
 }

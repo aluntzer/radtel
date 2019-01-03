@@ -25,7 +25,7 @@
  * @brief acknowledge backend spec_acq_enable command
  */
 
-void ack_spec_acq_enable(void)
+void ack_spec_acq_enable(uint16_t trans_id)
 {
 	gsize pkt_size;
 
@@ -34,10 +34,10 @@ void ack_spec_acq_enable(void)
 
 	pkt_size = sizeof(struct packet);
 
-	/* allocate zeroed packet + payload */
-	pkt = g_malloc0(pkt_size);
+	pkt = g_malloc(pkt_size);
 
 	pkt->service   = PR_SPEC_ACQ_ENABLE;
+	pkt->trans_id  = trans_id;
 	pkt->data_size = 0;
 
 
@@ -48,6 +48,5 @@ void ack_spec_acq_enable(void)
 	g_message("Sending SPEC ACQ ENABLE");
 	net_send((void *) pkt, pkt_size);
 
-cleanup:
 	g_free(pkt);
 }

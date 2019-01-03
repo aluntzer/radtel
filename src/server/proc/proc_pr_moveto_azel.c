@@ -37,7 +37,7 @@ void proc_pr_moveto_azel(struct packet *pkt)
 	g_message("Client requested moveto AZEL");
 
 	if (pkt->data_size != sizeof(struct moveto)) {
-		ack_invalid_pkt();
+		ack_invalid_pkt(pkt->trans_id);
 		return;
 	}
 
@@ -50,9 +50,9 @@ void proc_pr_moveto_azel(struct packet *pkt)
 
 
 	if(be_moveto_azel(az, el))
-		ack_fail();
+		ack_fail(pkt->trans_id);
 	else
-		ack_success();
+		ack_success(pkt->trans_id);
 
 	return;
 }

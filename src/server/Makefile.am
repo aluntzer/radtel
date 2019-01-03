@@ -4,7 +4,7 @@ AM_CFLAGS = $(server_CFLAGS)
 AM_LDFLAGS = -lm
 # force symbols from the .a that we absolutely need
 # it's a bit hackish, but who cares...
-AM_LDFLAGS += -u cmd_spec_data
+AM_LDFLAGS += -u ack_spec_data
 AM_LDFLAGS += -u ack_spec_acq_disable
 AM_LDFLAGS += -u ack_spec_acq_enable
 

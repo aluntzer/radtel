@@ -36,11 +36,11 @@ void process_pkt(struct packet *pkt)
 	switch(pkt->service) {
 
 	case PR_INVALID_PKT:
-		proc_pr_invalid_pkt();
+		proc_pr_invalid_pkt(pkt);
 		break;
 
 	case PR_CAPABILITIES:
-		proc_pr_capabilities();
+		proc_pr_capabilities(pkt);
 		break;
 
 	case PR_MOVETO_AZEL:
@@ -48,11 +48,11 @@ void process_pkt(struct packet *pkt)
 		break;
 
 	case PR_RECAL_POINTING:
-		proc_pr_recalibrate_pointing();
+		proc_pr_recalibrate_pointing(pkt);
 		break;
 
 	case PR_PARK_TELESCOPE:
-		proc_pr_park_telescope();
+		proc_pr_park_telescope(pkt);
 		break;
 
 	case PR_SPEC_ACQ_CFG:
@@ -60,15 +60,15 @@ void process_pkt(struct packet *pkt)
 		break;
 
 	case PR_SPEC_ACQ_ENABLE:
-		proc_pr_spec_acq_enable();
+		proc_pr_spec_acq_enable(pkt);
 		break;
 
 	case PR_SPEC_ACQ_DISABLE:
-		proc_pr_spec_acq_disable();
+		proc_pr_spec_acq_disable(pkt);
 		break;
 
 	case PR_GETPOS_AZEL:
-		proc_pr_getpos_azel();
+		proc_pr_getpos_azel(pkt);
 		break;
 
 	default:

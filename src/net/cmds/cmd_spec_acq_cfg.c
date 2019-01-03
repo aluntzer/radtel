@@ -31,7 +31,8 @@
  *
  */
 
-void cmd_spec_acq_cfg(uint64_t f0, uint64_t f1, uint32_t bw_div,
+void cmd_spec_acq_cfg(uint16_t trans_id,
+		      uint64_t f0, uint64_t f1, uint32_t bw_div,
 		      uint32_t bin_div, uint32_t n_stack, uint32_t acq_max)
 {
 	gsize pkt_size;
@@ -47,6 +48,7 @@ void cmd_spec_acq_cfg(uint64_t f0, uint64_t f1, uint32_t bw_div,
 	pkt = g_malloc0(pkt_size);
 
 	pkt->service   = PR_SPEC_ACQ_CFG;
+	pkt->trans_id  = trans_id;
 	pkt->data_size = sizeof(struct spec_acq_cfg);
 
 

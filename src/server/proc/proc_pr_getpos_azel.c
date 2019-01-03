@@ -20,7 +20,7 @@
 #include <backend.h>
 
 
-void proc_pr_getpos_azel(void)
+void proc_pr_getpos_azel(struct packet *pkt)
 {
 	double az;
 	double el;
@@ -32,12 +32,12 @@ void proc_pr_getpos_azel(void)
 
 
 	if (be_getpos_azel(&az, &el)) {
-		ack_fail();
+		ack_fail(pkt->trans_id);
 		return;
 	}
 
 	pos.az_arcsec = (typeof(pos.az_arcsec)) (az * 3600.0);
 	pos.el_arcsec = (typeof(pos.el_arcsec)) (el * 3600.0);
 
-	ack_getpos_azel(&pos);
+	ack_getpos_azel(pkt->trans_id, &pos);
 }

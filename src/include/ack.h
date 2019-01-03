@@ -22,14 +22,15 @@
 #include <protocol.h>
 #include <net_common.h>
 
-void ack_invalid_pkt(void);
-void ack_capabilities(void);
-void ack_getpos_azel(struct getpos *pos);
-void ack_spec_acq_enable(void);
-void ack_spec_acq_disable(void);
-void ack_fail(void);
-void ack_success(void);
-void ack_invalid_pkt(void);
+void ack_invalid_pkt(uint16_t trans_id);
+void ack_capabilities(uint16_t trans_id);
+void ack_getpos_azel(uint16_t trans_id, struct getpos *pos);
+void ack_spec_data(uint16_t trans_id, struct spec_data *s);
+void ack_spec_acq_enable(uint16_t trans_id);
+void ack_spec_acq_disable(uint16_t trans_id);
+void ack_fail(uint16_t trans_id);
+void ack_success(uint16_t trans_id);
+void ack_invalid_pkt(uint16_t trans_id);
 
 #endif /* _INCLUDE_ACK_H_ */
 

@@ -24,11 +24,11 @@
  * @brief process command park_telescope
  */
 
-void proc_pr_park_telescope(void)
+void proc_pr_park_telescope(struct packet *pkt)
 {
 	g_message("Client requested park_telescope");
 
 	be_park_telescope();
 
-	ack_success();
+	ack_success(pkt->trans_id);
 }

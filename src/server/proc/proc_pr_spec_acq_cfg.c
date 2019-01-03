@@ -29,7 +29,7 @@ void proc_pr_spec_acq_cfg(struct packet *pkt)
 	g_message("Client sent spectrum readout configuration");
 
 	if (pkt->data_size != sizeof(struct spec_acq_cfg)) {
-		ack_invalid_pkt();
+		ack_invalid_pkt(pkt->trans_id);
 		return;
 	}
 
@@ -38,7 +38,7 @@ void proc_pr_spec_acq_cfg(struct packet *pkt)
 
 
 	if(be_spec_acq_cfg(acq))
-		ack_fail();
+		ack_fail(pkt->trans_id);
 
-	ack_success();
+	ack_success(pkt->trans_id);
 }

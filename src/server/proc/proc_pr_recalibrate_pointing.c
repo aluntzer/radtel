@@ -24,11 +24,11 @@
  * @brief process command recalibrate_pointing
  */
 
-void proc_pr_recalibrate_pointing(void)
+void proc_pr_recalibrate_pointing(struct packet *pkt)
 {
 	g_message("Client requested recalibrate_pointing");
 
 	be_recalibrate_pointing();
 
-	ack_success();
+	ack_success(pkt->trans_id);
 }

@@ -19,7 +19,7 @@
 #include <ack.h>
 
 
-void ack_success(void)
+void ack_success(uint16_t trans_id)
 {
 	gsize pkt_size;
 
@@ -30,8 +30,9 @@ void ack_success(void)
 
 	pkt = g_malloc(pkt_size);
 
-	pkt->service    = PR_SUCCESS;
-	pkt->data_size  = 0;
+	pkt->service   = PR_SUCCESS;
+	pkt->trans_id  = trans_id;
+	pkt->data_size = 0;
 
 	pkt_set_data_crc16(pkt);
 

@@ -22,19 +22,19 @@
 #include <protocol.h>
 #include <net_common.h>
 
-void cmd_invalid_pkt(void);
-void cmd_capabilities(void);
-void cmd_success(void);
-void cmd_fail(void);
-void cmd_moveto_azel(double az, double el);
-void cmd_recalibrate_pointing(void);
-void cmd_park_telescope(void);
-void cmd_spec_acq_cfg(uint64_t f0, uint64_t f1, uint32_t bw_div,
+void cmd_invalid_pkt(uint16_t trans_id);
+void cmd_capabilities(uint16_t trans_id);
+void cmd_success(uint16_t trans_id);
+void cmd_fail(uint16_t trans_id);
+void cmd_moveto_azel(uint16_t trans_id, double az, double el);
+void cmd_recalibrate_pointing(uint16_t trans_id);
+void cmd_park_telescope(uint16_t trans_id);
+void cmd_spec_acq_cfg(uint16_t trans_id,
+		      uint64_t f0, uint64_t f1, uint32_t bw_div,
 		      uint32_t bin_div, uint32_t n_stack, uint32_t acq_max);
-void cmd_spec_data(struct spec_data *s);
-void cmd_getpos_azel(void);
-void cmd_spec_acq_enable(void);
-void cmd_spec_acq_disable(void);
+void cmd_getpos_azel(uint16_t trans_id);
+void cmd_spec_acq_enable(uint16_t trans_id);
+void cmd_spec_acq_disable(uint16_t trans_id);
 
 
 #endif /* _INCLUDE_CMD_H_ */

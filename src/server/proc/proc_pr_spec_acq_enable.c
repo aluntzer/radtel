@@ -20,12 +20,12 @@
 #include <backend.h>
 
 
-void proc_pr_spec_acq_enable(void)
+void proc_pr_spec_acq_enable(struct packet *pkt)
 {
 	g_message("Client requested spectral acquisition enable");
 
 	if(be_spec_acq_enable(TRUE))
-		ack_fail();
+		ack_fail(pkt->trans_id);
 	else
-		ack_success();
+		ack_success(pkt->trans_id);
 }

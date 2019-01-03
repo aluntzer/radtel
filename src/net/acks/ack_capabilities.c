@@ -19,13 +19,13 @@
 #include <ack.h>
 #include <net_common.h>
 
-	
+
 
 /**
  * @brief acknowledge backend capabilities command
  */
 
-void ack_capabilities(void)
+void ack_capabilities(uint16_t trans_id)
 {
 	gsize pkt_size;
 
@@ -38,8 +38,9 @@ void ack_capabilities(void)
 
 	/* allocate zeroed packet + payload */
 	pkt = g_malloc0(pkt_size);
-	
+
 	pkt->service   = PR_CAPABILITIES;
+	pkt->trans_id  = trans_id;
 	pkt->data_size = sizeof(struct capabilities);
 
 
@@ -60,12 +61,12 @@ void ack_capabilities(void)
 
 
 	pkt_set_data_crc16(pkt);
-	
-	pkt_hdr_to_net_order(pkt);
-	
-	g_message("Sending capabilities");
-	net_send((void *) pkt, pkt_size); 
 
-	/* clean up */	
+	pkt_hdr_to_net_order(pkt);
+
+	g_message("Sending capabilities");
+	net_send((void *) pkt, pkt_size);
+
+	/* clean up */
 	g_free(pkt);
 }

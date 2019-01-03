@@ -943,7 +943,7 @@ static void srt_comp_obs_strategy_dealloc(struct acq_strategy **acs, gsize n)
 /**
  * @brief apply temperature calibration
  *
- * @note converts data to integer milliKelvins (see payload/cmd_spec_data.h)
+ * @note converts data to integer milliKelvins (see payload/pr_spec_data.h)
  *
  * @todo polynomial preamp/inputfilter curve calibration
  */
@@ -1044,7 +1044,7 @@ static uint32_t srt_spec_acquire(struct observation *obs)
 	srt_apply_calibration(s);
 
 	/* handover for transmission */
-	cmd_spec_data(s);
+	ack_spec_data(PKT_TRANS_ID_UNDEF, s);
 
 	obs->acq.acq_max--;
 
@@ -1113,12 +1113,12 @@ static gpointer srt_spec_thread(gpointer data)
 
 		g_mutex_lock(&acq_lock);
 
-		ack_spec_acq_disable();
+		ack_spec_acq_disable(PKT_TRANS_ID_UNDEF);
 		g_message(MSG "spectrum acquisition stopped");
 
 		g_cond_wait(&acq_cond, &acq_lock);
 
-		ack_spec_acq_enable();
+		ack_spec_acq_enable(PKT_TRANS_ID_UNDEF);
 		g_message(MSG "spectrum acquisition running");
 
 		do {

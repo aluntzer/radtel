@@ -22,15 +22,15 @@
 void process_pkt(struct packet *pkt);
 
 /* command processing functions */
-void proc_pr_invalid_pkt(void);
-void proc_pr_capabilities(void);
+void proc_pr_invalid_pkt(struct packet *pkt);
+void proc_pr_capabilities(struct packet *pkt);
 void proc_pr_moveto_azel(struct packet *pkt);
-void proc_pr_recalibrate_pointing(void);
-void proc_pr_park_telescope(void);
+void proc_pr_recalibrate_pointing(struct packet *pkt);
+void proc_pr_park_telescope(struct packet *pkt);
 void proc_pr_spec_acq_cfg(struct packet *pkt);
-void proc_pr_getpos_azel(void);
-void proc_pr_spec_acq_enable(void);
-void proc_pr_spec_acq_disable(void);
+void proc_pr_getpos_azel(struct packet *pkt);
+void proc_pr_spec_acq_enable(struct packet *pkt);
+void proc_pr_spec_acq_disable(struct packet *pkt);
 
 #endif /* _SERVER_INCLUDE_PKT_PROC_H_ */
 

@@ -12,7 +12,14 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * NOTE: all payload data are expected in little-endian order!
+ * NOTE: * all payload data are expected in little-endian order
+ *	 * the transaction identifier is copied into an ACK packet, so the
+ *	   client can track success/failure of commands if so desired;
+ *	   transaction identifiers not recorded in a client's command log
+ *	   should be ignored, as there could be multiple clients (with different
+ *	   priviledge levels) requesting various server parameters;
+ *	   packets sent without a designated transaction identifiers should
+ *	   use PKT_TRANS_ID_UNDEF as the identifier
  *
  */
 
@@ -57,8 +64,11 @@
  * @brief command exchange packet structure
  */
 
+#define PKT_TRANS_ID_UNDEF	0xffff
+
 struct packet {
 	uint16_t service;
+	uint16_t trans_id;
 	uint16_t data_crc16;
 	uint32_t data_size;
 	char data[];

@@ -237,7 +237,7 @@ drop_pkt:
 
 	c->nbytes = 0;
 
-	cmd_invalid_pkt();
+	cmd_invalid_pkt(PKT_TRANS_ID_UNDEF);
 
 exit:
 

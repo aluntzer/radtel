@@ -19,7 +19,7 @@
 #include <ack.h>
 
 
-void ack_invalid_pkt(void)
+void ack_invalid_pkt(uint16_t trans_id)
 {
 	gsize pkt_size;
 
@@ -30,8 +30,9 @@ void ack_invalid_pkt(void)
 
 	pkt = g_malloc(pkt_size);
 
-	pkt->service    = PR_INVALID_PKT;
-	pkt->data_size  = 0;
+	pkt->service   = PR_INVALID_PKT;
+	pkt->trans_id  = trans_id;
+	pkt->data_size = 0;
 
 	pkt_set_data_crc16(pkt);
 

@@ -19,7 +19,7 @@
 #include <cmd.h>
 
 
-void cmd_moveto_azel(double az, double el)
+void cmd_moveto_azel(uint16_t trans_id, double az, double el)
 {
 	gsize pkt_size;
 
@@ -32,8 +32,9 @@ void cmd_moveto_azel(double az, double el)
 
 	/* allocate zeroed packet + payload */
 	pkt = g_malloc0(pkt_size);
-	
+
 	pkt->service   = PR_MOVETO_AZEL;
+	pkt->trans_id  = trans_id;
 	pkt->data_size = sizeof(struct moveto);
 
 
@@ -45,13 +46,13 @@ void cmd_moveto_azel(double az, double el)
 
 
 	pkt_set_data_crc16(pkt);
-	
-	pkt_hdr_to_net_order(pkt);
-	
-	g_message("Sending command moveto AZ/EL %g/%g", az, el);
-	net_send((void *) pkt, pkt_size); 
 
-	/* clean up */	
+	pkt_hdr_to_net_order(pkt);
+
+	g_message("Sending command moveto AZ/EL %g/%g", az, el);
+	net_send((void *) pkt, pkt_size);
+
+	/* clean up */
 	g_free(pkt);
 }
 

@@ -21,5 +21,5 @@
 void proc_pr_capabilities(struct packet *pkt)
 {
 	g_message("Client requested capabilites, acknowledging");
-	ack_capabilities();
+	ack_capabilities(pkt->trans_id);
 }

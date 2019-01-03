@@ -27,11 +27,12 @@
  * @note the caller is responsible for freeing pos
  */
 
-void ack_getpos_azel(struct getpos *pos)
+void ack_getpos_azel(uint16_t trans_id, struct getpos *pos)
 {
 	gsize pkt_size;
 
 	struct packet *pkt;
+
 
 	pkt_size = sizeof(struct packet) + sizeof(struct getpos);
 
@@ -39,6 +40,7 @@ void ack_getpos_azel(struct getpos *pos)
 	pkt = g_malloc0(pkt_size);
 
 	pkt->service   = PR_GETPOS_AZEL;
+	pkt->trans_id  = trans_id;
 	pkt->data_size = sizeof(struct getpos);
 
 	memcpy(pkt->data, pos, pkt->data_size);
@@ -50,6 +52,5 @@ void ack_getpos_azel(struct getpos *pos)
 	g_message("Sending AZEL");
 	net_send((void *) pkt, pkt_size);
 
-cleanup:
 	g_free(pkt);
 }
