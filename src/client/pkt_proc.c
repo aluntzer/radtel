@@ -36,7 +36,7 @@ void process_pkt(struct packet *pkt)
 	switch(pkt->service) {
 
 	case PR_INVALID_PKT:
-		proc_pr_invalid_pkt();
+		proc_pr_invalid_pkt(pkt);
 		break;
 
 	case PR_CAPABILITIES:
@@ -44,11 +44,11 @@ void process_pkt(struct packet *pkt)
 		break;
 
 	case PR_SUCCESS:
-		proc_pr_success();
+		proc_pr_success(pkt);
 		break;
 
 	case PR_FAIL:
-		proc_pr_fail();
+		proc_pr_fail(pkt);
 		break;
 
 	case PR_SPEC_DATA:
@@ -60,11 +60,15 @@ void process_pkt(struct packet *pkt)
 		break;
 
 	case PR_SPEC_ACQ_ENABLE:
-		proc_pr_spec_acq_enable();
+		proc_pr_spec_acq_enable(pkt);
 		break;
 
 	case PR_SPEC_ACQ_DISABLE:
-		proc_pr_spec_acq_disable();
+		proc_pr_spec_acq_disable(pkt);
+		break;
+
+	case PR_SPEC_ACQ_CFG:
+		proc_pr_spec_acq_cfg(pkt);
 		break;
 
 	default:

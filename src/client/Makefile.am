@@ -16,12 +16,14 @@ client_SOURCES = main.c \
 		 proc/proc_pr_getpos_azel.c \
 		 proc/proc_pr_spec_acq_enable.c \
 		 proc/proc_pr_spec_acq_disable.c \
+		 proc/proc_pr_spec_acq_cfg.c \
 		 sig/sig_pr_success.c \
 		 sig/sig_pr_capabilities.c \
 		 sig/sig_pr_spec_data.c \
 		 sig/sig_pr_getpos_azel.c \
 		 sig/sig_pr_spec_acq_enable.c \
 		 sig/sig_pr_spec_acq_disable.c \
+		 sig/sig_pr_spec_acq_cfg.c \
 		 sig/signals.c \
 		 widgets/xyplot/xyplot.c \
 		 widgets/sky/sky.c \

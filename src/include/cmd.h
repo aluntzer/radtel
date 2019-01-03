@@ -35,6 +35,8 @@ void cmd_spec_acq_cfg(uint16_t trans_id,
 void cmd_getpos_azel(uint16_t trans_id);
 void cmd_spec_acq_enable(uint16_t trans_id);
 void cmd_spec_acq_disable(uint16_t trans_id);
+void cmd_spec_acq_cfg_get(uint16_t trans_id);
+
 
 
 #endif /* _INCLUDE_CMD_H_ */

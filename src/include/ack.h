@@ -30,7 +30,7 @@ void ack_spec_acq_enable(uint16_t trans_id);
 void ack_spec_acq_disable(uint16_t trans_id);
 void ack_fail(uint16_t trans_id);
 void ack_success(uint16_t trans_id);
-void ack_invalid_pkt(uint16_t trans_id);
+void ack_spec_acq_cfg(uint16_t trans_id, struct spec_acq_cfg *acq);
 
 #endif /* _INCLUDE_ACK_H_ */
 

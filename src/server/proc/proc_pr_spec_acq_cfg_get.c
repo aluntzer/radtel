@@ -1,5 +1,5 @@
 /**
- * @file    client/include/signals.h
+ * @file    server/proc/proc_pr_spec_acq_cfg_get.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -14,22 +14,23 @@
  *
  */
 
-#ifndef _CLIENT_INCLUDE_SIGNALS_H_
-#define _CLIENT_INCLUDE_SIGNALS_H_
+#include <glib.h>
 
-#include <protocol.h>
-
-void sig_pr_success(void);
-void sig_pr_capabilities(const struct capabilities *c);
-void sig_pr_spec_data(const struct spec_data *c);
-void sig_pr_getpos_azel(const struct getpos *pos);
-void sig_pr_spec_acq_enable(void);
-void sig_pr_spec_acq_disable(void);
-void sig_pr_spec_acq_cfg(const struct spec_acq_cfg *acq);
+#include <ack.h>
+#include <backend.h>
 
 
-gpointer *sig_get_instance(void);
-void sig_init(void);
+void proc_pr_spec_acq_cfg_get(struct packet *pkt)
+{
+	struct spec_acq_cfg acq;
 
-#endif /* _CLIENT_INCLUDE_SIGNALS_H_ */
 
+	g_message("Client requested spectrometer configuration, acknowledging");
+
+	if (be_spec_acq_cfg_get(&acq)) {
+		ack_fail(pkt->trans_id);
+		return;
+	}
+
+	ack_spec_acq_cfg(pkt->trans_id, &acq);
+}

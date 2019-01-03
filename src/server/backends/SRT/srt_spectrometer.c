@@ -1308,6 +1308,22 @@ int be_spec_acq_cfg(struct spec_acq_cfg *acq)
 
 
 /**
+ * @brief current spectrum acquisition configuration readout
+ */
+
+G_MODULE_EXPORT
+int be_spec_acq_cfg_get(struct spec_acq_cfg *acq)
+{
+	if (!acq)
+		return -1;
+
+	memcpy(acq, &g_obs.acq, sizeof(struct spec_acq_cfg));
+
+	return 0;
+}
+
+
+/**
  * @brief spectrum acquisition enable/disable
  */
 

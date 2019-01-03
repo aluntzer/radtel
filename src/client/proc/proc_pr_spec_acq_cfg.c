@@ -1,5 +1,5 @@
 /**
- * @file    client/include/signals.h
+ * @file    client/proc/proc_pr_spec_acq_cfg.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -14,22 +14,29 @@
  *
  */
 
-#ifndef _CLIENT_INCLUDE_SIGNALS_H_
-#define _CLIENT_INCLUDE_SIGNALS_H_
+#include <glib.h>
 
 #include <protocol.h>
-
-void sig_pr_success(void);
-void sig_pr_capabilities(const struct capabilities *c);
-void sig_pr_spec_data(const struct spec_data *c);
-void sig_pr_getpos_azel(const struct getpos *pos);
-void sig_pr_spec_acq_enable(void);
-void sig_pr_spec_acq_disable(void);
-void sig_pr_spec_acq_cfg(const struct spec_acq_cfg *acq);
+#include <signals.h>
 
 
-gpointer *sig_get_instance(void);
-void sig_init(void);
 
-#endif /* _CLIENT_INCLUDE_SIGNALS_H_ */
+void proc_pr_spec_acq_cfg(struct packet *pkt)
+{
+	const struct spec_acq_cfg *acq;
 
+
+	g_message("Server sent spectrometer acquisition configuration");
+
+	if (pkt->data_size != sizeof(struct spec_acq_cfg)) {
+		g_message("\tacquisition configuration payload size mismatch "
+			  "%d != %d",
+			  sizeof(struct spec_acq_cfg), pkt->data_size);
+		return;
+	}
+
+	acq = (const struct spec_acq_cfg *) pkt->data;
+
+
+	sig_pr_spec_acq_cfg(acq);
+}

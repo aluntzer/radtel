@@ -11,5 +11,6 @@ libbackend_a_SOURCES = be_moveto_azel.c \
 		       be_recalibrate_pointing.c \
 		       be_park_telescope.c \
 		       be_spec_acq_cfg.c \
+		       be_spec_acq_cfg_get.c \
 		       be_getpos_azel.c \
 		       be_spec_acq_enable.c

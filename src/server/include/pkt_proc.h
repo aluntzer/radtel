@@ -31,6 +31,7 @@ void proc_pr_spec_acq_cfg(struct packet *pkt);
 void proc_pr_getpos_azel(struct packet *pkt);
 void proc_pr_spec_acq_enable(struct packet *pkt);
 void proc_pr_spec_acq_disable(struct packet *pkt);
+void proc_pr_spec_acq_cfg_get(struct packet *pkt);
 
 #endif /* _SERVER_INCLUDE_PKT_PROC_H_ */
 

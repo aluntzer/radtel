@@ -31,6 +31,7 @@ void be_park_telescope(void);
 int be_spec_acq_cfg(struct spec_acq_cfg *acq);
 int be_getpos_azel(double *az, double *el);
 int be_spec_acq_enable(gboolean mode);
+int be_spec_acq_cfg_get(struct spec_acq_cfg *acq);
 
 /* backend call loaders */
 int be_moveto_azel_load(GModule *mod);
@@ -41,6 +42,7 @@ int be_shared_comlink_read_load(GModule *mod);
 int be_recalibrate_pointing_load(GModule *mod);
 int be_park_telescope_load(GModule *mod);
 int be_spec_acq_cfg_load(GModule *mod);
+int be_spec_acq_cfg_get_load(GModule *mod);
 int be_getpos_azel_load(GModule *mod);
 int be_spec_acq_enable_load(GModule *mod);
 

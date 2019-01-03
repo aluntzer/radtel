@@ -1,5 +1,5 @@
 /**
- * @file    client/include/signals.h
+ * @file    net/cmds/cmd_spec_acq_cfg_get.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -14,22 +14,33 @@
  *
  */
 
-#ifndef _CLIENT_INCLUDE_SIGNALS_H_
-#define _CLIENT_INCLUDE_SIGNALS_H_
+#include <glib.h>
 
-#include <protocol.h>
-
-void sig_pr_success(void);
-void sig_pr_capabilities(const struct capabilities *c);
-void sig_pr_spec_data(const struct spec_data *c);
-void sig_pr_getpos_azel(const struct getpos *pos);
-void sig_pr_spec_acq_enable(void);
-void sig_pr_spec_acq_disable(void);
-void sig_pr_spec_acq_cfg(const struct spec_acq_cfg *acq);
+#include <cmd.h>
 
 
-gpointer *sig_get_instance(void);
-void sig_init(void);
+void cmd_spec_acq_cfg_get(uint16_t trans_id)
+{
+	gsize pkt_size;
 
-#endif /* _CLIENT_INCLUDE_SIGNALS_H_ */
+	struct packet *pkt;
 
+
+	pkt_size = sizeof(struct packet);
+
+	pkt = g_malloc(pkt_size);
+
+	pkt->service   = PR_SPEC_ACQ_CFG_GET;
+	pkt->trans_id  = trans_id;
+	pkt->data_size = 0;
+
+	pkt_set_data_crc16(pkt);
+
+	pkt_hdr_to_net_order(pkt);
+
+	g_message("Requesting spectral acquisition configuration");
+	net_send((void *) pkt, pkt_size);
+
+	/* clean up */
+	g_free(pkt);
+}

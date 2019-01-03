@@ -22,6 +22,7 @@
 #include <gio/gio.h>
 #include <glib.h>
 
+#include <ack.h>
 
 
 
@@ -71,8 +72,14 @@ void process_pkt(struct packet *pkt)
 		proc_pr_getpos_azel(pkt);
 		break;
 
+	case PR_SPEC_ACQ_CFG_GET:
+		proc_pr_spec_acq_cfg_get(pkt);
+		break;
+
 	default:
 		g_message("Service command %x not understood\n");
+		/* XXX need ack: PR_INVALID_SERVICE */
+		ack_fail(pkt->trans_id);
 		break;
 	}
 

@@ -1,5 +1,5 @@
 /**
- * @file    client/include/signals.h
+ * @file    client/sig/sig_pr_spec_acq_cfg.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -14,22 +14,17 @@
  *
  */
 
-#ifndef _CLIENT_INCLUDE_SIGNALS_H_
-#define _CLIENT_INCLUDE_SIGNALS_H_
+#include <glib.h>
+#include <glib-object.h>
+#include <signals.h>
 
-#include <protocol.h>
+/**
+ * @brief emit pr-spec-acq-cfg signal
+ */
 
-void sig_pr_success(void);
-void sig_pr_capabilities(const struct capabilities *c);
-void sig_pr_spec_data(const struct spec_data *c);
-void sig_pr_getpos_azel(const struct getpos *pos);
-void sig_pr_spec_acq_enable(void);
-void sig_pr_spec_acq_disable(void);
-void sig_pr_spec_acq_cfg(const struct spec_acq_cfg *acq);
+void sig_pr_spec_acq_cfg(const struct spec_acq_cfg *acq)
+{
+	g_message("Emit signal \"pr-spec-acq-cfg\"");
 
-
-gpointer *sig_get_instance(void);
-void sig_init(void);
-
-#endif /* _CLIENT_INCLUDE_SIGNALS_H_ */
-
+	g_signal_emit_by_name(sig_get_instance(), "pr-spec-acq-cfg", acq);
+}
