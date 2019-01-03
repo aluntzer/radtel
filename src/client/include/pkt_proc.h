@@ -1,5 +1,5 @@
 /**
- * @file    include/ack.h
+ * @file    client/include/pkt_proc.h
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -12,24 +12,24 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * @brief all functions with the ack_ prefix are server->client only
- *
  */
 
-#ifndef _INCLUDE_ACK_H_
-#define _INCLUDE_ACK_H_
+#ifndef _CLIENT_INCLUDE_PKT_PROC_H_
+#define _CLIENT_INCLUDE_PKT_PROC_H_
 
 #include <protocol.h>
-#include <net_common.h>
 
-void ack_invalid_pkt(void);
-void ack_capabilities(void);
-void ack_getpos_azel(struct getpos *pos);
-void ack_spec_acq_enable(void);
-void ack_spec_acq_disable(void);
-void ack_fail(void);
-void ack_success(void);
-void ack_invalid_pkt(void);
+void process_pkt(struct packet *pkt);
 
-#endif /* _INCLUDE_ACK_H_ */
+void proc_pr_invalid_pkt(void);
+void proc_pr_capabilities(struct packet *pkt);
+void proc_pr_success(void);
+void proc_pr_fail(void);
+void proc_pr_spec_data(struct packet *pkt);
+void proc_pr_getpos_azel(struct packet *pkt);
+void proc_pr_spec_acq_enable(void);
+void proc_pr_spec_acq_disable(void);
+
+
+#endif /* _CLIENT_INCLUDE_PKT_PROC_H_ */
 

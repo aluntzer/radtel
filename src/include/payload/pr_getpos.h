@@ -1,5 +1,5 @@
 /**
- * @file    include/ack.h
+ * @file    include/payload/pr_getpos.h
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -12,24 +12,23 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * @brief all functions with the ack_ prefix are server->client only
+ * @brief payload structure for PR_GETPOS_*
  *
  */
 
-#ifndef _INCLUDE_ACK_H_
-#define _INCLUDE_ACK_H_
+#ifndef _INCLUDE_PAYLOAD_PR_GETPOS_H_
+#define _INCLUDE_PAYLOAD_PR_GETPOS_H_
 
-#include <protocol.h>
-#include <net_common.h>
 
-void ack_invalid_pkt(void);
-void ack_capabilities(void);
-void ack_getpos_azel(struct getpos *pos);
-void ack_spec_acq_enable(void);
-void ack_spec_acq_disable(void);
-void ack_fail(void);
-void ack_success(void);
-void ack_invalid_pkt(void);
+/**
+ * PR_GETPOS_* packet payload structure
+ */
 
-#endif /* _INCLUDE_ACK_H_ */
+struct getpos {
+	int32_t az_arcsec;
+	int32_t el_arcsec;
+};
 
+
+
+#endif /* _INCLUDE_PAYLOAD_PR_GETPOS_H_ */

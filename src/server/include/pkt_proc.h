@@ -1,5 +1,5 @@
 /**
- * @file    include/ack.h
+ * @file    server/include/pkt_proc.h
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -12,24 +12,25 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * @brief all functions with the ack_ prefix are server->client only
- *
  */
 
-#ifndef _INCLUDE_ACK_H_
-#define _INCLUDE_ACK_H_
+#ifndef _SERVER_INCLUDE_PKT_PROC_H_
+#define _SERVER_INCLUDE_PKT_PROC_H_
 
 #include <protocol.h>
-#include <net_common.h>
 
-void ack_invalid_pkt(void);
-void ack_capabilities(void);
-void ack_getpos_azel(struct getpos *pos);
-void ack_spec_acq_enable(void);
-void ack_spec_acq_disable(void);
-void ack_fail(void);
-void ack_success(void);
-void ack_invalid_pkt(void);
+void process_pkt(struct packet *pkt);
 
-#endif /* _INCLUDE_ACK_H_ */
+/* command processing functions */
+void proc_pr_invalid_pkt(void);
+void proc_pr_capabilities(void);
+void proc_pr_moveto_azel(struct packet *pkt);
+void proc_pr_recalibrate_pointing(void);
+void proc_pr_park_telescope(void);
+void proc_pr_spec_acq_cfg(struct packet *pkt);
+void proc_pr_getpos_azel(void);
+void proc_pr_spec_acq_enable(void);
+void proc_pr_spec_acq_disable(void);
+
+#endif /* _SERVER_INCLUDE_PKT_PROC_H_ */
 

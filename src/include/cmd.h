@@ -12,6 +12,8 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
+ * @brief all functions with the cmd_ prefix are client -> server only
+ *
  */
 
 #ifndef _INCLUDE_CMD_H_

@@ -35,50 +35,50 @@ static void setup_sig_update(void)
 }
 
 
-static void setup_sig_cmd_success(void)
+static void setup_sig_pr_success(void)
 {
-	g_signal_new("cmd-success",
+	g_signal_new("pr-success",
 		     G_TYPE_OBJECT, G_SIGNAL_RUN_FIRST,
 		     0, NULL, NULL, NULL,
 		     G_TYPE_NONE, 0);
 }
 
 
-static void setup_sig_cmd_capabilities(void)
+static void setup_sig_pr_capabilities(void)
 {
-	g_signal_new("cmd-capabilities",
+	g_signal_new("pr-capabilities",
 		     G_TYPE_OBJECT, G_SIGNAL_RUN_FIRST,
 		     0, NULL, NULL, NULL,
 		     G_TYPE_NONE, 1, G_TYPE_POINTER);
 }
 
-static void setup_sig_cmd_spec_data(void)
+static void setup_sig_pr_spec_data(void)
 {
-	g_signal_new("cmd-spec-data",
+	g_signal_new("pr-spec-data",
 		     G_TYPE_OBJECT, G_SIGNAL_RUN_FIRST,
 		     0, NULL, NULL, NULL,
 		     G_TYPE_NONE, 1, G_TYPE_POINTER);
 }
 
-static void setup_sig_cmd_getpos_azel(void)
+static void setup_sig_pr_getpos_azel(void)
 {
-	g_signal_new("cmd-getpos-azel",
+	g_signal_new("pr-getpos-azel",
 		     G_TYPE_OBJECT, G_SIGNAL_RUN_FIRST,
 		     0, NULL, NULL, NULL,
 		     G_TYPE_NONE, 1, G_TYPE_POINTER);
 }
 
-static void setup_sig_cmd_spec_acq_enable(void)
+static void setup_sig_pr_spec_acq_enable(void)
 {
-	g_signal_new("cmd-spec-acq-enable",
+	g_signal_new("pr-spec-acq-enable",
 		     G_TYPE_OBJECT, G_SIGNAL_RUN_FIRST,
 		     0, NULL, NULL, NULL,
 		     G_TYPE_NONE, 0);
 }
 
-static void setup_sig_cmd_spec_acq_disable(void)
+static void setup_sig_pr_spec_acq_disable(void)
 {
-	g_signal_new("cmd-spec-acq-disable",
+	g_signal_new("pr-spec-acq-disable",
 		     G_TYPE_OBJECT, G_SIGNAL_RUN_FIRST,
 		     0, NULL, NULL, NULL,
 		     G_TYPE_NONE, 0);
@@ -97,10 +97,10 @@ void sig_init(void)
 
 //	setup_sig_update();
 
-	setup_sig_cmd_success();
-	setup_sig_cmd_capabilities();
-	setup_sig_cmd_spec_data();
-	setup_sig_cmd_getpos_azel();
-	setup_sig_cmd_spec_acq_enable();
-	setup_sig_cmd_spec_acq_disable();
+	setup_sig_pr_success();
+	setup_sig_pr_capabilities();
+	setup_sig_pr_spec_data();
+	setup_sig_pr_getpos_azel();
+	setup_sig_pr_spec_acq_enable();
+	setup_sig_pr_spec_acq_disable();
 }

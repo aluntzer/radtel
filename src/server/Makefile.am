@@ -14,17 +14,17 @@ server_SOURCES = main.c \
 		 cfg.c \
 		 backend.c \
 		 net.c \
-		 cmd_proc.c \
-		 proc/proc_cmd_capabilities.c \
-		 proc/proc_cmd_invalid_pkt.c \
-		 proc/proc_cmd_moveto_azel.c \
-		 proc/proc_cmd_recalibrate_pointing.c \
-		 proc/proc_cmd_park_telescope.c \
-		 proc/proc_cmd_spec_acq_cfg.c \
-		 proc/proc_cmd_getpos_azel.c \
-		 proc/proc_cmd_spec_acq_enable.c \
-		 proc/proc_cmd_spec_acq_disable.c
+		 pkt_proc.c \
+		 proc/proc_pr_capabilities.c \
+		 proc/proc_pr_invalid_pkt.c \
+		 proc/proc_pr_moveto_azel.c \
+		 proc/proc_pr_recalibrate_pointing.c \
+		 proc/proc_pr_park_telescope.c \
+		 proc/proc_pr_spec_acq_cfg.c \
+		 proc/proc_pr_getpos_azel.c \
+		 proc/proc_pr_spec_acq_enable.c \
+		 proc/proc_pr_spec_acq_disable.c
 
 server_LDADD = $(server_LIBS) \
-	       $(top_builddir)/src/net/libprotocmd.a \
+	       $(top_builddir)/src/net/libproto.a \
 	       $(top_builddir)/src/server/api/libbackend.a

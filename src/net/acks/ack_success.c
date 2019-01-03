@@ -1,5 +1,5 @@
 /**
- * @file    include/ack.h
+ * @file    net/acks/ack_success.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -12,24 +12,34 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * @brief all functions with the ack_ prefix are server->client only
- *
  */
 
-#ifndef _INCLUDE_ACK_H_
-#define _INCLUDE_ACK_H_
+#include <glib.h>
 
-#include <protocol.h>
-#include <net_common.h>
+#include <ack.h>
 
-void ack_invalid_pkt(void);
-void ack_capabilities(void);
-void ack_getpos_azel(struct getpos *pos);
-void ack_spec_acq_enable(void);
-void ack_spec_acq_disable(void);
-void ack_fail(void);
-void ack_success(void);
-void ack_invalid_pkt(void);
 
-#endif /* _INCLUDE_ACK_H_ */
+void ack_success(void)
+{
+	gsize pkt_size;
 
+	struct packet *pkt;
+
+
+	pkt_size = sizeof(struct packet);
+
+	pkt = g_malloc(pkt_size);
+
+	pkt->service    = PR_SUCCESS;
+	pkt->data_size  = 0;
+
+	pkt_set_data_crc16(pkt);
+
+	pkt_hdr_to_net_order(pkt);
+
+	g_message("Signalling successful operation");
+	net_send((void *) pkt, pkt_size);
+
+	/* clean up */
+	g_free(pkt);
+}

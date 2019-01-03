@@ -22,7 +22,7 @@
 
 #include <net.h>
 #include <cmd.h>
-#include <cmd_proc.h>
+#include <pkt_proc.h>
 
 
 #include <gio/gio.h>
@@ -181,7 +181,7 @@ pending:
 
 	/* verify packet payload */
 	if (CRC16(pkt->data, pkt->data_size) == pkt->data_crc16)  {
-		process_cmd_pkt(pkt);
+		process_pkt(pkt);
 		c->nbytes = 0;
 		g_buffered_input_stream_peek_buffer(bistream, &nbytes);
 		if (nbytes)
@@ -322,20 +322,6 @@ void net_send(const char *pkt, size_t nbytes)
 }
 
 
-#include <signals.h>
-
-void handle_cmd_success_event1(gpointer instance)
-{
-	g_message("Event \"cmd-success\" signalled (1)");
-}
-
-void handle_cmd_success_event2(gpointer instance)
-{
-	g_message("Event \"cmd-success\" signalled (2)");
-}
-
-
-
 /**
  * initialise client networking
  *
@@ -370,44 +356,10 @@ int net_client_init(void)
 
 	net_setup_recv(con);
 
-
 	g_message("Client started");
 
-	g_signal_connect(sig_get_instance(), "cmd-success",
-			  (GCallback) handle_cmd_success_event1,
-			  NULL);
-
-	g_signal_connect(sig_get_instance(), "cmd-success",
-			  (GCallback) handle_cmd_success_event2,
-			  NULL);
-
 	cmd_capabilities();
 	cmd_getpos_azel();
-	cmd_capabilities();
-	cmd_getpos_azel();
-	cmd_capabilities();
-//	cmd_spec_acq_start(1420100000 - 20000*10, 1420800000 + 20000 , 0, 0, 1, 5);
-
-//	cmd_getpos_azel();
-
-#if 1
-//	cmd_recalibrate_pointing();
-//	cmd_park_telescope();
-
-		//cmd_moveto_azel(20., 20.);
-#if 0
-	while (1) {
-		cmd_moveto_azel(20., 20.);
-		sleep(3);
-		cmd_moveto_azel(18., 20.);
-		cmd_moveto_azel(17., 20.);
-		cmd_moveto_azel(16., 20.);
-		cmd_moveto_azel(21., 20.);
-		cmd_moveto_azel(15., 20.);
-	}
-#endif
-#endif
-
 
 
 

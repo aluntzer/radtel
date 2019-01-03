@@ -23,7 +23,7 @@
 #include <net.h>
 #include <cfg.h>
 #include <cmd.h>
-#include <cmd_proc.h>
+#include <pkt_proc.h>
 
 #include <gio/gio.h>
 #include <glib.h>
@@ -210,7 +210,7 @@ pending:
 
 	/* verify packet payload */
 	if (CRC16(pkt->data, pkt->data_size) == pkt->data_crc16)  {
-		process_cmd_pkt(pkt);
+		process_pkt(pkt);
 		c->nbytes = 0;
 		g_buffered_input_stream_peek_buffer(bistream, &nbytes);
 		if (nbytes)

@@ -22,11 +22,11 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#include <payload/cmd_capabilities.h>
-#include <payload/cmd_moveto.h>
-#include <payload/cmd_spec_acq_cfg.h>
-#include <payload/cmd_spec_data.h>
-#include <payload/cmd_getpos.h>
+#include <payload/pr_capabilities.h>
+#include <payload/pr_moveto.h>
+#include <payload/pr_spec_acq_cfg.h>
+#include <payload/pr_spec_data.h>
+#include <payload/pr_getpos.h>
 
 
 #define DEFAULT_PORT 1420

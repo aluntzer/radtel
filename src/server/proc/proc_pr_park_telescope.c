@@ -1,5 +1,5 @@
 /**
- * @file    include/ack.h
+ * @file    server/proc/proc_pr_park_telescope.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -12,24 +12,23 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * @brief all functions with the ack_ prefix are server->client only
- *
  */
 
-#ifndef _INCLUDE_ACK_H_
-#define _INCLUDE_ACK_H_
+#include <glib.h>
 
-#include <protocol.h>
-#include <net_common.h>
+#include <ack.h>
+#include <backend.h>
 
-void ack_invalid_pkt(void);
-void ack_capabilities(void);
-void ack_getpos_azel(struct getpos *pos);
-void ack_spec_acq_enable(void);
-void ack_spec_acq_disable(void);
-void ack_fail(void);
-void ack_success(void);
-void ack_invalid_pkt(void);
 
-#endif /* _INCLUDE_ACK_H_ */
+/**
+ * @brief process command park_telescope
+ */
 
+void proc_pr_park_telescope(void)
+{
+	g_message("Client requested park_telescope");
+
+	be_park_telescope();
+
+	ack_success();
+}

@@ -1,5 +1,5 @@
 /**
- * @file    include/ack.h
+ * @file    client/proc/proc_pr_getpos_azel.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -12,24 +12,29 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * @brief all functions with the ack_ prefix are server->client only
- *
  */
 
-#ifndef _INCLUDE_ACK_H_
-#define _INCLUDE_ACK_H_
+#include <glib.h>
+#include <string.h>
 
 #include <protocol.h>
-#include <net_common.h>
+#include <signals.h>
 
-void ack_invalid_pkt(void);
-void ack_capabilities(void);
-void ack_getpos_azel(struct getpos *pos);
-void ack_spec_acq_enable(void);
-void ack_spec_acq_disable(void);
-void ack_fail(void);
-void ack_success(void);
-void ack_invalid_pkt(void);
 
-#endif /* _INCLUDE_ACK_H_ */
 
+void proc_pr_getpos_azel(struct packet *pkt)
+{
+	struct getpos *pos;
+
+
+	g_message("Server sent spectral data");
+
+	pos = g_malloc(pkt->data_size);
+
+	memcpy(pos, pkt->data, pkt->data_size);
+
+	sig_pr_getpos_azel(pos);
+
+	/* cleanup */
+	g_free(pos);
+}

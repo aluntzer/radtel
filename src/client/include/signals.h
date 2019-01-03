@@ -19,12 +19,12 @@
 
 #include <protocol.h>
 
-void sig_cmd_success(void);
-void sig_cmd_capabilities(const struct capabilities *c);
-void sig_cmd_spec_data(const struct spec_data *c);
-void sig_cmd_getpos_azel(const struct getpos *pos);
-void sig_cmd_spec_acq_enable(void);
-void sig_cmd_spec_acq_disable(void);
+void sig_pr_success(void);
+void sig_pr_capabilities(const struct capabilities *c);
+void sig_pr_spec_data(const struct spec_data *c);
+void sig_pr_getpos_azel(const struct getpos *pos);
+void sig_pr_spec_acq_enable(void);
+void sig_pr_spec_acq_disable(void);
 
 
 gpointer *sig_get_instance(void);
