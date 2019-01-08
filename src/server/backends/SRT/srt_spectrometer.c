@@ -1168,6 +1168,12 @@ static gpointer srt_acquisition_update(gpointer data)
 
 	g_mutex_unlock(&acq_abort);
 
+	/* signal the acquisition thread outer loop */
+	if (g_mutex_trylock(&acq_lock)) {
+		g_cond_signal(&acq_cond);
+		g_mutex_unlock(&acq_lock);
+	}
+
 
 	g_free(data);
 }
