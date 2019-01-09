@@ -47,7 +47,8 @@ void ack_capabilities(uint16_t trans_id)
 	c = (struct capabilities *) pkt->data;
 
 
-	/* now fill capabilites somehow (would call backend plugin here) */
+	/* XXX now fill capabilites somehow (would call backend plugin here) */
+
 	c->freq_min_hz		= 1370000000;
 	c->freq_max_hz		= 1800000000;
 	c->freq_inc_hz		= 40000;
@@ -57,7 +58,8 @@ void ack_capabilities(uint16_t trans_id)
 	c->bw_max_bins		= 64;
 	c->bw_max_bin_div_lin	= 0;
 	c->bw_max_bin_div_rad2	= 0;
-
+	c->bw_max_bin_div_rad2	= 0;
+	c->n_stack_max		= 0;
 
 
 	pkt_set_data_crc16(pkt);

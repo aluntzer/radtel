@@ -85,6 +85,8 @@ struct capabilities {
 	uint32_t bw_max_bins;		/* upper number of bins per bandwidth */
 	uint32_t bw_max_bin_div_lin;	/* max bin per BW divider (linear) */
 	uint32_t bw_max_bin_div_rad2;	/* max bin per BW divider (2^n) */
+
+	uint32_t n_stack_max;		/* max spec averaging */
 };
 
 
