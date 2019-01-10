@@ -989,6 +989,10 @@ static uint32_t srt_spec_acquire(struct observation *obs)
 	typeof(*s->spec) *p;
 
 
+	if (!obs->acq.acq_max)
+		return 0;
+
+
 	raw = g_malloc0(n * sizeof(*raw));
 	if (!raw) {
 		g_error(MSG "memory allocation of %d elements failed: %s:%d",
@@ -1102,6 +1106,41 @@ static int srt_spec_check_param(struct spec_acq_cfg *acq)
 
 
 /**
+ * @brief pause/unpause radio acquisition
+ *
+ */
+
+static void srt_spec_acq_enable(gboolean mode)
+{
+	static gboolean last = TRUE;
+
+
+	/* see if we currently hold the lock */
+	if (mode == last)
+		return;
+
+	last = mode;
+
+
+	if (!mode) {
+		g_mutex_lock(&acq_pause);
+		return;
+	}
+
+
+	g_mutex_unlock(&acq_pause);
+
+	/* signal the acquisition thread outer loop */
+	if (g_mutex_trylock(&acq_lock)) {
+		g_cond_signal(&acq_cond);
+		g_mutex_unlock(&acq_lock);
+	}
+
+	return;
+}
+
+
+/**
  * @brief thread function that does all the spectrum readout work
  */
 
@@ -1113,6 +1152,7 @@ static gpointer srt_spec_thread(gpointer data)
 
 		g_mutex_lock(&acq_lock);
 
+		srt_spec_acq_enable(FALSE);
 		ack_spec_acq_disable(PKT_TRANS_ID_UNDEF);
 		g_message(MSG "spectrum acquisition stopped");
 
@@ -1232,42 +1272,6 @@ static int srt_spec_acquisition_configure(struct spec_acq_cfg *acq)
 
 	return 0;
 }
-
-
-/**
- * @brief pause/unpause radio acquisition
- *
- */
-
-static void srt_spec_acq_enable(gboolean mode)
-{
-	static gboolean last = TRUE;
-
-
-	/* see if we currently hold the lock */
-	if (mode == last)
-		return;
-
-	last = mode;
-
-
-	if (!mode) {
-		g_mutex_lock(&acq_pause);
-		return;
-	}
-
-
-	g_mutex_unlock(&acq_pause);
-
-	/* signal the acquisition thread outer loop */
-	if (g_mutex_trylock(&acq_lock)) {
-		g_cond_signal(&acq_cond);
-		g_mutex_unlock(&acq_lock);
-	}
-
-	return;
-}
-
 
 
 /**
