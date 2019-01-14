@@ -18,6 +18,7 @@
 
 #include <ack.h>
 #include <backend.h>
+#include <cfg.h>
 
 void proc_pr_capabilities(struct packet *pkt)
 {
@@ -26,8 +27,10 @@ void proc_pr_capabilities(struct packet *pkt)
 	g_message("Client requested capabilites, acknowledging");
 
 	be_get_capabilities_spec(&c);
-
 	be_get_capabilities_drive(&c);
+
+	c.lon_arcsec = (int32_t) (3600.0 * server_cfg_get_station_lon());
+	c.lat_arcsec = (int32_t) (3600.0 * server_cfg_get_station_lat());
 
 	ack_capabilities(pkt->trans_id, &c);
 }

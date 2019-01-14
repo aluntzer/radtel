@@ -43,6 +43,15 @@
 
 struct capabilities {
 
+	/* given that the earch has a circumference of about 40075161.2 meters
+	 * at the equator, latitude and longitude in arcseconds should be
+	 * plenty precise for our application, giving at least ~31 meters of
+	 * position accuracy
+	 */
+
+	int32_t lat_arcsec;			/* station latitude  */
+	int32_t lon_arcsec;			/* station longitude */
+
 	int32_t az_min_arcsec;		/* left limit      */
 	int32_t az_max_arcsec;		/* right limit     */
 	int32_t az_res_arcsec;		/* step resolution */

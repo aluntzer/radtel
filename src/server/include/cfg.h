@@ -35,7 +35,7 @@ guint16 server_cfg_get_port(void);
 gchar **server_cfg_get_plugins(void);
 gchar *server_cfg_get_station(void);
 double server_cfg_get_station_lon(void);
-double server_cfg_get_station_lon(void);
+double server_cfg_get_station_lat(void);
 gsize server_cfg_get_hor_limits(int **hor_az, int **hor_el);
 
 int server_cfg_load(void);
