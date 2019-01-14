@@ -23,7 +23,7 @@
 #include <net_common.h>
 
 void ack_invalid_pkt(uint16_t trans_id);
-void ack_capabilities(uint16_t trans_id);
+void ack_capabilities(uint16_t trans_id, struct capabilities *c);
 void ack_getpos_azel(uint16_t trans_id, struct getpos *pos);
 void ack_spec_data(uint16_t trans_id, struct spec_data *s);
 void ack_spec_acq_enable(uint16_t trans_id);

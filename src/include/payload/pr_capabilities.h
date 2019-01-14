@@ -43,7 +43,7 @@
 
 struct capabilities {
 
-	int32_t az_min_arcsec;		/* left limit      */				
+	int32_t az_min_arcsec;		/* left limit      */
 	int32_t az_max_arcsec;		/* right limit     */
 	int32_t az_res_arcsec;		/* step resolution */
 

@@ -25,13 +25,11 @@
  * @brief acknowledge backend capabilities command
  */
 
-void ack_capabilities(uint16_t trans_id)
+void ack_capabilities(uint16_t trans_id, struct capabilities *c)
 {
 	gsize pkt_size;
 
 	struct packet *pkt;
-
-	struct capabilities *c;
 
 
 	pkt_size = sizeof(struct packet) + sizeof(struct capabilities);
@@ -44,23 +42,7 @@ void ack_capabilities(uint16_t trans_id)
 	pkt->data_size = sizeof(struct capabilities);
 
 
-	c = (struct capabilities *) pkt->data;
-
-
-	/* XXX now fill capabilites somehow (would call backend plugin here) */
-
-	c->freq_min_hz		= 1370000000;
-	c->freq_max_hz		= 1800000000;
-	c->freq_inc_hz		= 40000;
-	c->bw_max_hz		= 500000;
-	c->bw_max_div_lin	= 0;
-	c->bw_max_div_rad2	= 2;
-	c->bw_max_bins		= 64;
-	c->bw_max_bin_div_lin	= 0;
-	c->bw_max_bin_div_rad2	= 0;
-	c->bw_max_bin_div_rad2	= 0;
-	c->n_stack_max		= 0;
-
+	memcpy(pkt->data, c, sizeof(struct capabilities));
 
 	pkt_set_data_crc16(pkt);
 

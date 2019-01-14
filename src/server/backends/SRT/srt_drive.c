@@ -953,6 +953,40 @@ int be_getpos_azel(double *az, double *el)
 
 
 /**
+ * @brief get telescope drive capabilities
+ */
+
+G_MODULE_EXPORT
+int be_get_capabilities_drive(struct capabilities *c)
+{
+	double el_drive_min;
+	double el_drive_max;
+	double el_drive_cnt;
+	double el_drive_res;
+
+
+	el_drive_min = srt_drive_el_to_drive_ref(srt.el_limits.lower);
+	el_drive_max = srt_drive_el_to_drive_ref(srt.el_limits.upper);
+
+	el_drive_cnt = srt_drive_cassi_el_counts(el_drive_max)
+		     - srt_drive_cassi_el_counts(el_drive_min);
+
+	el_drive_res = (el_drive_max - el_drive_min) / el_drive_cnt;
+
+
+	c->az_min_arcsec = (int32_t) (3600.0 * srt.az_limits.left);
+	c->az_max_arcsec = (int32_t) (3600.0 * srt.az_limits.right);
+	c->az_res_arcsec = (int32_t) (3600.0 / srt.az_counts_per_deg);
+
+	c->el_min_arcsec = (int32_t) (3600.0 * srt.el_limits.lower);
+	c->el_max_arcsec = (int32_t) (3600.0 * srt.el_limits.upper);
+	c->el_res_arcsec = (int32_t) (3600.0 * el_drive_res);
+
+	return 0;
+}
+
+
+/**
  * @brief extra initialisation function
  *
  * @note if a thread is created in g_module_check_init(), the loader appears

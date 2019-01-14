@@ -17,9 +17,17 @@
 #include <glib.h>
 
 #include <ack.h>
+#include <backend.h>
 
 void proc_pr_capabilities(struct packet *pkt)
 {
+	struct capabilities c = {0};
+
 	g_message("Client requested capabilites, acknowledging");
-	ack_capabilities(pkt->trans_id);
+
+	be_get_capabilities_spec(&c);
+
+	be_get_capabilities_drive(&c);
+
+	ack_capabilities(pkt->trans_id, &c);
 }
