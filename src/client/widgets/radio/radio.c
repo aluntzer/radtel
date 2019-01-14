@@ -140,15 +140,10 @@ static void gui_create_radio_controls(Radio *p)
 	w = radio_spec_avg_ctrl_new(p);
 	gtk_box_pack_start(GTK_BOX(p), w, FALSE, FALSE, 0);
 
-	w = radio_spec_acq_num_ctrl_new(p);
-	gtk_box_pack_start(GTK_BOX(p), w, FALSE, FALSE, 0);
-
 	w = radio_spec_cfg_ctrl_set_new(p);
 	gtk_box_pack_start(GTK_BOX(p), w, FALSE, FALSE, 0);
 
-	w = gtk_separator_new(GTK_ORIENTATION_HORIZONTAL);
-	gtk_box_pack_start(GTK_BOX(p), w, FALSE, FALSE, 0);
-
+	/* XXX move out of here */
 	w = radio_spec_acq_ctrl_new(p);
 	gtk_box_pack_start(GTK_BOX(p), w, FALSE, FALSE, 0);
 }

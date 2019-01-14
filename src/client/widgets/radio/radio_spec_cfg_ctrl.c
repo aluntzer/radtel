@@ -58,7 +58,7 @@ static void radio_spec_cfg_set_cb(GtkWidget *w, Radio *p)
 	cmd_spec_acq_cfg(PKT_TRANS_ID_UNDEF,
 			 f0, f1, p->cfg->bw_div, p->cfg->bin_div,
 			 gtk_spin_button_get_value_as_int(p->cfg->sb_avg),
-			 gtk_spin_button_get_value_as_int(p->cfg->sb_limit));
+			 0);
 }
 
 
