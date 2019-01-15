@@ -3,6 +3,7 @@ AM_CPPFLAGS  = -I$(top_srcdir)/src/include
 AM_CPPFLAGS += -Iinclude
 AM_CPPFLAGS += -Iwidgets/include
 AM_CPPFLAGS += -Iwidgets/radio/
+AM_CPPFLAGS += -Iwidgets/telescope/
 AM_CFLAGS = $(client_CFLAGS)
 
 bin_PROGRAMS = client
@@ -45,6 +46,12 @@ client_SOURCES += widgets/radio/radio.c \
 		  widgets/radio/radio_spec_acq_num_ctrl.c \
 		  widgets/radio/radio_spec_cfg_ctrl.c \
 		  widgets/radio/radio_vrest_ctrl.c
+
+client_SOURCES += widgets/telescope/telescope.c \
+		  widgets/telescope/telescope_update.c \
+		  widgets/telescope/telescope_coord_ctrl.c \
+		  widgets/telescope/telescope_pos_ctrl.c
+
 
 
 
