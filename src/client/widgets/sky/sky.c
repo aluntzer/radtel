@@ -1111,10 +1111,6 @@ static PangoLayout *sky_coord_info_layout(cairo_t *cr, SKY *p,
 	hor.az = phi;
 	hor.el = r;
 
-	/* XXX dummy */
-	p->cfg->loc.lat = 48.23;
-	p->cfg->loc.lon = -16.34;
-
 	eq  = horizontal_to_equatorial(hor, p->cfg->loc.lat, p->cfg->loc.lon,
 				       p->cfg->time_off);
 	gal = equatorial_to_galactic(eq);
@@ -1373,9 +1369,6 @@ static void sky_plot(GtkWidget *widget)
 
 	sky_draw_grid_angular(cr, p->cfg->xc, p->cfg->yc, p->cfg->r);
 
-	/* XXX dummy */
-	p->cfg->loc.lat = 48.23;
-	p->cfg->loc.lon = -16.34;
 
 	sky_draw_milkyway(cr, p->cfg->xc, p->cfg->yc, p->cfg->r,
 			  p->cfg->loc.lat, p->cfg->loc.lon, p->cfg->time_off);
@@ -1766,6 +1759,10 @@ static void sky_init(SKY *p)
 			       | GDK_LEAVE_NOTIFY_MASK);
 
 	sky_load_config(p);
+
+	/* XXX dummy */
+	p->cfg->loc.lat = 48.23;
+	p->cfg->loc.lon = -16.34;
 
 	/* add sun/moon objects, their coordinates are updated
 	 * automatically */

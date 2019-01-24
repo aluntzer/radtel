@@ -342,7 +342,7 @@ int net_client_init(void)
 #if 1
 	con = g_socket_client_connect_to_host(client,
 					      (gchar*)"radtel.astro.univie.ac.at",
-					      2345, NULL, &error);
+					      1420, NULL, &error);
 #else
 	con = g_socket_client_connect_to_host(client,
 					      (gchar*)"localhost",

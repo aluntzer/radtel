@@ -57,7 +57,7 @@ GtkWidget *telescope_pos_ctrl_new(Telescope *p)
 
 	gtk_grid_attach(GTK_GRID(grid), w, 0, 0, 1, 1);
 
-	w = gtk_button_new_with_label("Move");
+	w = gtk_button_new_with_label("Go to Coordinates");
 	gtk_widget_set_tooltip_text(w, "Send position\nto server");
 
 	gtk_widget_set_hexpand(w, TRUE);
@@ -99,7 +99,7 @@ GtkWidget *telescope_park_ctrl_new(Telescope *p)
 
 	gtk_grid_attach(GTK_GRID(grid), w, 0, 0, 1, 1);
 
-	w = gtk_button_new_with_label("Stow");
+	w = gtk_button_new_with_label("Stow Telescope");
 	gtk_widget_set_tooltip_text(w, "Drive to park position");
 
 	gtk_widget_set_hexpand(w, TRUE);
