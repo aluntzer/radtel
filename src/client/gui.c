@@ -17,9 +17,11 @@
 
 #include <gtk/gtk.h>
 
+#include <sswdnd.h>
 #include <sky.h>
 #include <xyplot.h>
 #include <radio.h>
+#include <telescope.h>
 #include <signals.h>
 
 
@@ -99,12 +101,12 @@ static GtkWidget *gui_create_specplot(void)
 	xyplot_set_data(plot, xdata, ydata, LEN);
 	}
 #endif
-	g_signal_connect(sig_get_instance(), "cmd-spec-data",
+	g_signal_connect(sig_get_instance(), "pr-spec-data",
 			  (GCallback) gui_spec_data_cb,
 			  (gpointer) plot);
 
 	/*** XXX POSITION DUMMY ***/
-	g_signal_connect(sig_get_instance(), "cmd-getpos-azel",
+	g_signal_connect(sig_get_instance(), "pr-getpos-azel",
 			  (GCallback) gui_getpos_azel_cb,
 			  (gpointer) NULL);
 	return plot;
@@ -190,7 +192,7 @@ static void log_output(const gchar *logdomain, GLogLevelFlags loglevel,
 	gint64 now;
 	time_t now_secs;
 	struct tm *now_tm;
-	char time_buf[256];
+	char time_buf[128];
 	char *stmp;
 
 
@@ -204,8 +206,11 @@ static void log_output(const gchar *logdomain, GLogLevelFlags loglevel,
 
 	strftime(time_buf, sizeof(time_buf), "%H:%M:%S", now_tm);
 
-	stmp = g_strdup_printf("<span foreground='#004F96'>%s.%03d</span>",
-			       time_buf, (gint) ((now / 1000) % 1000));
+	stmp = g_strdup_printf("<tt>"
+			       "<span foreground='#004F96'>%s.%03d </span>"
+			       "%s</tt>\n",
+			       time_buf, (gint) ((now / 1000) % 1000),
+			       message);
 
 
 	mark = gtk_text_buffer_get_mark(b, "end");
@@ -213,9 +218,6 @@ static void log_output(const gchar *logdomain, GLogLevelFlags loglevel,
 	gtk_text_buffer_get_iter_at_mark(b, &iter, mark);
 
 	gtk_text_buffer_insert_markup(b, &iter, stmp, -1);
-	gtk_text_buffer_insert(b, &iter, "    ", -1);
-	gtk_text_buffer_insert(b, &iter, message, -1);
-	gtk_text_buffer_insert(b, &iter, "\n", -1);
 
 	gtk_text_view_scroll_mark_onscreen(GTK_TEXT_VIEW(userdata), mark);
 
@@ -240,7 +242,7 @@ static GtkWidget *gui_create_log(void)
 	gtk_container_add(GTK_CONTAINER(frame), w);
 
 	textview = gtk_text_view_new();
-	gtk_text_view_set_left_margin(GTK_TEXT_VIEW(textview), 10);
+	gtk_text_view_set_left_margin(GTK_TEXT_VIEW(textview), 3);
 	gtk_container_add(GTK_CONTAINER(w), textview);
 
 	{
@@ -253,9 +255,10 @@ static GtkWidget *gui_create_log(void)
 		 */
 		gtk_text_buffer_create_mark(b, "end", &iter, FALSE);
 	}
-
+/**** XXX console for now... ****/
+#if 0
 	 g_log_set_handler(NULL, G_LOG_LEVEL_MASK, log_output, (gpointer) textview);
-
+#endif
 	/* TODO add callbacks, right-click menu */
 
 	return frame;
@@ -280,60 +283,7 @@ static GtkWidget *gui_create_chatlog(void)
 
 
 
-static GtkWidget *gui_create_stack_switcher(void)
-{
-	GtkWidget *stack;
-	GtkWidget *stack_sw;
-	GtkWidget *w;
 
-
-
-	stack_sw = gtk_stack_switcher_new();
-
-
-	stack = gtk_stack_new();
-	gtk_stack_set_transition_type(GTK_STACK(stack),
-			      GTK_STACK_TRANSITION_TYPE_SLIDE_LEFT_RIGHT);
-
-	gtk_stack_switcher_set_stack(GTK_STACK_SWITCHER(stack_sw),
-				     GTK_STACK(stack));
-
-
-	w = gui_create_specplot();
-	gtk_stack_add_named(GTK_STACK(stack), w, "SPEC");
-	gtk_container_child_set(GTK_CONTAINER(stack), w, "title", "SPEC", NULL);
-
-
-
-	w = gui_create_chatlog();
-	gtk_stack_add_named(GTK_STACK(stack), w, "LOG");
-	gtk_container_child_set(GTK_CONTAINER(stack), w, "title", "LOG", NULL);
-
-
-
-
-
-	w = sky_new();
-	gtk_stack_add_named(GTK_STACK(stack), w, "SKY");
-	gtk_container_child_set(GTK_CONTAINER(stack), w, "title", "SKY", NULL);
-
-
-	w = gtk_scrolled_window_new(NULL, NULL);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(w),
-				       GTK_POLICY_AUTOMATIC,
-				       GTK_POLICY_AUTOMATIC);
-	gtk_container_add(GTK_CONTAINER(w), radio_new());
-	gtk_stack_add_named(GTK_STACK(stack), w, "RADIO");
-	gtk_container_child_set(GTK_CONTAINER(stack), w, "title", "RADIO", NULL);
-
-
-
-
-
-
-
-	return stack_sw;
-}
 
 static GtkWidget *gui_create_status_view(void)
 {
@@ -479,60 +429,123 @@ static GtkWidget *gui_create_status_view(void)
 }
 
 
-int gui_client(int argc, char *argv[])
+static GtkWidget *gui_create_default_window(void)
 {
-	static GtkWidget *window = NULL;
-	GtkWidget *box;
-	GtkWidget *stack_sw;
+	GtkWidget *win;
+	GtkWidget *hdr;
+	GtkWidget *btn;
+
+
+	win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	gtk_window_set_title(GTK_WINDOW(win), "GUI");
+	gtk_window_set_default_size(GTK_WINDOW(win), 500, 350);
+	gtk_window_set_resizable(GTK_WINDOW(win), TRUE);
+
+	g_signal_connect(win, "destroy", G_CALLBACK(gtk_widget_destroyed),
+			 NULL);
+
+	hdr = gtk_header_bar_new();
+	gtk_header_bar_set_show_close_button(GTK_HEADER_BAR(hdr), TRUE);
+
+	gtk_window_set_titlebar(GTK_WINDOW(win), hdr);
+
+
+	return win;
+}
+
+static void gui_create_window_with_widget(GtkWidget *p, GtkWidget **win,
+					  GtkWidget *sswdnd, gpointer data)
+{
 	GtkWidget *w;
+	GtkWidget *box;
+
+	GtkStack *stack;
 	GtkWidget *header;
-	guint i;
 
 
-	gtk_init(&argc, &argv);
+	(*win) = gui_create_default_window();
 
-	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-
-	gtk_window_set_resizable(GTK_WINDOW(window), TRUE);
-
-	gtk_widget_set_size_request(window, 500, 350);
-
-
-
-	header = gtk_header_bar_new();
-
-	gtk_header_bar_set_show_close_button(GTK_HEADER_BAR(header), TRUE);
-
-	gtk_window_set_titlebar(GTK_WINDOW(window), header);
-
-	gtk_window_set_title(GTK_WINDOW(window), "GUI");
-
-	g_signal_connect(window, "destroy", G_CALLBACK(gtk_widget_destroyed),
-			 &window);
+	stack = gtk_stack_switcher_get_stack(GTK_STACK_SWITCHER(sswdnd));
+	g_signal_connect(GTK_WIDGET(stack), "sswdnd-create-window",
+			 G_CALLBACK(gui_create_window_with_widget), NULL);
 
 
 	box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 18);
+	gtk_container_add(GTK_CONTAINER((*win)), box);
 
-	stack_sw = gui_create_stack_switcher();
-	gtk_widget_set_halign(GTK_WIDGET(stack_sw), GTK_ALIGN_CENTER);
-	gtk_box_pack_start(GTK_BOX(box), stack_sw, FALSE, FALSE, 0);
+	gtk_widget_set_halign(GTK_WIDGET(sswdnd), GTK_ALIGN_CENTER);
+	gtk_box_pack_start(GTK_BOX(box), sswdnd, FALSE, FALSE, 0);
 
-	w = GTK_WIDGET(gtk_stack_switcher_get_stack(GTK_STACK_SWITCHER(stack_sw)));
-	gtk_box_pack_start(GTK_BOX(box), w, TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(box), GTK_WIDGET(stack), TRUE, TRUE, 0);
 
 	w = gui_create_status_view();
 	gtk_widget_set_halign(GTK_WIDGET(w), GTK_ALIGN_CENTER);
 	gtk_box_pack_start(GTK_BOX(box), w, FALSE, FALSE, 0);
 
-	gtk_container_add(GTK_CONTAINER(window), box);
+	header = gtk_window_get_titlebar(GTK_WINDOW(*win));
 
+	sswdnd_add_header_buttons(sswdnd, header);
 
-	if (!gtk_widget_get_visible(window))
-		gtk_widget_show_all(window);
+	if (!gtk_widget_get_visible(*win))
+		gtk_widget_show_all(*win);
 	else
-		gtk_widget_destroy(window);
+		gtk_widget_destroy(*win);
+}
 
+
+static GtkWidget *gui_create_stack_switcher(void)
+{
+	GtkWidget *w;
+	GtkWidget *sswdnd;
+	GtkStack *stack;
+
+
+
+	sswdnd = sswdnd_new();
+
+	w = gtk_scrolled_window_new(NULL, NULL);
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(w),
+				       GTK_POLICY_AUTOMATIC,
+				       GTK_POLICY_AUTOMATIC);
+	gtk_container_add(GTK_CONTAINER(w), telescope_new());
+	sswdnd_add_named(sswdnd, w, "Telescope");
+
+	w = gtk_scrolled_window_new(NULL, NULL);
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(w),
+				       GTK_POLICY_AUTOMATIC,
+				       GTK_POLICY_AUTOMATIC);
+	gtk_container_add(GTK_CONTAINER(w), radio_new());
+	sswdnd_add_named(sswdnd, w, "Spectrometer");
+
+
+	sswdnd_add_named(sswdnd, gui_create_specplot(), "Spectrum");
+	sswdnd_add_named(sswdnd, gui_create_chatlog(), "Log");
+	sswdnd_add_named(sswdnd, sky_new(), "Sky View");
+
+
+	stack = gtk_stack_switcher_get_stack(GTK_STACK_SWITCHER(sswdnd));
+
+#if 0
+	g_signal_connect(stack, "sswdnd-create-window",
+			 G_CALLBACK(gui_create_window_with_widget), NULL);
+#endif
+	return sswdnd;
+}
+
+
+
+
+
+int gui_client(int argc, char *argv[])
+{
+	GtkWidget *window;
+
+	gtk_init(&argc, &argv);
+
+
+	gui_create_window_with_widget(NULL, &window,
+				      gui_create_stack_switcher(), NULL);
 
 	return 0;
-
 }
+

@@ -4,6 +4,7 @@ AM_CPPFLAGS += -Iinclude
 AM_CPPFLAGS += -Iwidgets/include
 AM_CPPFLAGS += -Iwidgets/radio/
 AM_CPPFLAGS += -Iwidgets/telescope/
+AM_CPPFLAGS += -Iwidgets/sswdnd/
 AM_CFLAGS = $(client_CFLAGS)
 
 bin_PROGRAMS = client
@@ -52,6 +53,7 @@ client_SOURCES += widgets/telescope/telescope.c \
 		  widgets/telescope/telescope_coord_ctrl.c \
 		  widgets/telescope/telescope_pos_ctrl.c
 
+client_SOURCES += widgets/sswdnd/sswdnd.c
 
 
 
