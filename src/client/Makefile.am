@@ -1,11 +1,20 @@
 SUBDIRS = ../util ../net
-AM_CPPFLAGS  = -I$(top_srcdir)/src/include
+AM_CPPFLAGS := -I$(top_srcdir)/src/include -Iinclude
 AM_CPPFLAGS += -Iinclude
 AM_CPPFLAGS += -Iwidgets/include
 AM_CPPFLAGS += -Iwidgets/radio/
 AM_CPPFLAGS += -Iwidgets/telescope/
 AM_CPPFLAGS += -Iwidgets/sswdnd/
-AM_CFLAGS = $(client_CFLAGS)
+
+AM_CFLAGS := $(GTK3_CFLAGS)
+AM_CFLAGS += $(GTHREAD_CFLAGS)
+AM_CFLAGS += $(GLIB_CFLAGS)
+AM_CFLAGS += $(GIO_CFLAGS)
+
+AM_LDFLAGS := $(GTK3_LIBS)
+AM_LDFLAGS += $(GTHREAD_LIBS)
+AM_LDFLAGS += $(GLIB_LIBS)
+AM_LDFLAGS += $(GIO_LIBS)
 
 bin_PROGRAMS = client
 

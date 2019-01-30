@@ -1,5 +1,7 @@
 AM_CPPFLAGS = -I$(top_srcdir)/src/include  -I$(top_srcdir)/src/server/include
-AM_CFLAGS = $(server_CFLAGS)
+AM_CFLAGS := $(GMODULE_CFLAGS)
+AM_CFLAGS += $(GTHREAD_CFLAGS)
+AM_CFLAGS += $(GLIB_CFLAGS)
 
 noinst_LIBRARIES = libbackend.a
 

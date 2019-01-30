@@ -5,14 +5,12 @@ AC_PROG_CC
 AC_PROG_RANLIB
 
 
-PKG_CHECK_MODULES(server, "glib-2.0 gio-2.0 gmodule-2.0 gthread-2.0")
-AC_SUBST(server_CFLAGS)
-AC_SUBST(server_LIBS)
-
+PKG_CHECK_MODULES([GMODULE], [gmodule-2.0])
+PKG_CHECK_MODULES([GTHREAD], [gthread-2.0])
+PKG_CHECK_MODULES([GLIB], [glib-2.0])
+PKG_CHECK_MODULES([GIO],  [gio-2.0])
+PKG_CHECK_MODULES([GTK3], [gtk+-3.0 >= 3.24.4])
 AC_SEARCH_LIBS([log10], [m])
-PKG_CHECK_MODULES(client, "glib-2.0 gio-2.0 gtk+-3.0")
-AC_SUBST(client_CFLAGS)
-AC_SUBST(client_LIBS)
 
 
 AC_OUTPUT([Makefile])

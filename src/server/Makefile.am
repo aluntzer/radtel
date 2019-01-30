@@ -1,7 +1,16 @@
 SUBDIRS = ../util ../net backends api
-AM_CPPFLAGS = -I$(top_srcdir)/src/include -Iinclude
-AM_CFLAGS = $(server_CFLAGS)
-AM_LDFLAGS = -lm
+
+AM_CFLAGS := $(GMODULE_CFLAGS)
+AM_CFLAGS += $(GTHREAD_CFLAGS)
+AM_CFLAGS += $(GLIB_CFLAGS)
+AM_CFLAGS += $(GIO_CFLAGS)
+AM_CFLAGS += -I$(top_srcdir)/src/include -Iinclude
+
+AM_LDFLAGS := $(GMODULE_LIBS)
+AM_LDFLAGS += $(GTHREAD_LIBS)
+AM_LDFLAGS += $(GLIB_LIBS)
+AM_LDFLAGS += $(GIO_LIBS)
+AM_LDFLAGS += -lm
 # force symbols from the .a that we absolutely need
 # it's a bit hackish, but who cares...
 AM_LDFLAGS += -u ack_spec_data
