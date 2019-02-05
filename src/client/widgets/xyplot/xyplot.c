@@ -19,10 +19,15 @@
  *	 rectangle of the previous, draw over the old overlay, then draw the
  *	 new one instead of copying it every time
  *
+ *
+ * TODO verify XYPLOT on public interfaces
  */
 
 #include <cairo.h>
+#include <cairo-pdf.h>
+
 #include <gtk/gtk.h>
+#include <glib/gstdio.h>
 
 #include <string.h>
 #include <math.h>
@@ -35,59 +40,579 @@
 
 G_DEFINE_TYPE(XYPlot, xyplot, GTK_TYPE_DRAWING_AREA)
 
+/* default colours */
 #define BG_R	0.200
 #define BG_G	0.224
 #define BG_B	0.231
 
-#define BASE_R	0.7
-#define BASE_G	0.7
-#define BASE_B	0.7
+#define AXES_R	0.7
+#define AXES_G	0.7
+#define AXES_B	0.7
 
-#define GRD_R	1.0
-#define GRD_G	1.0
-#define GRD_B	1.0
+#define GRAPH_R	0.804
+#define GRAPH_G	0.592
+#define GRAPH_B	0.047
 
-#define LIN_R	0.0
-#define LIN_G	0.0
-#define LIN_B	1.0
+gdouble x0_rub;
+gdouble y0_rub;
+gboolean autorange;
 
-#define ST_R	0.804
-#define ST_G	0.592
-#define ST_B	0.047
+gdouble px0, py0;
+gdouble px1, py1;
 
-#define CRC_R	0.0
-#define CRC_G	1.0
-#define CRC_B	0.0
+struct graph {
+	gdouble *data_x;	/* the data to plot */
+	gdouble *data_y;
+	gsize    data_len;
+
+	gchar *label;
+
+	GdkRGBA colour;
+	enum xyplot_graph_style style;
+
+	XYPlot *parent;
+};
+
+
+static void xyplot_plot(XYPlot *p);
+static void xyplot_plot_render(XYPlot *p, cairo_t *cr,
+			       unsigned int width, unsigned int height);
+
+
+static void xyplot_auto_range(XYPlot *p);
+static void xyplot_auto_axes(XYPlot *p);
 
 
 
-
-
-static void xyplot_save_pdf(GtkWidget *widget, gpointer data)
+static void xyplot_export_pdf(GtkWidget *w, XYPlot *p)
 {
-	g_message("save!");
+	GtkWidget *dia;
+	GtkFileChooser *chooser;
+	gint res;
+
+	GtkWidget *win;
+
+	cairo_t *cr;
+	cairo_surface_t *cs;
+
+	gchar *fname;
+
+
+
+	win = gtk_widget_get_toplevel(GTK_WIDGET(w));
+
+	if (!GTK_IS_WINDOW(win)) {
+		g_warning("%s: toplevel widget is not a window", __func__);
+		return;
+	}
+
+	dia = gtk_file_chooser_dialog_new("Export XY Data",
+					  GTK_WINDOW(win),
+					  GTK_FILE_CHOOSER_ACTION_SAVE,
+					  "_Cancel",
+					  GTK_RESPONSE_CANCEL,
+					  "_Save",
+					  GTK_RESPONSE_ACCEPT,
+					  NULL);
+
+	chooser = GTK_FILE_CHOOSER(dia);
+
+	gtk_file_chooser_set_do_overwrite_confirmation(chooser, TRUE);
+
+	gtk_file_chooser_set_current_name(chooser, "plot.pdf");
+
+
+	res = gtk_dialog_run(GTK_DIALOG(dia));
+
+	g_free(fname);
+
+	if (res == GTK_RESPONSE_ACCEPT) {
+
+		fname = gtk_file_chooser_get_filename(chooser);
+		cs = cairo_pdf_surface_create(fname, 1280, 720);
+		cr = cairo_create(cs);
+
+		xyplot_plot_render(p, cr, 1280, 720);
+
+		cairo_destroy(cr);
+		cairo_surface_destroy(cs);
+
+		g_free(fname);
+	}
+
+	gtk_widget_destroy(dia);
 }
+
+
+static void xyplot_drop_graph_cb(GtkWidget *w, struct graph *g)
+{
+	xyplot_drop_graph(GTK_WIDGET(g->parent), g);
+}
+
+static void xyplot_export_graph_xy_asc(const gchar *fname, struct graph *g)
+{
+	FILE *f;
+
+	size_t i;
+
+
+	f = g_fopen(fname, "w");
+
+	if (!f) {
+		g_message("%s: error opening file %s", __func__, fname);
+		return;
+	}
+
+	fprintf(f, "#\t%s\t%s\n", g->parent->xlabel, g->parent->ylabel);
+
+	for(i = 0; i < g->data_len; i++)
+		fprintf(f, "\t%f\t%f\n", g->data_x[i], g->data_y[i]);
+
+
+	fclose(f);
+}
+
+
+static void xyplot_export_xy_graph_cb(GtkWidget *w, struct graph *g)
+{
+	GtkWidget *dia;
+	GtkFileChooser *chooser;
+	gint res;
+
+	GtkWidget *win;
+
+	gchar *fname;
+
+	FILE *f;
+
+
+	win = gtk_widget_get_toplevel(GTK_WIDGET(w));
+
+	if (!GTK_IS_WINDOW(win)) {
+		g_warning("%s: toplevel widget is not a window", __func__);
+		return;
+	}
+
+	if (!strlen(g->label))
+		fname = g_strdup_printf("xydata.dat");
+	else
+		fname = g_strdup_printf("%s.dat", g->label);
+
+	dia = gtk_file_chooser_dialog_new("Export XY Data",
+					  GTK_WINDOW(win),
+					  GTK_FILE_CHOOSER_ACTION_SAVE,
+					  "_Cancel",
+					  GTK_RESPONSE_CANCEL,
+					  "_Save",
+					  GTK_RESPONSE_ACCEPT,
+					  NULL);
+
+	chooser = GTK_FILE_CHOOSER(dia);
+
+	gtk_file_chooser_set_do_overwrite_confirmation(chooser, TRUE);
+
+	gtk_file_chooser_set_current_name(chooser, fname);
+
+
+	res = gtk_dialog_run(GTK_DIALOG(dia));
+
+	g_free(fname);
+
+	if (res == GTK_RESPONSE_ACCEPT) {
+
+		fname = gtk_file_chooser_get_filename(chooser);
+
+
+		xyplot_export_graph_xy_asc(fname, g);
+
+		g_free(fname);
+	}
+
+	gtk_widget_destroy(dia);
+}
+
+
+static void xyplot_drop_all_graphs_cb(GtkWidget *w, XYPlot *p)
+{
+	xyplot_drop_all_graphs(GTK_WIDGET(p));
+}
+
+static void xyplot_autorange_cb(GtkWidget *w, XYPlot *p)
+{
+	autorange = 1;
+
+	xyplot_auto_range(p);
+	xyplot_auto_axes(p);
+
+	xyplot_plot(p);
+}
+
+
+static void xyplot_clear_selection_cb(GtkWidget *w, XYPlot *p)
+{
+	p->sel.xmin = p->xmin;
+	p->sel.xmax = p->xmax;
+	p->sel.ymin = p->ymin;
+	p->sel.ymax = p->ymax;
+
+	p->sel.active = FALSE;
+	/* XXX to clear fit */
+	g_signal_emit_by_name(p, "xyplot-fit-selection");
+
+	xyplot_plot(p);
+}
+
+
+static void xyplot_col_resp_cb(GtkDialog *dia, gint resp_id, struct graph *g)
+{
+	if (resp_id == GTK_RESPONSE_OK) {
+		gtk_color_chooser_get_rgba(GTK_COLOR_CHOOSER(dia), &g->colour);
+
+		xyplot_plot(XYPLOT(g->parent));
+	}
+
+	gtk_widget_destroy(GTK_WIDGET(dia));
+}
+
+
+static void xyplot_choose_colour_cb(GtkWidget *w, struct graph *g)
+{
+	GtkWidget *dia;
+	GtkWidget *win;
+
+
+	win = gtk_widget_get_toplevel(GTK_WIDGET(g->parent));
+
+	if (!GTK_IS_WINDOW(win)) {
+		g_warning("%s: toplevel widget is not a window", __func__);
+		return;
+	}
+
+	dia = gtk_color_chooser_dialog_new("Choose Colour", GTK_WINDOW(win));
+
+	gtk_window_set_modal(GTK_WINDOW(dia), TRUE);
+	gtk_color_chooser_set_rgba(GTK_COLOR_CHOOSER(dia), &g->colour);
+
+	g_signal_connect(dia, "response", G_CALLBACK(xyplot_col_resp_cb), g);
+
+	gtk_widget_show_all(dia);
+}
+
+
+
+/* XXX meh...this is so ridiculously redundant; need to think of a better
+ * solution, like force a redraw on the drawing area; atm I don't see how we can
+ * get there at the moment
+ */
+
+static void xyplot_col_bg_resp_cb(GtkDialog *dia, gint resp_id, XYPlot *p)
+{
+	if (resp_id == GTK_RESPONSE_OK) {
+		gtk_color_chooser_get_rgba(GTK_COLOR_CHOOSER(dia), &p->bg_colour);
+
+		xyplot_plot(p);
+	}
+
+	gtk_widget_destroy(GTK_WIDGET(dia));
+}
+
+
+static void xyplot_choose_plot_bgcolour_cb(GtkWidget *w, XYPlot *p)
+{
+	GtkWidget *dia;
+	GtkWidget *win;
+
+
+	win = gtk_widget_get_toplevel(GTK_WIDGET(p));
+
+	if (!GTK_IS_WINDOW(win)) {
+		g_warning("%s: toplevel widget is not a window", __func__);
+		return;
+	}
+
+	dia = gtk_color_chooser_dialog_new("Choose Colour", GTK_WINDOW(win));
+
+	gtk_window_set_modal(GTK_WINDOW(dia), TRUE);
+	gtk_color_chooser_set_rgba(GTK_COLOR_CHOOSER(dia), &p->bg_colour);
+	g_signal_connect(dia, "response",
+			 G_CALLBACK(xyplot_col_bg_resp_cb), p);
+
+	gtk_widget_show_all(dia);
+}
+
+
+static void xyplot_col_ax_resp_cb(GtkDialog *dia, gint resp_id, XYPlot *p)
+{
+	if (resp_id == GTK_RESPONSE_OK) {
+		gtk_color_chooser_get_rgba(GTK_COLOR_CHOOSER(dia), &p->ax_colour);
+
+		xyplot_plot(p);
+	}
+
+	gtk_widget_destroy(GTK_WIDGET(dia));
+}
+
+
+static void xyplot_choose_plot_axcolour_cb(GtkWidget *w, XYPlot *p)
+{
+	GtkWidget *dia;
+	GtkWidget *win;
+
+
+	win = gtk_widget_get_toplevel(GTK_WIDGET(p));
+
+	if (!GTK_IS_WINDOW(win)) {
+		g_warning("%s: toplevel widget is not a window", __func__);
+		return;
+	}
+
+	dia = gtk_color_chooser_dialog_new("Choose Colour", GTK_WINDOW(win));
+
+	gtk_window_set_modal(GTK_WINDOW(dia), TRUE);
+	gtk_color_chooser_set_rgba(GTK_COLOR_CHOOSER(dia), &p->ax_colour);
+	g_signal_connect(dia, "response",
+			 G_CALLBACK(xyplot_col_ax_resp_cb), p);
+
+	gtk_widget_show_all(dia);
+}
+
+
+static void xyplot_radio_menu_toggled_cb(GtkWidget *w, struct graph *g)
+{
+	gchar *lbl;
+
+	if (!gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(w)))
+		return;
+
+	g_object_get(G_OBJECT(w), "label", &lbl, NULL);
+
+	if (!g_strcmp0(lbl, "Stairs"))
+		g->style = STAIRS;
+	else if (!g_strcmp0(lbl, "Circles"))
+		g->style = CIRCLES;
+	else if (!g_strcmp0(lbl, "Lines"))
+		g->style = LINES;
+	else if (!g_strcmp0(lbl, "NaN Lines"))
+		g->style = NAN_LINES;
+	else if (!g_strcmp0(lbl, "Bézier"))
+		g->style = CURVES;
+	else if (!g_strcmp0(lbl, "Dashes"))
+		g->style = DASHES;
+	else if (!g_strcmp0(lbl, "Squares"))
+		g->style = SQUARES;
+
+
+	g_free(lbl);
+
+	xyplot_plot(g->parent);
+}
+
+
+static GtkWidget *xyplot_create_graph_style_menu(struct graph *g)
+{
+	GtkWidget *w;
+	GtkWidget *sub;
+
+	GSList *grp;
+
+	sub = gtk_menu_new();
+
+
+	w = gtk_radio_menu_item_new_with_label(NULL, "Stairs");
+	gtk_menu_shell_append(GTK_MENU_SHELL(sub), w);
+	g_signal_connect(w, "toggled",
+			 G_CALLBACK(xyplot_radio_menu_toggled_cb), g);
+	if (g->style == STAIRS)
+		g_object_set(G_OBJECT(w), "active", TRUE);
+
+	grp = gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(w));
+
+	w = gtk_radio_menu_item_new_with_label(grp, "Circles");
+	gtk_menu_shell_append(GTK_MENU_SHELL(sub), w);
+	if (g->style == CIRCLES)
+		g_object_set(G_OBJECT(w), "active", TRUE);
+	g_signal_connect(w, "toggled",
+			 G_CALLBACK(xyplot_radio_menu_toggled_cb), g);
+
+	w = gtk_radio_menu_item_new_with_label(grp, "Lines");
+	gtk_menu_shell_append(GTK_MENU_SHELL(sub), w);
+	g_signal_connect(w, "toggled",
+			 G_CALLBACK(xyplot_radio_menu_toggled_cb), g);
+	if (g->style == LINES)
+		g_object_set(G_OBJECT(w), "active", TRUE);
+
+	w = gtk_radio_menu_item_new_with_label(grp, "NaN Lines");
+	gtk_menu_shell_append(GTK_MENU_SHELL(sub), w);
+	g_signal_connect(w, "toggled",
+			 G_CALLBACK(xyplot_radio_menu_toggled_cb), g);
+	if (g->style == NAN_LINES)
+		g_object_set(G_OBJECT(w), "active", TRUE);
+
+	w = gtk_radio_menu_item_new_with_label(grp, "Bézier");
+	gtk_menu_shell_append(GTK_MENU_SHELL(sub), w);
+	g_signal_connect(w, "toggled",
+			 G_CALLBACK(xyplot_radio_menu_toggled_cb), g);
+	if (g->style == CURVES)
+		g_object_set(G_OBJECT(w), "active", TRUE);
+
+	w = gtk_radio_menu_item_new_with_label(grp, "Dashes");
+	gtk_menu_shell_append(GTK_MENU_SHELL(sub), w);
+	g_signal_connect(w, "toggled",
+			 G_CALLBACK(xyplot_radio_menu_toggled_cb), g);
+	if (g->style == DASHES)
+		g_object_set(G_OBJECT(w), "active", TRUE);
+
+
+	w = gtk_radio_menu_item_new_with_label(grp, "Squares");
+	gtk_menu_shell_append(GTK_MENU_SHELL(sub), w);
+	g_signal_connect(w, "toggled",
+			 G_CALLBACK(xyplot_radio_menu_toggled_cb), g);
+	if (g->style == SQUARES)
+		g_object_set(G_OBJECT(w), "active", TRUE);
+
+
+
+	return sub;
+}
+
+
+
+static GtkWidget *xyplot_create_graph_menu(struct graph *g)
+{
+	GtkWidget *w;
+	GtkWidget *sub;
+
+	sub = gtk_menu_new();
+
+	w = gtk_menu_item_new_with_label("Style");
+	gtk_menu_item_set_submenu(GTK_MENU_ITEM(w),
+				  xyplot_create_graph_style_menu(g));
+	gtk_menu_shell_append(GTK_MENU_SHELL(sub), w);
+
+
+	w = gtk_menu_item_new_with_label("Colour");
+	g_signal_connect(w, "activate", G_CALLBACK(xyplot_choose_colour_cb), g);
+	gtk_menu_shell_append(GTK_MENU_SHELL(sub), w);
+
+	w = gtk_menu_item_new_with_label("Drop Graph");
+	g_signal_connect(w, "activate", G_CALLBACK(xyplot_drop_graph_cb), g);
+	gtk_menu_shell_append(GTK_MENU_SHELL(sub), w);
+
+	w = gtk_menu_item_new_with_label("Export XY Data");
+	g_signal_connect(w, "activate",
+			 G_CALLBACK(xyplot_export_xy_graph_cb), g);
+	gtk_menu_shell_append(GTK_MENU_SHELL(sub), w);
+
+	return sub;
+}
+
+
+static void xyplot_popup_menu_add_graphs(XYPlot *p)
+{
+	GtkWidget *w;
+	GtkWidget *sub;
+
+	GList *l;
+
+	struct graph *g;
+
+
+	w = gtk_menu_item_new_with_label("Graphs");
+	gtk_menu_shell_append(GTK_MENU_SHELL(p->menu), w);
+	gtk_widget_show(w);
+
+	sub = gtk_menu_new();
+
+	gtk_menu_item_set_submenu(GTK_MENU_ITEM(w), sub);
+
+
+	for (l = p->graphs; l; l = l->next) {
+
+		g = (struct graph *) l->data;
+
+		w = gtk_menu_item_new_with_label(g->label);
+		gtk_menu_shell_append(GTK_MENU_SHELL(sub), w);
+
+		gtk_widget_show(w);
+
+		gtk_menu_item_set_submenu(GTK_MENU_ITEM(w),
+					  xyplot_create_graph_menu(g));
+	}
+}
+
+
+static void xyplot_popup_menu_add_plot_cfg(XYPlot *p)
+{
+	GtkWidget *w;
+	GtkWidget *sub;
+
+	GList *l;
+
+	struct graph *g;
+
+
+	w = gtk_menu_item_new_with_label("Plot");
+	gtk_menu_shell_append(GTK_MENU_SHELL(p->menu), w);
+	gtk_widget_show(w);
+
+	sub = gtk_menu_new();
+
+	gtk_menu_item_set_submenu(GTK_MENU_ITEM(w), sub);
+
+	w = gtk_menu_item_new_with_label("Autorange");
+	g_signal_connect(w, "activate",
+			 G_CALLBACK(xyplot_autorange_cb), p);
+	gtk_menu_shell_append(GTK_MENU_SHELL(sub), w);
+
+
+	w = gtk_menu_item_new_with_label("Background Colour");
+	g_signal_connect(w, "activate",
+			 G_CALLBACK(xyplot_choose_plot_bgcolour_cb), p);
+	gtk_menu_shell_append(GTK_MENU_SHELL(sub), w);
+
+	w = gtk_menu_item_new_with_label("Axes Colour");
+	g_signal_connect(w, "activate",
+			 G_CALLBACK(xyplot_choose_plot_axcolour_cb), p);
+	gtk_menu_shell_append(GTK_MENU_SHELL(sub), w);
+
+
+	w = gtk_menu_item_new_with_label("Clear Plot");
+	g_signal_connect(w, "activate",
+			 G_CALLBACK(xyplot_drop_all_graphs_cb), p);
+	gtk_menu_shell_append(GTK_MENU_SHELL(sub), w);
+
+	if (p->sel.active) {
+		w = gtk_menu_item_new_with_label("Clear Selection");
+		g_signal_connect(w, "activate",
+				 G_CALLBACK(xyplot_clear_selection_cb), p);
+		gtk_menu_shell_append(GTK_MENU_SHELL(sub), w);
+	}
+}
+
+
 
 
 /**
  * @brief build the right-click popup menu
  */
 
-static void xyplot_build_popup_menu(GtkWidget *widget)
+static void xyplot_build_popup_menu(XYPlot *p)
 {
-	XYPlot *p;
 	GtkWidget *menuitem;
 
 
-	p = XYPLOT(widget);
+	if (p->menu)
+		gtk_widget_destroy(p->menu);
 
 	p->menu = gtk_menu_new();
 
+
+	xyplot_popup_menu_add_graphs(p);
+	xyplot_popup_menu_add_plot_cfg(p);
+
 	menuitem = gtk_menu_item_new_with_label("Export as PDF");
-
 	g_signal_connect(menuitem, "activate",
-			 G_CALLBACK(xyplot_save_pdf), widget);
-
+			 G_CALLBACK(xyplot_export_pdf), p);
 	gtk_menu_shell_append(GTK_MENU_SHELL(p->menu), menuitem);
 
 	gtk_widget_show_all(p->menu);
@@ -104,6 +629,8 @@ static void xyplot_popup_menu(GtkWidget *widget)
 
 
 	p = XYPLOT(widget);
+
+	xyplot_build_popup_menu(p);
 
 	gtk_menu_popup_at_pointer(GTK_MENU(p->menu), NULL);
 }
@@ -157,14 +684,18 @@ static void xyplot_render_layout(cairo_t *cr, PangoLayout *layout,
  * @param cr the cairo context to draw on
  */
 
-static void xyplot_draw_bg(cairo_t *cr)
+static void xyplot_draw_bg(XYPlot *p, cairo_t *cr)
 {
 	cairo_save(cr);
 
-	cairo_set_source_rgba(cr, BG_R, BG_G, BG_B, 1.0);
+	cairo_set_source_rgba(cr, p->bg_colour.red,  p->bg_colour.green,
+				  p->bg_colour.blue, p->bg_colour.alpha);
+
 	cairo_paint(cr);
 
-	cairo_set_source_rgba(cr, BG_R, BG_G, BG_B, 1.0);
+	cairo_set_source_rgba(cr, p->bg_colour.red,  p->bg_colour.green,
+				  p->bg_colour.blue, p->bg_colour.alpha);
+
 	cairo_stroke(cr);
 
 	cairo_restore(cr);
@@ -251,23 +782,18 @@ static void xyplot_write_text_centered(cairo_t *cr,
  * @brief set current dimensions of plot frame
  * */
 
-static void xyplot_update_plot_size(GtkWidget *widget,
+static void xyplot_update_plot_size(XYPlot *p,
 				    const double x, const double y,
 				    const double w, const double h)
 {
-	XYPlot *plot;
+	p->plot_x = x;
+	p->plot_y = y;
 
-	plot = XYPLOT(widget);
+	p->plot_w = w;
+	p->plot_h = h;
 
-
-	plot->plot_x = x;
-	plot->plot_y = y;
-
-	plot->plot_w = w;
-	plot->plot_h = h;
-
-	plot->scale_x =  w / plot->x_ax.len;
-	plot->scale_y =  h / plot->y_ax.len;
+	p->scale_x =  w / p->x_ax.len;
+	p->scale_y =  h / p->y_ax.len;
 }
 
 
@@ -275,7 +801,7 @@ static void xyplot_update_plot_size(GtkWidget *widget,
  * @brief draw the outer plot frame and the axis labels
  */
 
-static void xyplot_draw_plot_frame(GtkWidget *widget, cairo_t *cr,
+static void xyplot_draw_plot_frame(XYPlot *p, cairo_t *cr,
 				   const double width, const double height)
 {
 	double x, y;
@@ -284,27 +810,23 @@ static void xyplot_draw_plot_frame(GtkWidget *widget, cairo_t *cr,
 	cairo_text_extents_t te_x;
 	cairo_text_extents_t te_y;
 
-	XYPlot *plot;
-
 
 
 	cairo_save(cr);
 
-	plot = XYPLOT(widget);
-
 	/* get extents of the x/y axis labels */
-	cairo_text_extents(cr, plot->xlabel, &te_x);
-	cairo_text_extents(cr, plot->ylabel, &te_y);
+	cairo_text_extents(cr, p->xlabel, &te_x);
+	cairo_text_extents(cr, p->ylabel, &te_y);
 
 	/* start of the plot frame; add extra space for y label */
-	x = plot->pad + 4.0 * te_y.height;
-	y = plot->pad;
+	x = p->pad + 4.0 * te_y.height;
+	y = p->pad;
 
 	/* size of frame; subtract paddings and extra text space */
-	w = width  - 2.0 * (plot->pad + 2.0 * te_y.height);
-	h = height - 2.0 * (plot->pad + 2.0 * te_x.height);
+	w = width  - 2.0 * (p->pad + 2.0 * te_y.height);
+	h = height - 2.0 * (p->pad + 2.0 * te_x.height);
 
-	xyplot_update_plot_size(widget, x, y, w, h);
+	xyplot_update_plot_size(p, x, y, w, h);
 
 
 	cairo_set_line_width(cr, 2.0);
@@ -320,14 +842,14 @@ static void xyplot_draw_plot_frame(GtkWidget *widget, cairo_t *cr,
 	xyplot_write_text_centered(cr,
 				   x + 0.5 * w ,
 				   y + h + 4.0 * te_x.height,
-				   plot->xlabel,
+				   p->xlabel,
 				   0.0);
 
 	/* draw the y-axis label */
 	xyplot_write_text_centered(cr,
 				   te_y.height,
 				   x + 0.5 * h - 4.0 * te_y.height,
-				   plot->ylabel,
+				   p->ylabel,
 				   -90.0 * M_PI / 180.0);
 
 	cairo_stroke(cr);
@@ -341,14 +863,10 @@ static void xyplot_draw_plot_frame(GtkWidget *widget, cairo_t *cr,
  *	  corner of plot frame
  */
 
-static void xyplot_transform_origin(GtkWidget *widget, cairo_t *cr)
+static void xyplot_transform_origin(XYPlot *p, cairo_t *cr)
 {
 	cairo_matrix_t matrix;
 
-	XYPlot *p;
-
-
-	p = XYPLOT(widget);
 
 	/* translate to lower left corner */
 	cairo_translate(cr, p->plot_x, p->plot_y + p->plot_h);
@@ -369,7 +887,7 @@ static void xyplot_transform_origin(GtkWidget *widget, cairo_t *cr)
  *
  */
 
-static void xyplot_draw_ticks_x(GtkWidget *widget, cairo_t *cr,
+static void xyplot_draw_ticks_x(XYPlot *p, cairo_t *cr,
 				const double width, const double height)
 {
 	double idx;
@@ -378,22 +896,18 @@ static void xyplot_draw_ticks_x(GtkWidget *widget, cairo_t *cr,
 	double min;
 	double scl;
 
-	XYPlot *p;
-
 
 	cairo_save(cr);
 
-	p = XYPLOT(widget);
-
-	/* background color */
-	cairo_set_source_rgba(cr, BASE_R, BASE_G, BASE_B, 1.0);
+	cairo_set_source_rgba(cr, p->ax_colour.red,  p->ax_colour.green,
+				  p->ax_colour.blue, p->ax_colour.alpha);
 
 	/* disable antialiasing for sharper line */
 	cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
 
 	cairo_set_line_width(cr, 2.0);
 
-	xyplot_transform_origin(widget, cr);
+	xyplot_transform_origin(p, cr);
 
 	idx = p->x_ax.min;
 	inc = p->x_ax.step;
@@ -426,7 +940,7 @@ static void xyplot_draw_ticks_x(GtkWidget *widget, cairo_t *cr,
  *
  */
 
-static void xyplot_draw_ticks_y(GtkWidget *widget, cairo_t *cr,
+static void xyplot_draw_ticks_y(XYPlot *p, cairo_t *cr,
 				const double width, const double height)
 {
 	double idx;
@@ -435,22 +949,19 @@ static void xyplot_draw_ticks_y(GtkWidget *widget, cairo_t *cr,
 	double min;
 	double scl;
 
-	XYPlot *p;
-
 
 	cairo_save(cr);
 
-	p = XYPLOT(widget);
-
 	/* background color */
-	cairo_set_source_rgba(cr, BASE_R, BASE_G, BASE_B, 1.0);
+	cairo_set_source_rgba(cr, p->ax_colour.red,  p->ax_colour.green,
+				  p->ax_colour.blue, p->ax_colour.alpha);
 
 	/* disable antialiasing for sharper line */
 	cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
 
 	cairo_set_line_width(cr, 2.0);
 
-	xyplot_transform_origin(widget, cr);
+	xyplot_transform_origin(p, cr);
 
 	/* horizontal grid lines */
 	idx = p->y_ax.min;
@@ -479,7 +990,7 @@ static void xyplot_draw_ticks_y(GtkWidget *widget, cairo_t *cr,
  * @brief draw labels to y-axis ticks
  */
 
-static void xyplot_draw_tickslabels_x(GtkWidget *widget, cairo_t *cr,
+static void xyplot_draw_tickslabels_x(XYPlot *p, cairo_t *cr,
 				      const double width, const double height)
 {
 	double idx;
@@ -491,14 +1002,10 @@ static void xyplot_draw_tickslabels_x(GtkWidget *widget, cairo_t *cr,
 
 	char buf[14];	/* should be large enough */
 
-	XYPlot *p;
-
 	cairo_text_extents_t te;
 
 
 	cairo_save(cr);
-
-	p = XYPLOT(widget);
 
 	/* translate to lower left corner */
 	cairo_translate(cr, p->plot_x, p->plot_y + p->plot_h);
@@ -515,7 +1022,7 @@ static void xyplot_draw_tickslabels_x(GtkWidget *widget, cairo_t *cr,
 	off = 1.5 * te.height;
 
 	for ( ; idx < stp; idx += inc) {
-		snprintf(buf, ARRAY_SIZE(buf), "%.2g", idx);
+		snprintf(buf, ARRAY_SIZE(buf), "%.6g", idx);
 		xyplot_write_text_centered(cr, (idx - min) * scl,
 					   off, buf, 0.0);
 	}
@@ -531,7 +1038,7 @@ static void xyplot_draw_tickslabels_x(GtkWidget *widget, cairo_t *cr,
  * @brief draw labels to y-axis ticks
  */
 
-static void xyplot_draw_tickslabels_y(GtkWidget *widget, cairo_t *cr,
+static void xyplot_draw_tickslabels_y(XYPlot *p, cairo_t *cr,
 				      const double width, const double height)
 {
 	double idx;
@@ -542,14 +1049,10 @@ static void xyplot_draw_tickslabels_y(GtkWidget *widget, cairo_t *cr,
 
 	char buf[14];	/* should be large enough */
 
-	XYPlot *p;
-
 	cairo_text_extents_t te;
 
 
 	cairo_save(cr);
-
-	p = XYPLOT(widget);
 
 	/* translate to lower left corner */
 	cairo_translate(cr, p->plot_x, p->plot_y + p->plot_h);
@@ -567,7 +1070,7 @@ static void xyplot_draw_tickslabels_y(GtkWidget *widget, cairo_t *cr,
 	scl = p->scale_y;
 
 	for ( ; idx < stp; idx += inc) {
-		snprintf(buf, ARRAY_SIZE(buf), "%.2g", idx);
+		snprintf(buf, ARRAY_SIZE(buf), "%.6g", idx);
 		xyplot_write_text_ralign(cr, -te.width, (min - idx) * scl, buf);
 	}
 
@@ -587,7 +1090,7 @@ static void xyplot_draw_tickslabels_y(GtkWidget *widget, cairo_t *cr,
  *
  */
 
-static void xyplot_draw_grid_y(GtkWidget *widget, cairo_t *cr,
+static void xyplot_draw_grid_y(XYPlot *p, cairo_t *cr,
 			       const double width, const double height)
 {
 	double idx;
@@ -597,20 +1100,16 @@ static void xyplot_draw_grid_y(GtkWidget *widget, cairo_t *cr,
 	double scl;
 	double end;
 
-	XYPlot *p;
-
-
 	const double dashes[] = {2.0, 2.0};
 
 
 	cairo_save(cr);
 
-	p = XYPLOT(widget);
-
-	xyplot_transform_origin(widget, cr);
+	xyplot_transform_origin(p, cr);
 
 	/* background color */
-	cairo_set_source_rgba(cr, BASE_R, BASE_G, BASE_B, 1.0);
+	cairo_set_source_rgba(cr, p->ax_colour.red,  p->ax_colour.green,
+				  p->ax_colour.blue, p->ax_colour.alpha);
 
 	/* disable antialiasing for sharper line */
 	cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
@@ -647,7 +1146,7 @@ static void xyplot_draw_grid_y(GtkWidget *widget, cairo_t *cr,
  *
  */
 
-static void xyplot_draw_grid_x(GtkWidget *widget, cairo_t *cr,
+static void xyplot_draw_grid_x(XYPlot *p, cairo_t *cr,
 			       const double width, const double height)
 {
 	double idx;
@@ -657,19 +1156,16 @@ static void xyplot_draw_grid_x(GtkWidget *widget, cairo_t *cr,
 	double scl;
 	double end;
 
-	XYPlot *p;
-
 	const double dashes[] = {2.0, 2.0};
 
 
 	cairo_save(cr);
 
-	p = XYPLOT(widget);
-
-	xyplot_transform_origin(widget, cr);
+	xyplot_transform_origin(p, cr);
 
 	/* background color */
-	cairo_set_source_rgba(cr, BASE_R, BASE_G, BASE_B, 1.0);
+	cairo_set_source_rgba(cr, p->ax_colour.red,  p->ax_colour.green,
+				  p->ax_colour.blue, p->ax_colour.alpha);
 
 	/* disable antialiasing for sharper line */
 	cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
@@ -699,9 +1195,14 @@ static void xyplot_draw_grid_x(GtkWidget *widget, cairo_t *cr,
 
 /**
  * @brief draw the plot data as stairs (gnuplot histeps)
+ *
+ * XXX the relative line drawing method runs into trouble
+ * when data is very large (~1Megapoints); to fix this, we should
+ * do intermediate stroke() and move_to() to split the path into smaller
+ * chunks; the same applies to draw_lines
  */
 
-static void xyplot_draw_stairs(GtkWidget *widget, cairo_t *cr)
+static void xyplot_draw_stairs(XYPlot *p, cairo_t *cr, struct graph *g)
 {
 	size_t i;
 
@@ -709,40 +1210,42 @@ static void xyplot_draw_stairs(GtkWidget *widget, cairo_t *cr)
 
 	gdouble *x, *y;
 
-	XYPlot *p;
+	int cnt = 0;
 
-
-	p = XYPLOT(widget);
 
 	/* can't connect a single point by a line */
-	if (p->data_len < 2)
+	if (g->data_len < 2)
 		return;
 
-	x  = p->data_x;
-	y  = p->data_y;
 	sx = p->scale_x;
 	sy = p->scale_y;
 
+	x  = g->data_x;
+	y  = g->data_y;
+
 	cairo_save(cr);
 
-	xyplot_transform_origin(widget, cr);
+
+	xyplot_transform_origin(p, cr);
 
 	cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-	cairo_set_source_rgba(cr, ST_R, ST_G, ST_B, 1.0);
+	cairo_set_source_rgba(cr, g->colour.red,  g->colour.green,
+			          g->colour.blue, g->colour.alpha);
 	cairo_set_line_width(cr, 2.0);
 
-	cairo_move_to(cr, (x[0] - (x[1] - x[0]) * 0.5 -  p->x_ax.min) * sx, 0.0);
+	cairo_move_to(cr,
+		      (x[0] - (x[1] - x[0]) * 0.5 -  p->x_ax.min) * sx,
+		      0.0);
 
 	cairo_rel_line_to(cr, 0.0, (y[0] - p->y_ax.min) * sy);
 	cairo_rel_line_to(cr, (x[1] - x[0]) * sx, 0.0);
 
-        for(i = 1; i < p->data_len; i++) {
+	for(i = 1; i < g->data_len; i++) {
 		cairo_rel_line_to(cr, 0.0, (y[i] - y[i - 1]) * sy);
 		cairo_rel_line_to(cr, (x[i] - x[i - 1]) * sx, 0.0);
 	}
 
 	cairo_rel_line_to(cr, 0.0, - (y[i - 1] - p->y_ax.min) * sy);
-
 
 	cairo_stroke(cr);
 
@@ -755,7 +1258,7 @@ static void xyplot_draw_stairs(GtkWidget *widget, cairo_t *cr)
  * @brief draw the plot data as circles
  */
 
-static void xyplot_draw_circles(GtkWidget *widget, cairo_t *cr)
+static void xyplot_draw_circles(XYPlot *p, cairo_t *cr, struct graph *g)
 {
 	size_t i;
 
@@ -763,26 +1266,24 @@ static void xyplot_draw_circles(GtkWidget *widget, cairo_t *cr)
 
 	gdouble *x, *y;
 
-	XYPlot *p;
-
-
-	p = XYPLOT(widget);
-
-	x  = p->data_x;
-	y  = p->data_y;
 	sx = p->scale_x;
 	sy = p->scale_y;
 
+	x  = g->data_x;
+	y  = g->data_y;
+
 	cairo_save(cr);
 
-	xyplot_transform_origin(widget, cr);
+	xyplot_transform_origin(p, cr);
 
-	cairo_set_source_rgba(cr, CRC_R, CRC_G, CRC_B, 1.0);
+	cairo_set_source_rgba(cr, g->colour.red,  g->colour.green,
+			          g->colour.blue, g->colour.alpha);
 
-        for(i = 0; i < p->data_len; i++) {
-		cairo_arc(cr, (x[i] - p->x_ax.min) * sx,
-			      (y[i] - p->y_ax.min) * sy,
-			       4.0, 0.0, 2.0 * M_PI);
+	for(i = 0; i < g->data_len; i++) {
+		cairo_arc(cr,
+			  (x[i] - p->x_ax.min) * sx,
+			  (y[i] - p->y_ax.min) * sy,
+			  4.0, 0.0, 2.0 * M_PI);
 		cairo_fill(cr);
 	}
 
@@ -791,10 +1292,10 @@ static void xyplot_draw_circles(GtkWidget *widget, cairo_t *cr)
 
 
 /**
- * @brief draw the plot data connected straight lines
+ * @brief draw the plot data as squares
  */
 
-static void xyplot_draw_lines(GtkWidget *widget, cairo_t *cr)
+static void xyplot_draw_squares(XYPlot *p, cairo_t *cr, struct graph *g)
 {
 	size_t i;
 
@@ -802,39 +1303,309 @@ static void xyplot_draw_lines(GtkWidget *widget, cairo_t *cr)
 
 	gdouble *x, *y;
 
-	XYPlot *p;
-
-
-	p = XYPLOT(widget);
-
-	/* can't connect a single point by a line */
-	if (p->data_len < 2)
-		return;
-
-	x  = p->data_x;
-	y  = p->data_y;
 	sx = p->scale_x;
 	sy = p->scale_y;
 
+	x  = g->data_x;
+	y  = g->data_y;
+
 	cairo_save(cr);
 
-	xyplot_transform_origin(widget, cr);
+	xyplot_transform_origin(p, cr);
+
+	cairo_set_source_rgba(cr, g->colour.red,  g->colour.green,
+			          g->colour.blue, g->colour.alpha);
+
+	for(i = 0; i < g->data_len; i++) {
+		cairo_rectangle(cr, (x[i] - p->x_ax.min) * sx - 2.0,
+				    (y[i] - p->y_ax.min) * sy - 2.0,
+				    4.0, 4.0);
+		cairo_fill(cr);
+	}
+
+	cairo_restore(cr);
+}
+
+
+/**
+ * @brief draw the plot data connected straight dashed lines
+ */
+
+static void xyplot_draw_dashes(XYPlot *p, cairo_t *cr, struct graph *g)
+{
+	size_t i;
+
+	gdouble sx, sy;
+
+	gdouble *x, *y;
+
+	const double dashes[] = {10.0, 10.0};
+
+	/* can't connect a single point by a line */
+	if (g->data_len < 2)
+		return;
+
+	sx = p->scale_x;
+	sy = p->scale_y;
+
+	x  = g->data_x;
+	y  = g->data_y;
+
+	cairo_save(cr);
+
+	cairo_set_dash(cr, dashes, ARRAY_SIZE(dashes), 0.0);
+
+	xyplot_transform_origin(p, cr);
 
 	cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-	cairo_set_source_rgba(cr, LIN_R, LIN_G, LIN_B, 1.0);
+	cairo_set_source_rgba(cr, g->colour.red,  g->colour.green,
+			          g->colour.blue, g->colour.alpha);
 	cairo_set_line_width(cr, 2.0);
 
-	cairo_move_to(cr, (x[0] - p->x_ax.min) * sx, (y[0] - p->y_ax.min) * sy);
+	cairo_move_to(cr,
+		      (x[0] - p->x_ax.min) * sx,
+		      (y[0] - p->y_ax.min) * sy);
 
-        for(i = 1; i < p->data_len; i++) {
-		cairo_rel_line_to(cr, (x[i] - x[i - 1]) * sx,
-				      (y[i] - y[i - 1]) * sy);
+	for(i = 1; i < g->data_len; i++) {
+		cairo_rel_line_to(cr,
+				  (x[i] - x[i - 1]) * sx,
+				  (y[i] - y[i - 1]) * sy);
+	}
+
+	cairo_stroke(cr);
+	cairo_restore(cr);
+}
+
+
+/**
+ * @brief draw the plot data connected straight lines
+ */
+
+static void xyplot_draw_lines(XYPlot *p, cairo_t *cr, struct graph *g)
+{
+	size_t i;
+
+	gdouble sx, sy;
+
+	gdouble *x, *y;
+
+
+	/* can't connect a single point by a line */
+	if (g->data_len < 2)
+		return;
+
+	sx = p->scale_x;
+	sy = p->scale_y;
+
+	x  = g->data_x;
+	y  = g->data_y;
+
+	cairo_save(cr);
+
+	xyplot_transform_origin(p, cr);
+
+	cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+	cairo_set_source_rgba(cr, g->colour.red,  g->colour.green,
+			          g->colour.blue, g->colour.alpha);
+	cairo_set_line_width(cr, 2.0);
+
+	cairo_move_to(cr, (x[0] - p->x_ax.min) * sx,
+		          (y[0] - p->y_ax.min) * sy);
+
+	for(i = 1; i < g->data_len; i++) {
+		cairo_rel_line_to(cr,
+				  (x[i] - x[i - 1]) * sx,
+				  (y[i] - y[i - 1]) * sy);
+
+	}
+
+	cairo_stroke(cr);
+	cairo_restore(cr);
+}
+
+
+/**
+ * @brief draw the plot data connected straight lines supporting NaN-valued
+ *	  segmented sections (i.e. set NaN what is not to be drawn)
+ *
+ * @note the NaN checks are a lot more expensive, so this is a separate
+ *	 function
+ */
+
+static void xyplot_draw_nan_lines(XYPlot *p, cairo_t *cr, struct graph *g)
+{
+	size_t i;
+
+	gdouble sx, sy;
+
+	gdouble *x, *y;
+
+
+	/* can't connect a single point by a line */
+	if (g->data_len < 2)
+		return;
+
+	sx = p->scale_x;
+	sy = p->scale_y;
+
+	x  = g->data_x;
+	y  = g->data_y;
+
+	cairo_save(cr);
+
+	xyplot_transform_origin(p, cr);
+
+	cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+	cairo_set_source_rgba(cr, g->colour.red,  g->colour.green,
+			          g->colour.blue, g->colour.alpha);
+	cairo_set_line_width(cr, 2.0);
+
+	for(i = 0; i < g->data_len; i++) {
+		if (!isnan(x[i]) && !isnan(y[i]))
+			break;
 	}
 
 
-	cairo_stroke(cr);
+	gboolean restart = FALSE;
+	cairo_move_to(cr, (x[i] - p->x_ax.min) * sx,
+		          (y[i] - p->y_ax.min) * sy);
 
+	for(i = i + 1; i < g->data_len; i++) {
+		if (isnan(x[i]) || isnan(y[i])) {
+			restart = TRUE;
+			continue;
+		}
+
+		if (restart) {
+			cairo_move_to(cr, (x[i] - p->x_ax.min) * sx,
+				          (y[i] - p->y_ax.min) * sy);
+
+			restart =FALSE;
+
+		}
+
+
+		cairo_rel_line_to(cr, (x[i] - x[i - 1]) * sx,
+				      (y[i] - y[i - 1]) * sy);
+
+	}
+
+	cairo_stroke(cr);
 	cairo_restore(cr);
+}
+
+
+
+/**
+ * @brief draw the plot data connected by bezier splines
+ */
+
+static void xyplot_draw_curves(XYPlot *p, cairo_t *cr, struct graph *g)
+{
+	size_t i;
+
+	gdouble sx, sy;
+
+	gdouble *x, *y;
+
+
+	/* can't connect a less than three points by a curve */
+	if (g->data_len < 3)
+		return;
+
+	sx = p->scale_x;
+	sy = p->scale_y;
+
+	x  = g->data_x;
+	y  = g->data_y;
+
+	cairo_save(cr);
+
+	xyplot_transform_origin(p, cr);
+
+	cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+	cairo_set_source_rgba(cr, g->colour.red,  g->colour.green,
+			          g->colour.blue, g->colour.alpha);
+	cairo_set_line_width(cr, 2.0);
+
+	gdouble ax0, ax1, ax2, ax3;
+	gdouble ay0, ay1, ay2, ay3;
+
+
+	cairo_move_to(cr, (x[0] - p->x_ax.min) * sx,
+		          (y[0] - p->y_ax.min) * sy);
+
+
+	for(i = 1; i < g->data_len - 2 ; i += 2) {
+
+		ax0 = (x[i - 1] + x[i]) * 0.5;
+		ay0 = (y[i - 1] + y[i]) * 0.5;
+
+		ax1 = x[i];
+		ay1 = y[i];
+
+		ax2 = x[i + 1];
+		ay2 = y[i + 1];
+
+		if (i < g->data_len - 3) {
+			ax3 = (x[i + 1] + x[i + 2]) * 0.5;
+			ay3 = (y[i + 1] + y[i + 2]) * 0.5;
+		} else {
+			ax3 = x[i + 2];
+			ay3 = y[i + 2];
+		}
+
+		cairo_curve_to(cr, (ax1 - p->x_ax.min) * sx,
+                                   (ay1 - p->y_ax.min) * sy,
+				   (ax2 - p->x_ax.min) * sx,
+				   (ay2 - p->y_ax.min) * sy,
+				   (ax3 - p->x_ax.min) * sx,
+				   (ay3 - p->y_ax.min) * sy);
+	}
+
+	cairo_stroke(cr);
+	cairo_restore(cr);
+}
+
+
+
+static void xyplot_draw_graphs(XYPlot *p, cairo_t *cr)
+{
+	GList *elem;
+
+	struct graph *g;
+
+
+	for (elem = p->graphs; elem; elem = elem->next) {
+
+		g = (struct graph *) elem->data;
+
+		switch (g->style) {
+		case STAIRS:
+			xyplot_draw_stairs(p, cr, g);
+			break;
+		case CIRCLES:
+			xyplot_draw_circles(p, cr, g);
+			break;
+		case LINES:
+			xyplot_draw_lines(p, cr, g);
+			break;
+		case NAN_LINES:
+			xyplot_draw_nan_lines(p, cr, g);
+			break;
+		case CURVES:
+			xyplot_draw_curves(p, cr, g);
+			break;
+		case DASHES:
+			xyplot_draw_dashes(p, cr, g);
+			break;
+		case SQUARES:
+			xyplot_draw_squares(p, cr, g);
+			break;
+		default:
+			break;
+		}
+	}
 }
 
 
@@ -934,58 +1705,44 @@ double xyplot_nicenum(const double num, const gboolean round)
  * @brief auto-set the plot axes given the data
  */
 
-static void xyplot_auto_axes(GtkWidget *widget)
+static void xyplot_auto_axes(XYPlot *p)
 {
+	p->x_ax.len  = xyplot_nicenum(p->xlen, FALSE);
+	p->x_ax.step = xyplot_nicenum(p->x_ax.len /
+				      (p->x_ax.ticks_maj - 1.0),
+				      TRUE);
 
-	XYPlot *xyplot;
-
-	xyplot = XYPLOT(widget);
-
-
-	xyplot->x_ax.len  = xyplot_nicenum(xyplot->xlen, FALSE);
-	xyplot->x_ax.step = xyplot_nicenum(xyplot->x_ax.len /
-		       		    (xyplot->x_ax.ticks_maj - 1.0),
-		       		    TRUE);
-	xyplot->x_ax.min  = floor(xyplot->xmin / xyplot->x_ax.step) *
-		            xyplot->x_ax.step;
-
-	xyplot->x_ax.max  = ceil(xyplot->xmax / xyplot->x_ax.step) *
-		            xyplot->x_ax.step;
+	p->x_ax.min = floor(p->xmin / p->x_ax.step) * p->x_ax.step;
+	p->x_ax.max = ceil(p->xmax / p->x_ax.step) * p->x_ax.step;
 
 	/* make sure there always is some space left and right */
-	if (xyplot->x_ax.min == xyplot->xmin)
-		xyplot->x_ax.min -= xyplot->x_ax.step;
+	if (p->x_ax.min == p->xmin)
+		p->x_ax.min -= p->x_ax.step;
 
-	if (xyplot->x_ax.max == xyplot->xmax)
-		xyplot->x_ax.max += xyplot->x_ax.step;
+	if (p->x_ax.max == p->xmax)
+		p->x_ax.max += p->x_ax.step;
 
-	xyplot->x_ax.len  = xyplot->x_ax.max - xyplot->x_ax.min;
-
-	xyplot->x_ax.prec = MAX(-floor(log10(xyplot->x_ax.step)), 0);
-
+	p->x_ax.len  = p->x_ax.max - p->x_ax.min;
+	p->x_ax.prec = MAX(-floor(log10(p->x_ax.step)), 0);
 
 
-	xyplot->y_ax.len  = xyplot_nicenum(xyplot->ylen, FALSE);
-	xyplot->y_ax.step = xyplot_nicenum(xyplot->y_ax.len /
-		       		    (xyplot->y_ax.ticks_maj - 1.0),
-		       		    TRUE);
-	xyplot->y_ax.min  = floor(xyplot->ymin / xyplot->y_ax.step) *
-		            xyplot->y_ax.step;
+	p->y_ax.len  = xyplot_nicenum(p->ylen, FALSE);
+	p->y_ax.step = xyplot_nicenum(p->y_ax.len / (p->y_ax.ticks_maj - 1.0),
+				      TRUE);
 
-	xyplot->y_ax.max  = ceil(xyplot->ymax / xyplot->y_ax.step) *
-		            xyplot->y_ax.step;
+	p->y_ax.min = floor(p->ymin / p->y_ax.step) * p->y_ax.step;
+	p->y_ax.max =  ceil(p->ymax / p->y_ax.step) * p->y_ax.step;
 
 	/* as above, for bottom and top */
-	if (xyplot->y_ax.min == xyplot->ymin)
-		xyplot->y_ax.min -= xyplot->y_ax.step;
+	if (p->y_ax.min == p->ymin)
+		p->y_ax.min -= p->y_ax.step;
 
-	if (xyplot->y_ax.max == xyplot->ymax)
-		xyplot->y_ax.max += xyplot->y_ax.step;
+	if (p->y_ax.max == p->ymax)
+		p->y_ax.max += p->y_ax.step;
 
 
-	xyplot->y_ax.len  = xyplot->y_ax.max - xyplot->y_ax.min;
-
-	xyplot->y_ax.prec = MAX(-floor(log10(xyplot->y_ax.step)), 0);
+	p->y_ax.len  = p->y_ax.max - p->y_ax.min;
+	p->y_ax.prec = MAX(-floor(log10(p->y_ax.step)), 0);
 }
 
 
@@ -994,52 +1751,59 @@ static void xyplot_auto_axes(GtkWidget *widget)
  *
  */
 
-static void xyplot_auto_range(GtkWidget *widget)
+static void xyplot_auto_range(XYPlot *p)
 {
 	size_t i;
 
 	gdouble tmp;
 
-	XYPlot *xyplot;
+	GList *elem;
+
+	struct graph *g;
 
 
+	if (!autorange) /* XXX */
+		return;
 
-	xyplot = XYPLOT(widget);
+	p->xmin = DBL_MAX;
+	p->ymin = DBL_MAX;
 
-	xyplot->xmin = DBL_MAX;
-	xyplot->ymin = DBL_MAX;
-
-	xyplot->xmax = -DBL_MAX;
-	xyplot->ymax = -DBL_MAX;
+	p->xmax = -DBL_MAX;
+	p->ymax = -DBL_MAX;
 
 
-	for(i = 0; i < xyplot->data_len; i++) {
+	for (elem = p->graphs; elem; elem = elem->next) {
 
-		tmp = xyplot->data_x[i];
+		g = (struct graph *) elem->data;
 
-		if(tmp < xyplot->xmin)
-			xyplot->xmin = tmp;
+		for(i = 0; i < g->data_len; i++) {
 
-		if(tmp > xyplot->xmax)
-			xyplot->xmax = tmp;
+			tmp = g->data_x[i];
 
+			if(tmp < p->xmin)
+				p->xmin = tmp;
+
+			if(tmp > p->xmax)
+				p->xmax = tmp;
+
+		}
+
+		for(i = 0; i < g->data_len; i++) {
+
+			tmp = g->data_y[i];
+
+			if(tmp < p->ymin)
+				p->ymin = tmp;
+
+			if(tmp > p->ymax)
+				p->ymax = tmp;
+
+		}
 	}
 
-	for(i = 0; i < xyplot->data_len; i++) {
 
-		tmp = xyplot->data_y[i];
-
-		if(tmp < xyplot->ymin)
-			xyplot->ymin = tmp;
-
-		if(tmp > xyplot->ymax)
-			xyplot->ymax = tmp;
-
-	}
-
-
-	xyplot->xlen = xyplot->xmax - xyplot->xmin;
-	xyplot->ylen = xyplot->ymax - xyplot->ymin;
+	p->xlen = p->xmax - p->xmin;
+	p->ylen = p->ymax - p->ymin;
 }
 
 
@@ -1050,46 +1814,91 @@ static void xyplot_auto_range(GtkWidget *widget)
  *	 to redraw it every time we want to add or update an overlay
  */
 
-static void xyplot_plot(GtkWidget *widget)
+static void xyplot_plot_render(XYPlot *p, cairo_t *cr,
+			       unsigned int width, unsigned int height)
 {
-	unsigned int width, height;
-
-	XYPlot *p;
-	cairo_t *cr;
-
-
-	p = XYPLOT(widget);
-
-
-	cr = cairo_create(p->plot);
-
-	width  = gtk_widget_get_allocated_width(widget);
-	height = gtk_widget_get_allocated_height(widget);
-
-	xyplot_draw_bg(cr);
+	xyplot_draw_bg(p, cr);
 
 	/* base color */
-	cairo_set_source_rgba(cr, BASE_R, BASE_G, BASE_B, 1.0);
+	cairo_set_source_rgba(cr, p->ax_colour.red,  p->ax_colour.green,
+			      p->ax_colour.blue, p->ax_colour.alpha);
 
-	xyplot_draw_plot_frame(widget, cr, width, height);
+	xyplot_draw_plot_frame(p, cr, width, height);
 
 
-	if (p->data_len) {
-		xyplot_draw_grid_x(widget, cr, width, height);
-		xyplot_draw_grid_y(widget, cr, width, height);
-		xyplot_draw_stairs(widget, cr);
-#if 0
-		xyplot_draw_lines(widget, cr);
-		xyplot_draw_circles(widget, cr);
-#endif
-		xyplot_draw_ticks_x(widget, cr, width, height);
-		xyplot_draw_ticks_y(widget, cr, width, height);
-		xyplot_draw_tickslabels_x(widget, cr, width, height);
-		xyplot_draw_tickslabels_y(widget, cr, width, height);
+	if (p->graphs) {
+
+		xyplot_draw_grid_x(p, cr, width, height);
+		xyplot_draw_grid_y(p, cr, width, height);
+		xyplot_draw_ticks_x(p, cr, width, height);
+		xyplot_draw_ticks_y(p, cr, width, height);
+		xyplot_draw_tickslabels_x(p, cr, width, height);
+		xyplot_draw_tickslabels_y(p, cr, width, height);
+
+		/* create a clipping region so we won't draw parts of a graph
+		 * outside of the frame
+		 */
+		cairo_rectangle(cr, p->plot_x, p->plot_y, p->plot_w , p->plot_h);
+		cairo_clip(cr);
+		cairo_new_path (cr);
+
+		if (p->sel.active) {
+
+
+			cairo_save(cr);
+
+			xyplot_transform_origin(p, cr);
+
+			cairo_set_source_rgba(cr, 1.0, 1.0, 0.0, 1.0);
+
+			cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+
+			cairo_set_line_width(cr, 2.0);
+
+			cairo_rectangle(cr,
+					(p->sel.xmin - p->x_ax.min) * p->scale_x,
+					(p->sel.ymin - p->y_ax.min) * p->scale_y,
+					(p->sel.xmax - p->sel.xmin) * p->scale_x,
+					(p->sel.ymax - p->sel.ymin) * p->scale_y);
+
+			cairo_stroke(cr);
+			cairo_restore(cr);
+		}
+		xyplot_draw_graphs(p, cr);
+
+
+
+
+
+
 	} else {
 		xyplot_write_text_centered(cr, 0.5 * width, 0.5 * height,
 					   "NO DATA", 0.0);
 	}
+}
+
+
+/**
+ * @brief draws the plot
+ *
+ * @note the plot is rendered onto it's own surface, so we don't need
+ *	 to redraw it every time we want to add or update an overlay
+ */
+
+static void xyplot_plot(XYPlot *p)
+{
+	unsigned int width;
+	unsigned int height;
+
+	cairo_t *cr;
+
+
+	width  = gtk_widget_get_allocated_width(GTK_WIDGET(p));
+	height = gtk_widget_get_allocated_height(GTK_WIDGET(p));
+
+	cr = cairo_create(p->plot);
+
+	xyplot_plot_render(p, cr, width, height);
 
 	cairo_destroy(cr);
 
@@ -1100,8 +1909,9 @@ static void xyplot_plot(GtkWidget *widget)
 	cairo_destroy(cr);
 
 
-	gtk_widget_queue_draw(widget);
+	gtk_widget_queue_draw(GTK_WIDGET(p));
 }
+
 
 
 /**
@@ -1227,8 +2037,8 @@ static gboolean xyplot_motion_notify_event_cb(GtkWidget *widget,
 		 "<span foreground='#dddddd'"
 		 "	font_desc='Sans Bold 8'>"
 		 "<tt>"
-		 "X: %+2.2g\n"
-		 "Y: %+2.2g\n"
+		 "X: %+.6g\n"
+		 "Y: %+.6g\n"
 		 "</tt>"
 		 "</span>",
 		 x, y);
@@ -1252,6 +2062,49 @@ static gboolean xyplot_motion_notify_event_cb(GtkWidget *widget,
 	else
 		y0 = event->y - off;
 
+	if (event->state & (GDK_BUTTON1_MASK | GDK_BUTTON2_MASK)) {
+
+
+		/* get plot pixel reference */
+		px0 = (x0_rub - p->plot_x) / p->scale_x + p->x_ax.min;
+		py0 = (p->plot_y + p->plot_h - y0_rub) / p->scale_y + p->y_ax.min;
+
+		px1 = x;
+		py1 = y;
+
+		cairo_save(cr);
+
+		if (event->state & GDK_BUTTON1_MASK)
+			cairo_set_source_rgba(cr, 1.0, 1.0, 1.0, 1.0);
+		else
+			cairo_set_source_rgba(cr, 1.0, 1.0, 0.0, 1.0);
+
+		cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+
+		cairo_set_line_width(cr, 2.0);
+
+		cairo_rectangle(cr, x0_rub, y0_rub, event->x - x0_rub, event->y - y0_rub);
+
+		if (event->state & GDK_BUTTON2_MASK) {
+		if (px0 < px1) {
+			p->sel.xmin = px0;
+			p->sel.xmax = px1;
+		} else {
+			p->sel.xmin = px1;
+			p->sel.xmax = px0;
+		}
+
+		if (py0 < py1) {
+			p->sel.ymin = py0;
+			p->sel.ymax = py1;
+		} else {
+			p->sel.ymin = py1;
+			p->sel.ymax = py0;
+		}
+		}
+		cairo_stroke(cr);
+		cairo_restore(cr);
+	}
 
 	xyplot_render_layout(cr, layout, x0, y0);
 
@@ -1267,6 +2120,60 @@ exit:
 }
 
 
+/**
+ * @brief button release events
+ */
+
+static gboolean xyplot_button_release_cb(GtkWidget *widget,
+					 GdkEventButton *event, gpointer data)
+{
+	XYPlot *p;
+
+	gdouble px;
+	gdouble py;
+
+
+	p = XYPLOT(widget);
+
+	if (event->type != GDK_BUTTON_RELEASE)
+		return TRUE;
+
+	if (event->button == 1) {
+
+		g_message("WAS X: %g to %g and Y: %g to %g",
+			  p->xmin, p->xmax, p->ymin, p->ymax);
+
+		autorange = 0;
+		p->xmin = px0;
+		p->xmax = px1;
+		p->ymin = py1;
+		p->ymax = py0;
+		p->xlen = p->xmax - p->xmin;
+		p->ylen = p->ymax - p->ymin;
+
+		xyplot_auto_range(p);
+		xyplot_auto_axes(p);
+
+		xyplot_plot(p);
+
+		g_message("NOW X: %g to %g and Y: %g to %g",
+			  p->xmin, p->xmax, p->ymin, p->ymax);
+	}
+
+
+	if (event->button == 2) {
+
+		g_message("FIT ALL DATA X: %g to %g and Y: %g to %g",
+			  p->sel.xmin, p->sel.xmax, p->sel.ymin, p->sel.ymax);
+
+		p->sel.active = TRUE;
+		g_signal_emit_by_name(widget, "xyplot-fit-selection");
+
+	}
+
+
+	return TRUE;
+}
 
 
 
@@ -1277,16 +2184,41 @@ exit:
 static gboolean xyplot_button_press_cb(GtkWidget *widget, GdkEventButton *event,
 				       gpointer data)
 {
+	XYPlot *p;
+
+	gdouble px;
+	gdouble py;
 
 
+	p = XYPLOT(widget);
 
 	if (event->type != GDK_BUTTON_PRESS)
 		goto exit;
 
-	if (event->button != 3)
-		goto exit;
+	if (event->button == 1 || event->button == 2) {
 
-	xyplot_popup_menu(widget);
+		/* get plot pixel reference */
+		px = event->x - p->plot_x;
+		py = p->plot_y + p->plot_h - event->y;
+
+		if (px < 0.0)
+			goto exit;
+
+		if (px > p->plot_w)
+			goto exit;
+
+		if (py < 0.0)
+			goto exit;
+
+		if (py > p->plot_h)
+			goto exit;
+
+		x0_rub = event->x;
+		y0_rub = event->y;
+	}
+
+	if (event->button == 3)
+		xyplot_popup_menu(widget);
 
 exit:
 	return TRUE;
@@ -1328,7 +2260,7 @@ static gboolean xyplot_configure_event_cb(GtkWidget *widget,
 	p->render = gdk_window_create_similar_surface(win, CAIRO_CONTENT_COLOR,
 						       width, height);
 
-	xyplot_plot(widget);
+	xyplot_plot(p);
 
 exit:
 	return TRUE;
@@ -1348,6 +2280,11 @@ static void xyplot_class_init(XYPlotClass *klass)
 
 	widget_class = GTK_WIDGET_CLASS(klass);
 
+	g_signal_new("xyplot-fit-selection",
+		     TYPE_XYPLOT, G_SIGNAL_RUN_FIRST,
+		     0, NULL, NULL, NULL,
+		     G_TYPE_NONE, 0);
+
 	/* override widget methods go here if needed */
 }
 
@@ -1360,6 +2297,42 @@ static void xyplot_init(XYPlot *p)
 {
 	g_return_if_fail(p != NULL);
 	g_return_if_fail(IS_XYPLOT(p));
+
+	/* initialisation of plotting internals */
+	p->xlabel = "X-Axis";
+	p->ylabel = "Y-Axis";
+	p->pad    = 20.0;
+
+	p->graphs = NULL;
+
+	p->x_ax.min       = 0.0;
+	p->x_ax.max       = 0.0;
+	p->x_ax.len       = 0.0;
+	p->x_ax.step      = 0.0;
+	p->x_ax.ticks_maj = 5.0;
+	p->x_ax.prec      = 0.0;
+
+	p->y_ax.min       = 0.0;
+	p->y_ax.max       = 0.0;
+	p->y_ax.len       = 0.0;
+	p->y_ax.step      = 0.0;
+	p->y_ax.ticks_maj = 5.0;
+	p->y_ax.prec      = 0.0;
+
+
+	p->bg_colour.red   = BG_R;
+	p->bg_colour.green = BG_G;
+	p->bg_colour.blue  = BG_B;
+	p->bg_colour.alpha = 1.0;
+
+	p->ax_colour.red   = AXES_R;
+	p->ax_colour.green = AXES_G;
+	p->ax_colour.blue  = AXES_B;
+	p->ax_colour.alpha = 1.0;
+
+	/* XXX */
+	autorange = 1;
+
 
 	/* connect the relevant signals of the DrawingArea */
 	g_signal_connect(G_OBJECT(&p->parent), "draw",
@@ -1379,90 +2352,417 @@ static void xyplot_init(XYPlot *p)
 
 	g_signal_connect (G_OBJECT(&p->parent), "button-press-event",
 			  G_CALLBACK (xyplot_button_press_cb), NULL);
+	g_signal_connect (G_OBJECT(&p->parent), "button-release-event",
+			  G_CALLBACK (xyplot_button_release_cb), NULL);
 
 
 	gtk_widget_set_events(GTK_WIDGET(&p->parent), GDK_EXPOSURE_MASK
 			       | GDK_LEAVE_NOTIFY_MASK
 			       | GDK_BUTTON_PRESS_MASK
+			       | GDK_BUTTON_RELEASE_MASK
 			       | GDK_POINTER_MOTION_MASK
 			       | GDK_POINTER_MOTION_HINT_MASK
 			       | GDK_ENTER_NOTIFY_MASK
 			       | GDK_LEAVE_NOTIFY_MASK);
-
-	xyplot_build_popup_menu(GTK_WIDGET(p));
-
-	/* initialisation of plotting internals */
-	p->xlabel = "X-Axis";
-	p->ylabel = "Y-Axis";
-	p->pad    = 20.0;
-
-	p->data_x    = NULL;
-	p->data_y    = NULL;
-	p->data_len = 0;
-
-	p->x_ax.min       = 0.0;
-	p->x_ax.max       = 0.0;
-	p->x_ax.len       = 0.0;
-	p->x_ax.step      = 0.0;
-	p->x_ax.ticks_maj = 5.0;
-	p->x_ax.prec      = 0.0;
-
-	p->y_ax.min       = 0.0;
-	p->y_ax.max       = 0.0;
-	p->y_ax.len       = 0.0;
-	p->y_ax.step      = 0.0;
-	p->y_ax.ticks_maj = 5.0;
-	p->y_ax.prec      = 0.0;
 }
 
 
 /**
- * @brief set the data to plot
- *
- * @note we expect len(x) == len(y);
- *
- * @note a valid call to this function will g_free() the previously used data,
- *	 so if you want to keep them, only supply copies
- *
- * @note if one of the pointers is NULL, the original data is kept
+ * @brief g_free() a graph and all its contents
  */
 
-void xyplot_set_data(GtkWidget *widget, gdouble *x, gdouble *y, gsize size)
+static void xyplot_free_graph(struct graph *g)
+{
+	if (!g)
+		return;
+
+	g_free(g->data_x);
+	g_free(g->data_y);
+	g_free(g->label);
+	g_free(g);
+}
+
+
+/**
+ * @brief get the data inside the selection box
+ *
+ * @param widget the XYPlot widget
+ * @param x pointer-to-pointer where the x-data will be stored
+ * @param y pointer-to-pointer where the y-data will be stored
+ *
+ * @returns the number of elements in the arrays
+ *
+ * XXX this function is pretty inefficient for large amounts of data, but
+ *     it'll do for now
+ *
+ * @note the caller must deallocate the buffers
+ */
+
+size_t xyplot_get_selection_data(GtkWidget *widget, gdouble **x, gdouble **y)
+{
+	size_t i;
+	size_t n = 0;
+
+	XYPlot *p;
+
+	GList *elem;
+
+	struct graph *g;
+
+	GArray *gx, *gy;
+
+
+	p = XYPLOT(widget);
+
+
+	if (!p->sel.active)
+		return 0;
+
+	gx = g_array_new(FALSE, FALSE, sizeof(gdouble));
+	gy = g_array_new(FALSE, FALSE, sizeof(gdouble));
+
+
+	for (elem = p->graphs; elem; elem = elem->next) {
+
+		g  = (struct graph *) elem->data;
+
+		for (i = 0; i < g->data_len; i++) {
+
+			if (g->data_x[i] >= p->sel.xmin) {
+				if (g->data_x[i] <= p->sel.xmax) {
+					if (g->data_y[i] >= p->sel.ymin) {
+						if (g->data_y[i] <= p->sel.ymax) {
+							g_array_append_val(gx, g->data_x[i]);
+							g_array_append_val(gy, g->data_y[i]);
+							n++;
+						}
+					}
+				}
+			}
+
+
+		}
+	}
+
+
+	(*x) = (gdouble *) gx->data;
+	(*y) = (gdouble *) gy->data;
+
+	g_array_free(gx, FALSE);
+	g_array_free(gy, FALSE);
+
+
+	return n;
+}
+
+
+/**
+ * @brief drop all graphs
+ *
+ * @param widget the XYPlot widget
+ */
+
+void xyplot_drop_all_graphs(GtkWidget *widget)
 {
 	XYPlot *plot;
 
+	GList *elem;
+
+
 	plot = XYPLOT(widget);
 
+	if (!plot)
+		return;
 
-	if (!x)
-		goto error;
-	if (!y)
-		goto error;
+	for (elem = plot->graphs; elem; elem = elem->next)
+		xyplot_free_graph((struct graph *) elem->data);
 
-	g_free(plot->data_x);
-	g_free(plot->data_y);
+	g_list_free(plot->graphs);
+	plot->graphs = NULL;
 
-	plot->data_x    = x;
-	plot->data_y    = y;
-	plot->data_len = size;
+	plot->sel.active = FALSE;
 
-	xyplot_auto_range(widget);
-	xyplot_auto_axes(widget);
-
-
-
-	xyplot_plot(widget);
-
-	return;
-
-error:
-	g_warning("%s: data array is NULL", __func__);
-
-	return;
+	xyplot_plot(plot);
 }
 
 
 
+/**
+ * @brief drop a dataset by reference
+ *
+ * @param widget the XYPlot widget
+ * @param ref a reference to a graph
+ *
+ * @note a valid call to this function will g_free() the data and the label
+ *
+ */
+
+
+void xyplot_drop_graph(GtkWidget *widget, void *ref)
+{
+	XYPlot *plot;
+
+	GList *elem;
+
+	struct graph *g;
+
+
+	plot = XYPLOT(widget);
+
+	if (!plot)
+		return;
+
+	if (!ref)
+		return;
+
+	g = (struct graph *) ref;
+
+	elem = g_list_find(plot->graphs, g);
+
+	if (!elem) {
+		g_warning("%s: graph reference not found!", __func__);
+		return;
+	}
+
+	plot->graphs = g_list_remove_link(plot->graphs, elem);
+	xyplot_free_graph(g);
+
+	g_list_free(elem);
+#if 1
+	xyplot_auto_range(plot);
+	xyplot_auto_axes(plot);
+
+	xyplot_plot(plot);
+#endif
+}
+
+
+
+/**
+ * @brief add a dataset to plot
+ *
+ * @param widget the XYPlot widget
+ * @param x an array of x axis values
+ * @param y an array of y axis values
+ * @param size the number of elements in the arrays
+ * @param label the name of the graph (may be NULL)
+ *
+ *
+ * @note we expect len(x) == len(y)
+ * @note the data an the label must be allocated on the heap, so we can g_free()
+ *
+ * @returns a reference to the data set in the plot or NULL on error
+ *
+ * @note call xyplot_redraw() to update plot!
+ */
+
+void *xyplot_add_graph(GtkWidget *widget,
+		       gdouble *x, gdouble *y, gsize size, gchar *label)
+{
+	XYPlot *p;
+
+	struct graph *g;
+
+
+	p = XYPLOT(widget);
+
+	if (!p)
+		return NULL;
+	if (!x)
+		return NULL;
+	if (!y)
+		return NULL;
+
+
+	g = (struct graph *) g_malloc0(sizeof(struct graph));
+
+
+	g->data_x   = x;
+	g->data_y   = y;
+	g->data_len = size;
+	g->label    = label;
+	g->parent   = p;
+	g->style    = STAIRS;
+
+	g->colour.red   = GRAPH_R;
+	g->colour.green = GRAPH_G;
+	g->colour.blue  = GRAPH_B;
+	g->colour.alpha = 1.0;
+
+	p->graphs = g_list_append(p->graphs, g);
+
+	xyplot_auto_range(p);
+	xyplot_auto_axes(p);
+
+	if (strcmp("FIT", label))
+		if (p->sel.active)
+			g_signal_emit_by_name(widget, "xyplot-fit-selection");
+
+	return g;
+}
+
+
+void xyplot_set_graph_style(GtkWidget *widget, void *ref,
+			    enum xyplot_graph_style style)
+{
+	XYPlot *plot;
+
+	GList *elem;
+
+	struct graph *g;
+
+
+	plot = XYPLOT(widget);
+
+	if (!plot)
+		return;
+
+	if (!ref)
+		return;
+
+	g = (struct graph *) ref;
+
+	elem = g_list_find(plot->graphs, g);
+
+	if (!elem) {
+		g_warning("%s: graph reference not found!", __func__);
+		return;
+	}
+
+	g->style = style;
+}
+
+void xyplot_set_graph_rgba(GtkWidget *widget, void *ref,
+			   GdkRGBA colour)
+{
+	XYPlot *p;
+
+	GList *elem;
+
+	struct graph *g;
+
+
+	p = XYPLOT(widget);
+
+	if (!p)
+		return;
+
+	if (!ref)
+		return;
+
+	g = (struct graph *) ref;
+
+	elem = g_list_find(p->graphs, g);
+
+	if (!elem) {
+		g_warning("%s: graph reference not found!", __func__);
+		return;
+	}
+
+	g->colour.red   = colour.red;
+	g->colour.green = colour.green;
+	g->colour.blue  = colour.blue;
+	g->colour.alpha = colour.alpha;
+}
+
+
+/**
+ * @brief retreive the colour of a graph
+ *
+ * @returns 0 on success, otherwise error
+ */
+
+int xyplot_get_graph_rgba(GtkWidget *widget, void *ref, GdkRGBA *colour)
+{
+	XYPlot *p;
+
+	GList *elem;
+
+	struct graph *g;
+
+
+	p = XYPLOT(widget);
+
+	if (!p)
+		return -1;
+
+	if (!ref)
+		return -1;
+
+	g = (struct graph *) ref;
+
+	elem = g_list_find(p->graphs, g);
+
+	if (!elem) {
+		g_warning("%s: graph reference not found!", __func__);
+		return -1;
+	}
+
+
+	colour->red   = g->colour.red;
+	colour->green = g->colour.green;
+	colour->blue  = g->colour.blue;
+	colour->alpha = g->colour.alpha;
+
+	return 0;
+}
+
+
+
+void xyplot_get_sel_axis_range(GtkWidget *widget,
+			   gdouble *xmin, gdouble *xmax,
+			   gdouble *ymin, gdouble *ymax)
+{
+	XYPlot *p;
+
+
+	p = XYPLOT(widget);
+
+	if (!p)
+		return;
+
+	if (xmin)
+		(*xmin) = p->sel.xmin;
+	if (xmax)
+		(*xmax) = p->sel.xmax;
+	if (ymin)
+		(*ymin) = p->sel.ymin;
+	if (ymax)
+		(*ymax) = p->sel.ymax;
+
+
+}
+
+
+void xyplot_get_data_axis_range(GtkWidget *widget,
+			   gdouble *xmin, gdouble *xmax,
+			   gdouble *ymin, gdouble *ymax)
+{
+	XYPlot *p;
+
+
+	p = XYPLOT(widget);
+
+	if (!p)
+		return;
+
+	if (xmin)
+		(*xmin) = p->xmin;
+	if (xmax)
+		(*xmax) = p->xmax;
+	if (ymin)
+		(*ymin) = p->ymin;
+	if (ymax)
+		(*ymax) = p->ymax;
+
+
+}
+
+
+void xyplot_redraw(GtkWidget *widget)
+{
+	xyplot_plot(XYPLOT(widget));
+}
 
 /**
  * @brief create a new XYPlot widget

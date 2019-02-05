@@ -41,11 +41,10 @@ struct _XYPlotAxis {
 	gdouble prec;
 };
 
-
 struct _XYPlot {
 	/* these should be private, we'll leave them exposed */
 	GtkDrawingArea parent;
-	cairo_surface_t *plot;		/* the plotting surface */	
+	cairo_surface_t *plot;		/* the plotting surface */
 	cairo_surface_t *render;	/* the rendered surface */
 	GtkWidget *menu;		/* popup menu */
 
@@ -54,7 +53,7 @@ struct _XYPlot {
 	gdouble xmin;	/* data range in x-axis */
 	gdouble xmax;
 	gdouble xlen;
-	
+
 	gdouble ymin;	/* data range in y-axis */
 	gdouble ymax;
 	gdouble ylen;
@@ -67,28 +66,65 @@ struct _XYPlot {
 
 	gdouble plot_x;	/* plot frame starting points and size */
 	gdouble plot_y;
-	
+
 	gdouble plot_w;
 	gdouble plot_h;
-	
+
 	gdouble scale_x; /* plot area to data scale */
 	gdouble scale_y;
 
-	gdouble *data_x;	/* the data to plot */
-	gdouble *data_y;
-	gsize    data_len;
 
+	struct {
+		gdouble xmin;
+		gdouble xmax;
+		gdouble ymin;
+		gdouble ymax;
+		gboolean active;
+	} sel;
+
+
+
+
+	GList *graphs;
+
+	GdkRGBA bg_colour;
+	GdkRGBA ax_colour;
 };
 
 struct _XYPlotClass {
 	GtkDrawingAreaClass parent_class;
 };
 
+enum xyplot_graph_style {STAIRS, CIRCLES, LINES, NAN_LINES, CURVES, DASHES, SQUARES};
+
 GtkWidget *xyplot_new(void);
 void xyplot_set_xlabel(GtkWidget *widget, gchar *label);
 void xyplot_set_ylabel(GtkWidget *widget, gchar *label);
 void xyplot_set_padding(GtkWidget *widget, gdouble pad);
-void xyplot_set_data(GtkWidget *widget, gdouble *x, gdouble *y, gsize size);
+
+void *xyplot_add_graph(GtkWidget *widget,
+		       gdouble *x, gdouble *y, gsize size, gchar *label);
+void xyplot_drop_graph(GtkWidget *widget, void *ref);
+void xyplot_drop_all_graphs(GtkWidget *widget);
+
+
+void xyplot_set_graph_style(GtkWidget *widget, void *ref,
+			    enum xyplot_graph_style style);
+
+void xyplot_set_graph_rgba(GtkWidget *widget, void *ref,
+			   GdkRGBA colour);
+int xyplot_get_graph_rgba(GtkWidget *widget, void *ref, GdkRGBA *colour);
+
+size_t xyplot_get_selection_data(GtkWidget *widget, double **x, double **y);
+
+void xyplot_get_sel_axis_range(GtkWidget *widget,
+			   gdouble *xmin, gdouble *xmax,
+			   gdouble *ymin, gdouble *ymax);
+
+void xyplot_get_data_axis_range(GtkWidget *widget,
+			   gdouble *xmin, gdouble *xmax,
+			   gdouble *ymin, gdouble *ymax);
+void xyplot_redraw(GtkWidget *widget);
 
 
 #endif /* _WIDGETS_XYPLOT_H_ */

@@ -5,6 +5,7 @@ AM_CPPFLAGS += -Iwidgets/include
 AM_CPPFLAGS += -Iwidgets/radio/
 AM_CPPFLAGS += -Iwidgets/telescope/
 AM_CPPFLAGS += -Iwidgets/sswdnd/
+AM_CPPFLAGS += -Iwidgets/spectrum
 
 AM_CFLAGS := $(GTK3_CFLAGS)
 AM_CFLAGS += $(GTHREAD_CFLAGS)
@@ -64,6 +65,7 @@ client_SOURCES += widgets/telescope/telescope.c \
 
 client_SOURCES += widgets/sswdnd/sswdnd.c
 
+client_SOURCES += widgets/spectrum/spectrum.c
 
 
 
