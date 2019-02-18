@@ -954,7 +954,7 @@ static void srt_apply_calibration(struct spec_data *s)
 
 
 	for (i = 0; i < s->n; i++)
-		s->spec[i] = (typeof(*s->spec)) ((double) s->spec[i] * 1000.0) / srt.temp_cal_factor;
+		s->spec[i] = (uint32_t) ((double) s->spec[i] * 1000.0) / srt.temp_cal_factor;
 
 }
 
@@ -986,7 +986,7 @@ static uint32_t srt_spec_acquire(struct observation *obs)
 
 	struct spec_data *s = NULL;
 
-	typeof(*s->spec) *p;
+	uint32_t *p;
 
 
 	if (!obs->acq.acq_max)
@@ -1029,7 +1029,7 @@ static uint32_t srt_spec_acquire(struct observation *obs)
 
 
 	/* prepare and send: allocate full length */
-	s = g_malloc0(sizeof(struct spec_data) + total * sizeof(typeof(*s->spec)));
+	s = g_malloc0(sizeof(struct spec_data) + total * sizeof(uint32_t));
 
 	s->freq_min_hz = (typeof(s->freq_min_hz)) acs[0].fq[acs[0].offset];
 	s->freq_max_hz = (typeof(s->freq_max_hz)) acs[n - 1].fq[acs[n - 1].offset + acs[n - 1].nbins];
@@ -1040,7 +1040,7 @@ static uint32_t srt_spec_acquire(struct observation *obs)
 	p = s->spec;
 	for (i = 0; i < n; i++) {
 		for (j = 0; j < acs[i].nbins; j++) {
-			(*p++) = (typeof(*s->spec)) raw[i][j + srt.bin_cut_lo + acs[i].offset];
+			(*p++) = (uint32_t) raw[i][j + srt.bin_cut_lo + acs[i].offset];
 			s->n++;
 		}
 	}

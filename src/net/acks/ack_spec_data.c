@@ -35,7 +35,7 @@ void ack_spec_data(uint16_t trans_id, struct spec_data *s)
 
 
 	data_size = sizeof(struct spec_data)
-		    + s->n * sizeof(sizeof(typeof(*s->spec)));
+		    + s->n * sizeof(uint32_t);
 
 	pkt_size = sizeof(struct packet) + data_size;
 
