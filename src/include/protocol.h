@@ -73,7 +73,7 @@ struct packet {
 	uint16_t data_crc16;
 	uint32_t data_size;
 	char data[];
-};
+} __attribute__((packed));
 
 /* arbitrarily limit maximum payload size to 32 MiB */
 #define MAX_PAYLOAD_SIZE	0x2000000UL
