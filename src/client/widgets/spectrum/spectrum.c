@@ -366,7 +366,7 @@ static void spectrum_append_data(Spectrum *p, struct spectrum *sp)
 	void *ref;
 
 	GList *elem;
-	GList *prev;
+	GList *tmp;
 
 
 
@@ -385,7 +385,18 @@ static void spectrum_append_data(Spectrum *p, struct spectrum *sp)
 
 		for (elem = p->cfg->per; elem; elem = elem->next) {
 			ref = elem->data;
-			xyplot_get_graph_rgba(p->cfg->plot, ref, &c);
+
+			if (xyplot_get_graph_rgba(p->cfg->plot, ref, &c)) {
+				/* graph is no more, drop */
+				tmp = elem->next;
+				p->cfg->per = g_list_delete_link(p->cfg->per, elem);
+
+				if (tmp && tmp->prev) {
+					elem = tmp->prev; /* take one step back */
+					continue;
+				}
+			}
+
 			c.alpha -= alpha_frac;
 
 			/* could happen if the base alpha was changed by user,

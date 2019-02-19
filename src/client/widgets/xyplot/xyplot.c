@@ -70,6 +70,8 @@ struct graph {
 	GdkRGBA colour;
 	enum xyplot_graph_style style;
 
+	grefcount ref;
+
 	XYPlot *parent;
 };
 
@@ -193,6 +195,8 @@ static void xyplot_export_xy_graph_cb(GtkWidget *w, struct graph *g)
 		return;
 	}
 
+	g_ref_count_inc(&g->ref);
+
 	if (!strlen(g->label))
 		fname = g_strdup_printf("xydata.dat");
 	else
@@ -229,6 +233,8 @@ static void xyplot_export_xy_graph_cb(GtkWidget *w, struct graph *g)
 	}
 
 	gtk_widget_destroy(dia);
+
+	g_ref_count_dec(&g->ref);
 }
 
 
@@ -265,6 +271,8 @@ static void xyplot_clear_selection_cb(GtkWidget *w, XYPlot *p)
 
 static void xyplot_col_resp_cb(GtkDialog *dia, gint resp_id, struct graph *g)
 {
+	g_ref_count_inc(&g->ref);
+
 	if (resp_id == GTK_RESPONSE_OK) {
 		gtk_color_chooser_get_rgba(GTK_COLOR_CHOOSER(dia), &g->colour);
 
@@ -272,6 +280,8 @@ static void xyplot_col_resp_cb(GtkDialog *dia, gint resp_id, struct graph *g)
 	}
 
 	gtk_widget_destroy(GTK_WIDGET(dia));
+
+	g_ref_count_dec(&g->ref);
 }
 
 
@@ -288,6 +298,8 @@ static void xyplot_choose_colour_cb(GtkWidget *w, struct graph *g)
 		return;
 	}
 
+	g_ref_count_inc(&g->ref);
+
 	dia = gtk_color_chooser_dialog_new("Choose Colour", GTK_WINDOW(win));
 
 	gtk_window_set_modal(GTK_WINDOW(dia), TRUE);
@@ -296,6 +308,8 @@ static void xyplot_choose_colour_cb(GtkWidget *w, struct graph *g)
 	g_signal_connect(dia, "response", G_CALLBACK(xyplot_col_resp_cb), g);
 
 	gtk_widget_show_all(dia);
+
+	g_ref_count_dec(&g->ref);
 }
 
 
@@ -384,6 +398,8 @@ static void xyplot_radio_menu_toggled_cb(GtkWidget *w, struct graph *g)
 	if (!gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(w)))
 		return;
 
+	g_ref_count_inc(&g->ref);
+
 	g_object_get(G_OBJECT(w), "label", &lbl, NULL);
 
 	if (!g_strcmp0(lbl, "Stairs"))
@@ -405,6 +421,8 @@ static void xyplot_radio_menu_toggled_cb(GtkWidget *w, struct graph *g)
 	g_free(lbl);
 
 	xyplot_plot(g->parent);
+
+	g_ref_count_dec(&g->ref);
 }
 
 
@@ -2486,6 +2504,51 @@ void xyplot_drop_all_graphs(GtkWidget *widget)
 }
 
 
+/**
+ * @brief drop all graphs in the cleanup list
+ *
+ * @param widget the XYPlot widget
+ */
+
+static void xyplot_drop_all_graphs_cleanup(GtkWidget *widget)
+{
+	XYPlot *plot;
+
+	GList *elem;
+	GList *tmp;
+
+	struct graph *g;
+
+
+	plot = XYPLOT(widget);
+
+	if (!plot)
+		return;
+
+	for (elem = plot->graphs_cleanup; elem; elem = elem->next) {
+
+		g = (struct graph *) elem->data;
+
+		if (!g_ref_count_dec(&g->ref))
+			continue;
+
+		tmp = elem->next;
+
+		plot->graphs_cleanup = g_list_remove_link(plot->graphs_cleanup,
+							  elem);
+		xyplot_free_graph(g);
+
+		if (tmp && tmp->prev)
+			elem = tmp->prev;
+	}
+
+	if (!g_list_length(plot->graphs_cleanup)) {
+		g_list_free(plot->graphs_cleanup);
+		plot->graphs_cleanup = NULL;
+	}
+}
+
+
 
 /**
  * @brief drop a dataset by reference
@@ -2515,6 +2578,7 @@ void xyplot_drop_graph(GtkWidget *widget, void *ref)
 	if (!ref)
 		return;
 
+
 	g = (struct graph *) ref;
 
 	elem = g_list_find(plot->graphs, g);
@@ -2525,9 +2589,23 @@ void xyplot_drop_graph(GtkWidget *widget, void *ref)
 	}
 
 	plot->graphs = g_list_remove_link(plot->graphs, elem);
-	xyplot_free_graph(g);
 
-	g_list_free(elem);
+	if (plot->menu && !gtk_widget_get_visible(plot->menu)) {
+
+		/* free the current graph and the cleanup list */
+
+		if (g_ref_count_dec(&g->ref)) {
+			xyplot_free_graph(g);
+			g_list_free(elem);
+		}
+
+		xyplot_drop_all_graphs_cleanup(widget);
+
+	} else {
+		g_ref_count_dec(&g->ref);
+		plot->graphs_cleanup = g_list_append(plot->graphs_cleanup, g);
+	}
+
 #if 1
 	xyplot_auto_range(plot);
 	xyplot_auto_axes(plot);
@@ -2577,6 +2655,7 @@ void *xyplot_add_graph(GtkWidget *widget,
 	g = (struct graph *) g_malloc0(sizeof(struct graph));
 
 
+
 	g->data_x   = x;
 	g->data_y   = y;
 	g->data_len = size;
@@ -2589,6 +2668,7 @@ void *xyplot_add_graph(GtkWidget *widget,
 	g->colour.blue  = GRAPH_B;
 	g->colour.alpha = 1.0;
 
+	g_ref_count_init(&g->ref);
 	p->graphs = g_list_append(p->graphs, g);
 
 	xyplot_auto_range(p);

@@ -86,6 +86,7 @@ struct _XYPlot {
 
 
 	GList *graphs;
+	GList *graphs_cleanup;
 
 	GdkRGBA bg_colour;
 	GdkRGBA ax_colour;
