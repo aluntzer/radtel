@@ -134,6 +134,8 @@ static int srt_com_serial_set_comm_param(int fd)
 	/* enable receiver and set local mode */
 	cfg.c_cflag |= (CLOCAL | CREAD);
 
+	cfg.c_cc[VTIME] = 1;
+
 	/* set configuration */
 	return tcsetattr (fd, TCSANOW, &cfg);
 }
