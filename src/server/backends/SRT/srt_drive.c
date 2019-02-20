@@ -29,6 +29,7 @@
 
 #include <math.h>
 #include <backend.h>
+#include <ack.h>
 
 
 #define MSG "SRT DRIVE: "
@@ -104,6 +105,7 @@ static struct {
 
 
 
+static void srt_drive_notify_pos_update(void);
 
 
 /**
@@ -745,6 +747,7 @@ static int srt_drive_move(void)
 	srt.pos.az_cur = srt_drive_az_from_counts(srt.pos.az_cnts);
 	srt.pos.el_cur = srt_drive_el_from_cassi_counts(srt.pos.el_cnts);
 
+	srt_drive_notify_pos_update();
 
 	g_message(MSG "now at telescope AZ/EL: %g %g",
 		  srt_drive_az_to_telescope_ref(srt.pos.az_cur),
@@ -852,6 +855,8 @@ static gpointer srt_park_thread(gpointer data)
 	be_shared_comlink_release();
 	g_mutex_unlock(&mutex);
 
+	srt_drive_notify_pos_update();
+
 	g_thread_exit(NULL);
 }
 
@@ -893,6 +898,28 @@ static gpointer srt_recal_thread(gpointer data)
 	g_mutex_unlock(&mutex);
 
 	g_thread_exit(NULL);
+}
+
+
+/**
+ * @brief push drive position to server
+ */
+
+static void srt_drive_notify_pos_update(void)
+{
+	double az_arcsec;
+	double el_arcsec;
+
+	struct getpos pos;
+
+
+	az_arcsec = srt_drive_az_to_telescope_ref(srt.pos.az_cur) * 3600.0;
+	el_arcsec = srt_drive_el_to_telescope_ref(srt.pos.el_cur) * 3600.0;
+
+	/* emit notification */
+	pos.az_arcsec = (typeof(pos.az_arcsec)) az_arcsec;
+	pos.el_arcsec = (typeof(pos.el_arcsec)) el_arcsec;
+	ack_getpos_azel(PKT_TRANS_ID_UNDEF, &pos);
 }
 
 
