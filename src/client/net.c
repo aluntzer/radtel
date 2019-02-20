@@ -182,6 +182,7 @@ pending:
 	/* verify packet payload */
 	if (CRC16(pkt->data, pkt->data_size) == pkt->data_crc16)  {
 		process_pkt(pkt);
+		pkt = NULL;
 		c->nbytes = 0;
 		g_buffered_input_stream_peek_buffer(bistream, &nbytes);
 		if (nbytes)
@@ -212,8 +213,6 @@ drop_pkt:
 	g_bytes_unref(g_input_stream_read_bytes(istream, ret, NULL, &error));
 
 	c->nbytes = 0;
-
-	cmd_invalid_pkt(PKT_TRANS_ID_UNDEF);
 
 exit:
 
