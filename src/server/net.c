@@ -69,7 +69,7 @@ static void drop_connection(struct con_data *c)
  * @brief send a packet on a connection
  */
 
-static void net_send_internal(struct con_data *c, const char *pkt, gsize nbytes)
+static gint net_send_internal(struct con_data *c, const char *pkt, gsize nbytes)
 {
 	gssize ret;
 
@@ -86,13 +86,13 @@ static void net_send_internal(struct con_data *c, const char *pkt, gsize nbytes)
 
 	if (g_io_stream_is_closed(stream)) {
 		g_message("Error sending packet: stream closed\n");
-		return;
+		return -1;
 	}
 
 
 	if (!g_socket_connection_is_connected(c->con)) {
 		g_message("Error sending packet: socket not connected\n");
-		return;
+		return -1;
 	}
 
 	ret = g_output_stream_write(ostream, pkt, nbytes, NULL, &error);
@@ -103,6 +103,8 @@ static void net_send_internal(struct con_data *c, const char *pkt, gsize nbytes)
 			g_clear_error (&error);
 		}
 	}
+
+	return ret;
 }
 
 
@@ -183,7 +185,9 @@ pending:
 	for (i = 0; i < nbytes; i++)
 		printf("%c", buf[i]);
 	printf("\n");
-	net_send(buf, nbytes);
+	if (net_send(buf, nbytes))
+		goto drop_pkt;
+
 
 		if (pkt_size < MAX_PAYLOAD_SIZE) {
 			g_message("Increasing input buffer to packet size\n");
@@ -324,15 +328,20 @@ static gboolean net_incoming(GSocketService    *service,
 
 /**
  * @brief se3nd a packet to all connected clients
+ *
+ * @returns <0 on error
  */
 
-void net_send(const char *pkt, gsize nbytes)
+gint net_send(const char *pkt, gsize nbytes)
 {
+	gint ret;
+
 	GList *elem;
 
 	struct con_data *item;
 
 	static GMutex lock;
+
 
 
 	g_message("Broadcasting packet of %d bytes", nbytes);
@@ -341,10 +350,12 @@ void net_send(const char *pkt, gsize nbytes)
 
 	for (elem = con_list; elem; elem = elem->next) {
 		item = elem->data;
-		net_send_internal(item, pkt, nbytes);
+		ret = net_send_internal(item, pkt, nbytes);
 	}
 
 	g_mutex_unlock(&lock);
+
+	return ret;
 }
 
 

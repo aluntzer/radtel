@@ -21,7 +21,7 @@
 
 #include <glib.h>
 
-void net_send(const char *pkt, size_t nbytes);
+gint net_send(const char *pkt, size_t nbytes);
 
 #endif /* _INCLUDE_NET_COMMON_H_ */
 
