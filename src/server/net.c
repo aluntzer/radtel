@@ -211,6 +211,7 @@ pending:
 	/* verify packet payload */
 	if (CRC16(pkt->data, pkt->data_size) == pkt->data_crc16)  {
 		process_pkt(pkt);
+		pkt = NULL;
 		c->nbytes = 0;
 		g_buffered_input_stream_peek_buffer(bistream, &nbytes);
 		if (nbytes)
