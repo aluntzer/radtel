@@ -277,7 +277,7 @@ static void net_setup_recv(GSocketConnection *con)
  * @brief send a packet to the server
  */
 
-void net_send(const char *pkt, size_t nbytes)
+gint net_send(const char *pkt, size_t nbytes)
 {
 	gssize ret;
 
@@ -293,7 +293,7 @@ void net_send(const char *pkt, size_t nbytes)
 
 	if (!stream) {
 		g_warning("Remote not connected, cannot send packet");
-		return;
+		return -1;
 	}
 
 	ostream = g_io_stream_get_output_stream(stream);
@@ -301,13 +301,13 @@ void net_send(const char *pkt, size_t nbytes)
 
 	if (g_io_stream_is_closed(stream)) {
 		g_message("Error sending packet: stream closed\n");
-		return;
+		return -1;
 	}
 
 
 	if (!g_socket_connection_is_connected(server_con.con)) {
 		g_message("Error sending packet: socket not connected\n");
-		return;
+		return -1;
 	}
 
 	ret = g_output_stream_write(ostream, pkt, nbytes, NULL, &error);
@@ -318,6 +318,8 @@ void net_send(const char *pkt, size_t nbytes)
 			g_clear_error (&error);
 		}
 	}
+
+	return ret;
 }
 
 
