@@ -46,7 +46,7 @@
 #define PR_INVALID_PKT		0xa001	/* invalid packet signal */
 #define PR_CAPABILITIES		0xa002	/* capabilities of the telescope */
 #define PR_STATIONNAME		0xa003	/* name of station */
-#define PR_LOCATION		0xa004	/* geographical location of telescope */
+#define PR_UNDEFINED		0xa004
 #define PR_MOVETO_AZEL		0xa005	/* move to azimuth/elevation */
 #define PR_SUCCESS		0xa006  /* last command succeded */
 #define PR_FAIL			0xa007	/* last command failed */
