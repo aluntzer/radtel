@@ -19,7 +19,7 @@
 
 #include <protocol.h>
 
-void process_pkt(struct packet *pkt);
+int process_pkt(struct packet *pkt);
 
 /* command processing functions */
 void proc_pr_invalid_pkt(struct packet *pkt);

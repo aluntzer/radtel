@@ -30,9 +30,10 @@
 
 /**
  * @brief process a command pkt
+ * @returns -1 on error
  */
 
-void process_pkt(struct packet *pkt)
+int process_pkt(struct packet *pkt)
 {
 	switch(pkt->service) {
 
@@ -80,9 +81,12 @@ void process_pkt(struct packet *pkt)
 		g_message("Service command %x not understood\n");
 		/* XXX need ack: PR_INVALID_SERVICE */
 		ack_fail(pkt->trans_id);
-		break;
+
+		return -1;
 	}
 
 
 	g_free(pkt);
+
+	return 0;
 }
