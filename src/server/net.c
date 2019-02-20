@@ -143,6 +143,7 @@ static void net_buffer_ready(GObject *source_object, GAsyncResult *res,
 	GBufferedInputStream *bistream;
 
 	GError *error = NULL;
+	GBytes *b;
 
 
 	c = (struct con_data *) user_data;
@@ -167,6 +168,14 @@ pending:
 		goto exit;
 	}
 
+	gsize i;
+
+	for (i = 0; i < nbytes; i++)
+		printf("%x ", buf[i]);
+	printf("\n");
+	for (i = 0; i < nbytes; i++)
+		printf("%c", buf[i]);
+	printf("\n");
 
 
 
@@ -177,16 +186,9 @@ pending:
 		g_message("Packet of %ld bytes is larger than input buffer of "
 			  "%ld bytes.", pkt_size,
 			  g_buffered_input_stream_get_buffer_size(bistream));
-	gsize i;
 
-	for (i = 0; i < nbytes; i++)
-		printf("%x ", buf[i]);
-	printf("\n");
-	for (i = 0; i < nbytes; i++)
-		printf("%c", buf[i]);
-	printf("\n");
-	if (net_send(buf, nbytes))
-		goto drop_pkt;
+	if (net_send(buf, nbytes) < 0)
+		goto error;
 
 
 		if (pkt_size < MAX_PAYLOAD_SIZE) {
@@ -249,8 +251,11 @@ drop_pkt:
 	if (ret < 0)
 		goto error;
 
-	g_bytes_unref(g_input_stream_read_bytes(istream, ret, NULL, &error));
+	b = g_input_stream_read_bytes(istream, ret, NULL, &error);
+	if (!b)
+		goto error;
 
+	g_bytes_unref(b);
 	c->nbytes = 0;
 
 	cmd_invalid_pkt(PKT_TRANS_ID_UNDEF);
