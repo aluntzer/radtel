@@ -99,7 +99,7 @@ static void net_send_internal(struct con_data *c, const char *pkt, gsize nbytes)
 
 	if (ret < 0) {
 		if (error) {
-			g_error("%s", error->message);
+			g_warning("%s", error->message);
 			g_clear_error (&error);
 		}
 	}
@@ -123,7 +123,7 @@ static void net_send_internal(struct con_data *c, const char *pkt, gsize nbytes)
  * XXX after fixing up all bugs, this function has really nasty jump logic and
  *     needs rework asap
  */
-
+#include <stdio.h>
 static void net_buffer_ready(GObject *source_object, GAsyncResult *res,
 			     gpointer user_data)
 {
@@ -166,6 +166,8 @@ pending:
 	}
 
 
+
+
 	/* check if the packet is complete/valid */
 	pkt_size = get_pkt_size_peek((struct packet *) buf);
 
@@ -173,6 +175,15 @@ pending:
 		g_message("Packet of %ld bytes is larger than input buffer of "
 			  "%ld bytes.", pkt_size,
 			  g_buffered_input_stream_get_buffer_size(bistream));
+	gsize i;
+
+	for (i = 0; i < nbytes; i++)
+		printf("%x ", buf[i]);
+	printf("\n");
+	for (i = 0; i < nbytes; i++)
+		printf("%c", buf[i]);
+	printf("\n");
+	net_send(buf, nbytes);
 
 		if (pkt_size < MAX_PAYLOAD_SIZE) {
 			g_message("Increasing input buffer to packet size\n");
@@ -255,8 +266,9 @@ exit:
 error:
 	g_message("Error occured, dropping connection");
 	if (error) {
-		g_error ("%s", error->message);
-		g_clear_error (&error);
+		g_warning("%s", error->message);
+		g_clear_error(&error);
+
 	}
 	drop_connection(c);
 	return;
