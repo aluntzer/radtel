@@ -34,6 +34,7 @@
 #include <payload/pr_spec_acq_cfg.h>
 #include <payload/pr_spec_data.h>
 #include <payload/pr_getpos.h>
+#include <payload/pr_status.h>
 
 
 #define DEFAULT_PORT 1420
@@ -58,6 +59,8 @@
 #define PR_SPEC_ACQ_ENABLE	0xa00d  /* enable spectrum acquisition */
 #define PR_SPEC_ACQ_DISABLE	0xa00e  /* disable spectrum acquisition */
 #define PR_SPEC_ACQ_CFG_GET	0xa00f	/* get spectrum acquisition config */
+#define PR_STATUS_ACQ		0xa010	/* spectrum acquisition status */
+#define PR_STATUS_SLEW		0xa011	/* drive slew status */
 
 
 

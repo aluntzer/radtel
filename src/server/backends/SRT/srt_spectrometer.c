@@ -387,6 +387,8 @@ static guint16 *srt_spec_acquire_raw(guint32 refdiv, int mode, gsize *len)
 
 	GTimer *timer;
 
+	struct status s;
+
 
 	/* serial command string */
 	cmd = g_strdup_printf("%cfreq%c%c%c%c\n",
@@ -404,13 +406,23 @@ static guint16 *srt_spec_acquire_raw(guint32 refdiv, int mode, gsize *len)
 
 	be_shared_comlink_acquire();
 
+	s.busy = 1;
+	s.eta_msec = 0; /** XXX add estimate **/
+	ack_status_acq(PKT_TRANS_ID_UNDEF, &s);
+
 	/* give size explicitly, as command starts with '\0' */
 	be_shared_comlink_write(cmd, 9);
 
 	/* actual raw data is 16 bit unsigned @128 bytes total */
 	response = (guint16 *) be_shared_comlink_read(len);
 
+	s.busy = 0;
+	s.eta_msec = 0;
+	ack_status_acq(PKT_TRANS_ID_UNDEF, &s);
+
 	be_shared_comlink_release();
+
+
 
 	g_timer_stop(timer);
 

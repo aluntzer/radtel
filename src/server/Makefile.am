@@ -11,11 +11,13 @@ AM_LDFLAGS += $(GTHREAD_LIBS)
 AM_LDFLAGS += $(GLIB_LIBS)
 AM_LDFLAGS += $(GIO_LIBS)
 AM_LDFLAGS += -lm
-# force symbols from the .a that we absolutely need
+# force symbols from the .a that we absolutely need (and are unused otherwise)
 # it's a bit hackish, but who cares...
 AM_LDFLAGS += -u ack_spec_data
 AM_LDFLAGS += -u ack_spec_acq_disable
 AM_LDFLAGS += -u ack_spec_acq_enable
+AM_LDFLAGS += -u ack_status_acq
+AM_LDFLAGS += -u ack_status_slew
 
 bin_PROGRAMS = server 
 

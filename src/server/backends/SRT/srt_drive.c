@@ -637,12 +637,23 @@ static double srt_drive_motor_cmd_eval(gchar *cmd)
 
 	gchar *response;
 
+	struct status s;
+
 
 	g_message(MSG "CMD: %s", cmd);
+
+	s.busy = 1;
+	s.eta_msec = 0; /** XXX add estimate **/
+	ack_status_slew(PKT_TRANS_ID_UNDEF, &s);
 
 	be_shared_comlink_write(cmd, strlen(cmd));
 
 	response = be_shared_comlink_read(&len);
+
+	s.busy = 0;
+	s.eta_msec = 0;
+	ack_status_slew(PKT_TRANS_ID_UNDEF, &s);
+
 
 	if (sscanf(response, "%c %d %d %d", &c, &cnts, &f1, &f2) != 4)
 		g_warning(MSG, "error scanning com link response: %s", response);

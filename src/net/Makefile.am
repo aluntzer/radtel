@@ -26,4 +26,7 @@ libproto_a_SOURCES = protocol.c \
 		     acks/ack_fail.c \
 		     acks/ack_invalid_pkt.c \
 		     acks/ack_success.c \
-		     acks/ack_spec_acq_cfg.c
+		     acks/ack_spec_acq_cfg.c \
+		     acks/ack_status_acq.c \
+		     acks/ack_status_slew.c
+

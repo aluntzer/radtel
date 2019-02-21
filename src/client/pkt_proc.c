@@ -71,6 +71,15 @@ void process_pkt(struct packet *pkt)
 		proc_pr_spec_acq_cfg(pkt);
 		break;
 
+	case PR_STATUS_ACQ:
+		proc_pr_status_acq(pkt);
+		break;
+
+	case PR_STATUS_SLEW:
+		proc_pr_status_slew(pkt);
+		break;
+
+
 	default:
 		g_message("Service command %x not understood\n", pkt->service);
 		break;

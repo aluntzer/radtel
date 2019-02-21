@@ -92,6 +92,22 @@ static void setup_sig_pr_spec_acq_cfg(void)
 		     G_TYPE_NONE, 1, G_TYPE_POINTER);
 }
 
+static void setup_sig_pr_status_acq(void)
+{
+	g_signal_new("pr-status-acq",
+		     G_TYPE_OBJECT, G_SIGNAL_RUN_FIRST,
+		     0, NULL, NULL, NULL,
+		     G_TYPE_NONE, 1, G_TYPE_POINTER);
+}
+
+static void setup_sig_pr_status_slew(void)
+{
+	g_signal_new("pr-status-slew",
+		     G_TYPE_OBJECT, G_SIGNAL_RUN_FIRST,
+		     0, NULL, NULL, NULL,
+		     G_TYPE_NONE, 1, G_TYPE_POINTER);
+}
+
 
 gpointer *sig_get_instance(void)
 {
@@ -112,4 +128,6 @@ void sig_init(void)
 	setup_sig_pr_spec_acq_enable();
 	setup_sig_pr_spec_acq_disable();
 	setup_sig_pr_spec_acq_cfg();
+	setup_sig_pr_status_acq();
+	setup_sig_pr_status_slew();
 }
