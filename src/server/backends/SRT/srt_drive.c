@@ -834,7 +834,7 @@ static gpointer srt_park_thread(gpointer data)
 
 
 	/* move to stow in azimuth */
-	if (srt_drive_motor_cmd_eval("move 0 5000\n")) {
+	if (srt_drive_motor_cmd_eval("move 0 5000\n") == 0.0) {
 		srt.pos.az_cur  = 0.0;
 		srt.pos.az_tgt  = 0.0;
 		srt.pos.az_cnts = 0.0;
@@ -844,7 +844,7 @@ static gpointer srt_park_thread(gpointer data)
 
 
 	/* move to stow in elevation */
-	if (srt_drive_motor_cmd_eval("move 2 5000\n")) {
+	if (srt_drive_motor_cmd_eval("move 2 5000\n") == 0.0) {
 		srt.pos.el_cur  = 0.0;
 		srt.pos.el_tgt = 0.0;
 		srt.pos.el_cnts = 0.0;
@@ -875,7 +875,7 @@ static gpointer srt_recal_thread(gpointer data)
 
 	be_shared_comlink_acquire();
 	/* move to stow in azimuth */
-	if (srt_drive_motor_cmd_eval("move 0 5000\n")) {
+	if (srt_drive_motor_cmd_eval("move 0 5000\n") == 0.0) {
 		srt.pos.az_cur  = 0.0;
 		srt.pos.az_cnts = 0.0;
 	} else {
@@ -884,7 +884,7 @@ static gpointer srt_recal_thread(gpointer data)
 
 
 	/* move to stow in elevation */
-	if (srt_drive_motor_cmd_eval("move 2 5000\n")) {
+	if (srt_drive_motor_cmd_eval("move 2 5000\n") == 0.0) {
 		srt.pos.el_cur  = 0.0;
 		srt.pos.el_cnts = 0.0;
 	} else {
