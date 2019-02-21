@@ -237,8 +237,12 @@ static void sswdnd_drag_data_received(GtkWidget *w, GdkDragContext *ctx,
 
 
 	if (!gtk_container_get_children(GTK_CONTAINER(ostack))) {
+
+		GtkWidget *top = gtk_widget_get_toplevel(ostack);
+
 		g_message("Oh the vast emptiness...");
-		gdk_window_destroy(gtk_widget_get_window(ostack));
+		gtk_widget_destroy(top);
+	//	gdk_window_destroy(gtk_widget_get_window(ostack));
 	}
 }
 
@@ -425,8 +429,9 @@ static void sswdnd_catch(gpointer instance, GtkWidget *ostack, gpointer data)
 		g_message("Oh the vast emptiness... (3)");
 
 		if (GTK_IS_WINDOW(top)) {
-			gtk_window_close(GTK_WINDOW(top));
-			gdk_window_destroy(gtk_widget_get_window(top));
+			gtk_widget_destroy(top);
+			//gtk_window_close(GTK_WINDOW(top));
+			//gdk_window_destroy(gtk_widget_get_window(top));
 		}
 	}
 
