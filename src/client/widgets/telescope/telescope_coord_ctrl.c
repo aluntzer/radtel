@@ -196,7 +196,7 @@ static void telescope_switch_to_gal(Telescope *p)
 	gtk_spin_button_set_value(sb, gal.lat);
 
 	sb = p->cfg->sb_de_glon;
-	gtk_spin_button_set_range(sb, -180.0, 180.0);
+	gtk_spin_button_set_range(sb, 0., 360.);
 	gtk_spin_button_set_value(sb, gal.lon);
 
 	g_signal_handlers_unblock_matched(p->cfg->sb_ra_glat,
