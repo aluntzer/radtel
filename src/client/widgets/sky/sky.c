@@ -85,6 +85,9 @@ struct _SKYConfig {
 
 	gdouble mb3_x;		/* last mouse button 3 click coordinate */
 	gdouble time_off;	/* current time offset */
+
+
+	guint id_to;
 };
 
 
@@ -1693,6 +1696,22 @@ exit:
 }
 
 
+/**
+ * @brief destroy signal handler
+ */
+
+static gboolean sky_destroy(GtkWidget *w, void *data)
+{
+	SKY *p;
+
+	p = SKY(data);
+
+
+	g_source_remove(p->cfg->id_to);
+
+	return TRUE;
+}
+
 
 /**
  * @brief initialise the SKY class
@@ -1737,13 +1756,17 @@ static void sky_init(SKY *p)
 			 G_CALLBACK(sky_motion_notify_event_cb), NULL);
 
 	g_signal_connect (G_OBJECT(&p->parent), "button-press-event",
-			  G_CALLBACK (sky_button_press_cb), NULL);
+			  G_CALLBACK(sky_button_press_cb), NULL);
 
 	g_signal_connect (G_OBJECT(&p->parent), "enter-notify-event",
-			  G_CALLBACK (sky_pointer_crossing_cb), NULL);
+			  G_CALLBACK(sky_pointer_crossing_cb), NULL);
 
 	g_signal_connect (G_OBJECT(&p->parent), "leave-notify-event",
-			  G_CALLBACK (sky_pointer_crossing_cb), NULL);
+			  G_CALLBACK(sky_pointer_crossing_cb), NULL);
+
+	g_signal_connect(G_OBJECT(&p->parent), "destroy",
+			 G_CALLBACK(sky_destroy), (gpointer) p);
+
 #if 0
 
 	g_signal_connect (G_OBJECT(&p->parent), "button-press-event",
@@ -1771,7 +1794,7 @@ static void sky_init(SKY *p)
 
 
 	/* update coordinates every second */
-	g_timeout_add_seconds(1, sky_update_coord_hor, (gpointer) p);
+	p->cfg->id_to = g_timeout_add_seconds(1, sky_update_coord_hor, (gpointer) p);
 
 }
 

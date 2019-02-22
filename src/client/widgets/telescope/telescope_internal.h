@@ -21,8 +21,10 @@
 
 GtkWidget *telescope_coord_ctrl_new(Telescope *p);
 GtkWidget *telescope_pos_ctrl_new(Telescope *p);
+GtkWidget *telescope_get_pos_new(Telescope *p);
 GtkWidget *telescope_park_ctrl_new(Telescope *p);
 GtkWidget *telescope_recal_pointing_new(Telescope *p);
+GtkWidget *telescope_track_sky_new(Telescope *p);
 
 void telescope_update_movement_range(Telescope *p);
 

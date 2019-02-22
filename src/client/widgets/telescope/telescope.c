@@ -47,20 +47,6 @@ static void telescope_handle_pr_capabilities(gpointer instance,
 
 	p->cfg->c = (*c);
 
-	g_message("Event \"pr-capabilities\" signalled:");
-
-	g_message("\tlat_arcsec    %d", p->cfg->c.lat_arcsec);
-	g_message("\tlon_arcsec    %d", p->cfg->c.lon_arcsec);
-
-	g_message("\taz_min_arcsec %d", p->cfg->c.az_min_arcsec);
-	g_message("\taz_max_arcsec %d", p->cfg->c.az_max_arcsec);
-	g_message("\taz_res_arcsec %d", p->cfg->c.az_res_arcsec);
-
-	g_message("\tel_min_arcsec %d", p->cfg->c.el_min_arcsec);
-	g_message("\tel_max_arcsec %d", p->cfg->c.el_max_arcsec);
-	g_message("\tel_res_arcsec %d", p->cfg->c.el_res_arcsec);
-
-
 	p->cfg->lat = p->cfg->c.lat_arcsec / 3600.0;
 	p->cfg->lon = p->cfg->c.lon_arcsec / 3600.0;
 
@@ -73,6 +59,8 @@ static void gui_create_telescope_controls(Telescope *p)
 {
 	GtkWidget *w;
 
+	w = telescope_get_pos_new(p);
+	gtk_box_pack_start(GTK_BOX(p), w, FALSE, FALSE, 0);
 
 	w = telescope_coord_ctrl_new(p);
 	gtk_box_pack_start(GTK_BOX(p), w, FALSE, FALSE, 0);
@@ -85,6 +73,10 @@ static void gui_create_telescope_controls(Telescope *p)
 
 	w = telescope_recal_pointing_new(p);
 	gtk_box_pack_start(GTK_BOX(p), w, FALSE, FALSE, 0);
+
+	w = telescope_track_sky_new(p);
+	gtk_box_pack_start(GTK_BOX(p), w, FALSE, FALSE, 0);
+
 }
 
 
@@ -116,6 +108,9 @@ static void telescope_init(Telescope *p)
 
 	p->cfg = telescope_get_instance_private(p);
 
+	/* initialise with nosensical values */
+	p->cfg->track_ra = DBL_MIN;
+	p->cfg->track_de = DBL_MIN;
 
 	gtk_orientable_set_orientation(GTK_ORIENTABLE(p),
 				       GTK_ORIENTATION_VERTICAL);

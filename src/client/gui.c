@@ -17,164 +17,16 @@
 
 #include <gtk/gtk.h>
 
+#include <signals.h>
 #include <sswdnd.h>
 #include <sky.h>
 #include <xyplot.h>
 #include <radio.h>
 #include <telescope.h>
-#include <signals.h>
-
 #include <spectrum.h>
+#include <sys_status.h>
+#include <obs_assist.h>
 
-
-
-
-
-
-/**
- * @brief uniform noise macro
- */
-
-#define UNOISE (rand()/((double)RAND_MAX + 1.))
-
-/**
- * @brief gaussian noise macro
- */
-#define GNOISE (UNOISE + UNOISE + UNOISE + UNOISE + UNOISE + UNOISE + UNOISE + UNOISE + UNOISE + UNOISE + UNOISE + UNOISE - 6.)
-
-
-static gboolean gui_spec_data_cb(gpointer instance, struct spec_data *s, gpointer *data)
-{
-	GtkWidget *plot;
-
-	gdouble *xdata;
-	gdouble *ydata;
-
-	gdouble *xax;
-	gdouble *y_avg;
-
-	static gdouble *y_sum;
-
-	static size_t len;
-	static int cnt = 1;
-	static void *ref;
-
-	static int total;
-#define GRAPH_R	0.804
-#define GRAPH_G	0.592
-#define GRAPH_B	0.047
-
-
-	const GdkRGBA yel_phos = {GRAPH_R, GRAPH_G, GRAPH_B, 0.6};
-	const GdkRGBA white = {1.0, 1.0, 1.0, 0.7};
-	const GdkRGBA red = {0.3, 0.0, 0.0, 0.1};
-
-	void *tmp;
-
-
-	uint64_t f;
-	uint64_t i;
-
-	plot = GTK_WIDGET(data);
-
-
-	g_message("drawing:");
-	xdata = g_malloc(s->n * sizeof(gdouble));
-	ydata = g_malloc(s->n * sizeof(gdouble));
-
-	if (!y_sum)
-		y_sum = g_malloc0(s->n * sizeof(gdouble));
-
-	y_avg = g_malloc0(s->n * sizeof(gdouble));
-	xax = g_malloc0(s->n * sizeof(gdouble));
-
-	for (i = 0, f = s->freq_min_hz; i < s->n; i++, f += s->freq_inc_hz) {
-		xdata[i] = (gdouble) f * 1e-6; /* to Mhz */
-		ydata[i] = (gdouble) s->spec[i] * 0.001; /* convert mK to K */
-
-		/* dummy "Average" */
-		y_sum[i] += ydata[i];
-		y_avg[i] = y_sum[i] / (gdouble) cnt;
-		xax[i] = xdata[i];
-	}
-#if 1
-//	xyplot_drop_all_graphs(plot);
-	tmp = xyplot_add_graph(plot, xdata, ydata, s->n,
-			       g_strdup_printf("Spectrum %d", cnt++));
-
-	xyplot_set_graph_style(plot, tmp, CIRCLES);
-	xyplot_set_graph_rgba(plot, tmp, yel_phos);
-#endif
-
-	xyplot_drop_graph(plot, ref);
-	ref = xyplot_add_graph(plot, xax, y_avg, s->n,
-			       g_strdup_printf("Average"));
-	xyplot_set_graph_style(plot, ref, STAIRS);
-	xyplot_set_graph_rgba(plot, ref, white);
-
-	return TRUE;
-}
-
-
-static gboolean gui_getpos_azel_cb(gpointer instance, struct getpos *pos, gpointer *data)
-{
-
-	g_message("getpos azel CB! %g %g", (gdouble) pos->az_arcsec / 3600.0,
-					   (gdouble) pos->el_arcsec / 3600.0);
-
-	return TRUE;
-}
-
-
-
-static GtkWidget *gui_create_specplot(void)
-{
-	GtkWidget *plot;
-
-
-
-
-	plot = xyplot_new();
-
-#if 0
-
-	{ /* dummy */
-	#define LEN   8
-	#define X0   -3.0
-	#define INC   1.0
-
-	gdouble *xdata;
-	gdouble *ydata;
-
-	gdouble d = X0;
-	int i;
-	xdata = g_malloc(LEN * sizeof(gdouble));
-	ydata = g_malloc(LEN * sizeof(gdouble));
-
-
-	for (i = 0; i < LEN; i++) {
-		xdata[i] = d;
-		ydata[i] = d * d;
-
-		d += INC;
-	}
-
-	xyplot_set_data(plot, xdata, ydata, LEN);
-	}
-#endif
-	g_signal_connect(sig_get_instance(), "pr-spec-data",
-			  (GCallback) gui_spec_data_cb,
-			  (gpointer) plot);
-
-
-
-
-	/*** XXX POSITION DUMMY ***/
-	g_signal_connect(sig_get_instance(), "pr-getpos-azel",
-			  (GCallback) gui_getpos_azel_cb,
-			  (gpointer) NULL);
-	return plot;
-}
 
 
 static GtkWidget *gui_create_chat(void)
@@ -542,10 +394,14 @@ static void gui_create_window_with_widget(GtkWidget *p, GtkWidget **win,
 
 	gtk_box_pack_start(GTK_BOX(box), GTK_WIDGET(stack), TRUE, TRUE, 0);
 
+	w = sys_status_new();
+	gtk_widget_set_halign(GTK_WIDGET(w), GTK_ALIGN_CENTER);
+	gtk_box_pack_start(GTK_BOX(box), w, FALSE, FALSE, 0);
+#if 0
 	w = gui_create_status_view();
 	gtk_widget_set_halign(GTK_WIDGET(w), GTK_ALIGN_CENTER);
 	gtk_box_pack_start(GTK_BOX(box), w, FALSE, FALSE, 0);
-
+#endif
 	header = gtk_window_get_titlebar(GTK_WINDOW(*win));
 
 	sswdnd_add_header_buttons(sswdnd, header);
@@ -566,6 +422,15 @@ static GtkWidget *gui_create_stack_switcher(void)
 
 
 	sswdnd = sswdnd_new();
+
+	w = gtk_scrolled_window_new(NULL, NULL);
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(w),
+				       GTK_POLICY_AUTOMATIC,
+				       GTK_POLICY_AUTOMATIC);
+	gtk_container_add(GTK_CONTAINER(w), obs_assist_new());
+	sswdnd_add_named(sswdnd, w, "Observation");
+
+
 
 	sswdnd_add_named(sswdnd, spectrum_new(), "Spectrum");
 

@@ -35,8 +35,13 @@ struct _TelescopeConfig {
 	gdouble lat;
 	gdouble lon;
 
+	gdouble az;
+	gdouble el;
+
 	gdouble track_ra;
 	gdouble track_de;
+
+	gboolean tracking;
 
 	GtkComboBox   *coord_ref_cb;
 
@@ -47,7 +52,6 @@ struct _TelescopeConfig {
 	GtkSpinButton *sb_el;
 	GtkSpinButton *sb_de_glon;
 	GtkLabel      *sb_el_de_glon_lbl;
-
 
 	GtkLabel      *not_vis_lbl;
 };

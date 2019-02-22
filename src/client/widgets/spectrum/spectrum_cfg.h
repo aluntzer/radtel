@@ -37,7 +37,7 @@ struct _SpectrumConfig {
 	enum xyplot_graph_style s_avg;
 	GdkRGBA                 c_avg;
 
-
+	guint id_spd;
 };
 
 

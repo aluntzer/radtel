@@ -6,6 +6,8 @@ AM_CPPFLAGS += -Iwidgets/radio/
 AM_CPPFLAGS += -Iwidgets/telescope/
 AM_CPPFLAGS += -Iwidgets/sswdnd/
 AM_CPPFLAGS += -Iwidgets/spectrum
+AM_CPPFLAGS += -Iwidgets/sys_status
+AM_CPPFLAGS += -Iwidgets/obs_assist
 
 AM_CFLAGS := $(GTK3_CFLAGS)
 AM_CFLAGS += $(GTHREAD_CFLAGS)
@@ -36,7 +38,9 @@ client_SOURCES += pkt_proc.c \
 		  proc/proc_pr_getpos_azel.c \
 		  proc/proc_pr_spec_acq_enable.c \
 		  proc/proc_pr_spec_acq_disable.c \
-		  proc/proc_pr_spec_acq_cfg.c
+		  proc/proc_pr_spec_acq_cfg.c \
+		  proc/proc_pr_status_acq.c \
+		  proc/proc_pr_status_slew.c 
 
 
 client_SOURCES += sig/sig_pr_success.c \
@@ -46,6 +50,8 @@ client_SOURCES += sig/sig_pr_success.c \
 		  sig/sig_pr_spec_acq_enable.c \
 		  sig/sig_pr_spec_acq_disable.c \
 		  sig/sig_pr_spec_acq_cfg.c \
+		  sig/sig_pr_status_acq.c \
+		  sig/sig_pr_status_slew.c \
 		  sig/signals.c
 
 client_SOURCES += widgets/radio/radio.c \
@@ -66,6 +72,12 @@ client_SOURCES += widgets/telescope/telescope.c \
 client_SOURCES += widgets/sswdnd/sswdnd.c
 
 client_SOURCES += widgets/spectrum/spectrum.c
+
+client_SOURCES += widgets/sys_status/sys_status.c \
+		  widgets/sys_status/sys_status_position.c \
+		  widgets/sys_status/sys_status_info_bar.c
+
+client_SOURCES += widgets/obs_assist/obs_assist.c
 
 
 

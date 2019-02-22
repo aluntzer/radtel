@@ -45,7 +45,7 @@ static void radio_handle_pr_capabilities(gpointer instance,
 	p = RADIO(data);
 
 	p->cfg->c = (*c);
-
+#if 0
 	g_message("Event \"pr-capabilities\" signalled:");
 
 	g_message("\tfreq_min_hz %lu",		p->cfg->c.freq_min_hz);
@@ -58,7 +58,7 @@ static void radio_handle_pr_capabilities(gpointer instance,
 	g_message("\tbw_max_bin_div_lin %d",	p->cfg->c.bw_max_bin_div_lin);
 	g_message("\tbw_max_bin_div_rad2 %d",	p->cfg->c.bw_max_bin_div_rad2);
 	g_message("\tn_stack_max %d",		p->cfg->c.n_stack_max);
-
+#endif
 
 	radio_update_bw_divider(p);
 	radio_update_bin_divider(p);

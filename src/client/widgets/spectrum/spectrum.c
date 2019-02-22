@@ -826,6 +826,22 @@ static void gui_create_spectrum_controls(Spectrum *p)
 }
 
 
+/**
+ * @brief destroy signal handler
+ */
+
+static gboolean spectrum_destroy(GtkWidget *w, void *data)
+{
+	Spectrum *p;
+
+
+	p = SPECTRUM(w);
+
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_spd);
+
+	return TRUE;
+}
+
 
 /**
  * @brief initialise the Spectrum class
@@ -873,9 +889,11 @@ static void spectrum_init(Spectrum *p)
 
 	gui_create_spectrum_controls(p);
 
-	g_signal_connect(sig_get_instance(), "pr-spec-data",
-			 G_CALLBACK(spectrum_handle_pr_spec_data),
-			 (gpointer) p);
+	p->cfg->id_spd = g_signal_connect(sig_get_instance(), "pr-spec-data",
+				G_CALLBACK(spectrum_handle_pr_spec_data),
+				(gpointer) p);
+
+	g_signal_connect(p, "destroy", G_CALLBACK(spectrum_destroy), NULL);
 }
 
 
