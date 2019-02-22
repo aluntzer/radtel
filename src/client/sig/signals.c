@@ -23,12 +23,25 @@ static gpointer *sig_server;
 
 
 /**
- * special signal to notify of any internal updates
+ * special internal signal to notify of any updates
  */
 
 static void setup_sig_update(void)
 {
 	g_signal_new("update",
+		     G_TYPE_OBJECT, G_SIGNAL_RUN_FIRST,
+		     0, NULL, NULL, NULL,
+		     G_TYPE_NONE, 0);
+}
+
+
+/**
+ * special internal signal to notify all compnents of a shutdown
+ */
+
+static void setup_sig_shutdown(void)
+{
+	g_signal_new("shutdown",
 		     G_TYPE_OBJECT, G_SIGNAL_RUN_FIRST,
 		     0, NULL, NULL, NULL,
 		     G_TYPE_NONE, 0);
@@ -119,7 +132,10 @@ void sig_init(void)
 {
 	sig_server = g_object_new(G_TYPE_OBJECT, NULL);
 
-//	setup_sig_update();
+#if 0
+	setup_sig_update();
+#endif
+	setup_sig_shutdown();
 
 	setup_sig_pr_success();
 	setup_sig_pr_capabilities();

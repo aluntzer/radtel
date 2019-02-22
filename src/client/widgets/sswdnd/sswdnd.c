@@ -25,15 +25,17 @@
 
 G_DEFINE_TYPE(SSWDnD, sswdnd, GTK_TYPE_STACK_SWITCHER)
 
+static gpointer *sswdnd_sig;
+static grefcount sswdnd_ref;
+
+
+
 static void sswdnd_enable_dnd_on_last(GtkWidget *p);
 static gboolean sswdnd_drag_failed(GtkWidget *w, GdkDragContext *c,
 				   GtkDragResult res, gpointer data);
-
 static void sswdnd_catch(gpointer instance, GtkWidget *ostack, gpointer data);
 
 
-
-static gpointer *sswdnd_sig;
 
 static gpointer *sswdnd_sig_get_instance(void)
 {
@@ -84,15 +86,14 @@ static void sswdnd_collect(gpointer instance, GtkWidget *stacksw, gpointer data)
 	/*  stack is empty, not a stack or stale memory in still registered
 	 *  callback, drop
 	 */
-
 	g_signal_handlers_disconnect_matched(instance,
 					     G_SIGNAL_MATCH_DATA,
 					     0, 0, NULL,
 					     sswdnd_collect, data);
-//	g_object_unref(data);
+#if 0
+	g_object_unref(data);
+#endif
 }
-
-
 
 
 /**
@@ -235,39 +236,23 @@ static void sswdnd_drag_data_received(GtkWidget *w, GdkDragContext *ctx,
 	gtk_container_child_set(GTK_CONTAINER(nstack), GTK_WIDGET(button),
 				"position", drop_pos, NULL);
 
-
-	if (!gtk_container_get_children(GTK_CONTAINER(ostack))) {
-
-		GtkWidget *top = gtk_widget_get_toplevel(ostack);
-
-		g_message("Oh the vast emptiness...");
-		gtk_widget_destroy(top);
-	//	gdk_window_destroy(gtk_widget_get_window(ostack));
-	}
+	if (!gtk_container_get_children(GTK_CONTAINER(ostack)))
+		gtk_widget_destroy(gtk_widget_get_toplevel(ostack));
 }
-
 
 
 /**
  * @brief drag-failed handler; we treat these as new-window drops
  */
 
-
 static gboolean sswdnd_drag_failed(GtkWidget *w, GdkDragContext *c,
 				   GtkDragResult res, gpointer data)
 {
-
-	GtkWidget *win = NULL;
-	GtkWidget *header = NULL;
-	GtkWidget *parent;
-	GtkWidget *sswdnd;
-	GtkWidget *stack;
-	GtkWidget *btn;
-
-	GtkWidget *box;
-
 	gchar *lbl = NULL;
 
+	GtkWidget *win = NULL;
+	GtkWidget *parent;
+	GtkWidget *sswdnd;
 
 
 	parent = gtk_widget_get_parent(GTK_WIDGET(data));
@@ -291,27 +276,29 @@ static gboolean sswdnd_drag_failed(GtkWidget *w, GdkDragContext *c,
 	g_signal_emit_by_name(parent, "sswdnd-create-window", &win, sswdnd);
 
 	if (!win) {
-		g_warning("Could not add new window, widget dangling...");
+		g_warning("Could not add new window, widget dangling!");
 		return TRUE;
 	}
 
-
-
+	/* we created a new window and moved there */
+	g_ref_count_inc(&sswdnd_ref);
 
 	/* mop up if we spilled an empty window */
 	if (!gtk_container_get_children(GTK_CONTAINER(parent))) {
-		g_message("Oh the vast emptiness... (2)");
+
 		GtkWidget *top = gtk_widget_get_toplevel(parent);
 
-		if (GTK_IS_WINDOW(top)) {
-			//gdk_window_destroy(gtk_widget_get_window(top));
+		if (GTK_IS_WINDOW(top))
 			gtk_window_close(GTK_WINDOW(top));
-		}
 	}
 
 	return TRUE;
 }
 
+
+/**
+ * @brief enable dnd on the last item added to a stack switcher
+ */
 
 static void sswdnd_enable_dnd_on_last(GtkWidget *p)
 {
@@ -354,6 +341,10 @@ static void sswdnd_enable_dnd_on_last(GtkWidget *p)
 }
 
 
+/**
+ * @brief catches stacks which were dropped need rescue
+ */
+
 static void sswdnd_catch(gpointer instance, GtkWidget *ostack, gpointer data)
 {
 
@@ -365,6 +356,7 @@ static void sswdnd_catch(gpointer instance, GtkWidget *ostack, gpointer data)
 	GList *l, *elem;
 
 	gchar *lbl = NULL;
+
 
 	/* some other ssw might have given us a new home already */
 	if (!GTK_IS_STACK_SWITCHER(data))
@@ -398,7 +390,7 @@ static void sswdnd_catch(gpointer instance, GtkWidget *ostack, gpointer data)
 	g_list_free(l);
 
 	if (!tgt) {
-		g_warning("no target in new stack!");
+		g_warning("No target in new stack!");
 		return;
 	}
 
@@ -426,23 +418,30 @@ static void sswdnd_catch(gpointer instance, GtkWidget *ostack, gpointer data)
 
 		GtkWidget *top = gtk_widget_get_toplevel(ostack);
 
-		g_message("Oh the vast emptiness... (3)");
-
-		if (GTK_IS_WINDOW(top)) {
+		if (GTK_IS_WINDOW(top))
 			gtk_widget_destroy(top);
-			//gtk_window_close(GTK_WINDOW(top));
-			//gdk_window_destroy(gtk_widget_get_window(top));
-		}
 	}
+
 
 	g_list_free(l);
 
 	return;
 }
 
+
+
 static gboolean sswdnd_rescue_me(GtkWidget *w, gpointer data)
 {
+	/* we were disconnected from the parent window */
+	g_ref_count_dec(&sswdnd_ref);
+
 	g_signal_emit_by_name(sswdnd_sig_get_instance(), "rescue-me", w);
+
+
+	if (g_ref_count_dec(&sswdnd_ref))
+		g_signal_emit_by_name(sig_get_instance(), "shutdown", NULL);
+	else
+		g_ref_count_inc(&sswdnd_ref);
 
 	return TRUE;
 }
@@ -481,27 +480,34 @@ void sswdnd_add_named(GtkWidget *p, GtkWidget *w, const gchar *name)
 }
 
 
+/**
+ * @brief add cascade and collect buttons to headerbar
+ */
 
 void sswdnd_add_header_buttons(GtkWidget *sswdnd, GtkWidget *header)
 {
 	GtkWidget *btn;
 
-	/* cascade and collect buttons */
+
 	btn = gtk_button_new_from_icon_name("view-grid-symbolic",
 					    GTK_ICON_SIZE_BUTTON);
+
 	g_signal_connect(G_OBJECT(btn), "clicked",
-			 G_CALLBACK(sswdnd_disperse_widgets), GTK_CONTAINER(sswdnd));
+			 G_CALLBACK(sswdnd_disperse_widgets),
+			 GTK_CONTAINER(sswdnd));
+
 	gtk_widget_set_tooltip_text(btn, "Disperse");
 	gtk_header_bar_pack_start(GTK_HEADER_BAR(header), btn);
 
 	btn = gtk_button_new_from_icon_name("view-restore-symbolic",
 					    GTK_ICON_SIZE_BUTTON);
+
 	g_signal_connect(G_OBJECT(btn), "clicked",
 			 G_CALLBACK(sswdnd_collect_widgets), GTK_CONTAINER(sswdnd));
+
 	gtk_widget_set_tooltip_text(btn,"Collect");
 	gtk_header_bar_pack_start(GTK_HEADER_BAR(header), btn);
 }
-
 
 
 /**
@@ -546,6 +552,11 @@ static void sswdnd_init(SSWDnD *p)
 {
 	g_return_if_fail(p != NULL);
 	g_return_if_fail(IS_SSWDND(p));
+
+	if (!sswdnd_ref) {
+		g_ref_count_init(&sswdnd_ref);
+		g_ref_count_inc(&sswdnd_ref);
+	}
 }
 
 

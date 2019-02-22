@@ -15,9 +15,21 @@
  * @brief the client main() function
  */
 
+#include <glib-object.h>
 #include <net.h>
 #include <gui.h>
 #include <signals.h>
+
+
+/**
+ * @brief handle status slew
+ */
+
+static void main_shutdown_cb(gpointer instance, gpointer data)
+{
+	g_main_loop_quit((GMainLoop *) data);
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -33,6 +45,11 @@ int main(int argc, char *argv[])
 
 	/* initialise networking */
 	net_client_init();
+
+
+	g_signal_connect(sig_get_instance(), "shutdown",
+			 G_CALLBACK(main_shutdown_cb),
+			 (gpointer) loop);
 
 	g_main_loop_run(loop);
 }
