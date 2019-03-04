@@ -24,32 +24,33 @@
 
 static void sys_status_update_hor_lbl(SysStatus *p)
 {
-	gint dd, mm;
-
-	gdouble ss;
+	gdouble dd, mm, ss;
 
 	gchar *lbl;
 
 
-	dd = (int) p->cfg->az;
-	mm = (int) ((p->cfg->az - (double) dd) * 60.);
-	ss = ((p->cfg->az - (double) dd) * 60. - (double) mm) * 60.0;
-        lbl = g_strdup_printf("<tt>%3d° %02d' %05.2f\"</tt>", dd, mm, ss);
+	dd = round(p->cfg->az);
+	mm = round((p->cfg->az - dd) * 60.0);
+	ss = ((p->cfg->az - dd) * 60.0 - mm) * 60.0;
+	mm = fabs(mm);
+	ss = fabs(ss);
+        lbl = g_strdup_printf("<tt>%3.0f° %02.0f' %05.2f\"</tt>", dd, mm, ss);
         gtk_label_set_markup(p->cfg->lbl_az, lbl);
 
-	dd = (int) p->cfg->el;
-	mm = (int) ((p->cfg->el - (double) dd) * 60.);
-	ss = ((p->cfg->el - (double) dd) * 60. - (double) mm) * 60.0;
-        lbl = g_strdup_printf("<tt> %02d° %02d' %05.2f\"</tt>", dd, mm, ss);
+	dd = round(p->cfg->el);
+	mm = round(((p->cfg->el - dd) * 60.0));
+	ss = round(((p->cfg->el - dd) * 60.0 - mm) * 60.0);
+	mm = fabs(mm);
+	ss = fabs(ss);
+        lbl = g_strdup_printf("<tt> %02.0f° %02.0f' %05.2f\"</tt>", dd, mm, ss);
         gtk_label_set_markup(p->cfg->lbl_el, lbl);
 }
 
 
+
 static void sys_status_update_equ_lbl(SysStatus *p)
 {
-	gint hh, dd, mm;
-
-	gdouble ss;
+	gdouble hh, dd, mm, ss;
 
 	gchar *lbl;
 
@@ -62,26 +63,29 @@ static void sys_status_update_equ_lbl(SysStatus *p)
 	hor.el = p->cfg->el;
 
 	equ = horizontal_to_equatorial(hor, p->cfg->lat, p->cfg->lon, 0.0);
-	hh = (int) equ.ra;
-	mm = (int) ((equ.ra - (double) hh) * 60.);
-	ss = ((equ.ra - (double) hh) * 60. - (double) mm) * 60.0;
-        lbl = g_strdup_printf("<tt> %02dh %02dm %05.2fs</tt>", hh, mm, ss);
+
+	hh = round(equ.ra);
+	mm = round(((equ.ra - hh) * 60.0));
+	ss = round(((equ.ra - hh) * 60.0 - mm) * 60.0);
+	mm = fabs(mm);
+	ss = fabs(ss);
+        lbl = g_strdup_printf("<tt> %02.0fh %02.0fm %05.2fs</tt>", hh, mm, ss);
         gtk_label_set_markup(p->cfg->lbl_ra, lbl);
 
 
-	dd = (int) equ.dec;
-	mm = (int) ((equ.dec - (double) dd) * 60.);
-	ss = ((equ.dec - (double) dd) * 60. - (double) mm) * 60.0;
-        lbl = g_strdup_printf("<tt> %02d° %02d' %05.2f\"</tt>", dd, mm, ss);
+	dd = round(equ.dec);
+	mm = round(((equ.dec - dd) * 60.));
+	ss = round(((equ.dec - dd) * 60. - mm) * 60.0);
+	mm = fabs(mm);
+	ss = fabs(ss);
+        lbl = g_strdup_printf("<tt> %02.0f° %02.0f' %05.2f\"</tt>", dd, mm, ss);
         gtk_label_set_markup(p->cfg->lbl_de, lbl);
 }
 
 
 static void sys_status_update_gal_lbl(SysStatus *p)
 {
-	gint dd, mm;
-
-	gdouble ss;
+	gdouble dd, mm, ss;
 
 	gchar *lbl;
 
@@ -94,16 +98,20 @@ static void sys_status_update_gal_lbl(SysStatus *p)
 
 	gal = horizontal_to_galactic(hor, p->cfg->lat, p->cfg->lon);
 
-	dd = (int) gal.lat;
-	mm = (int) ((gal.lat - (double) dd) * 60.);
-	ss = ((gal.lat - (double) dd) * 60. - (double) mm) * 60.0;
-        lbl = g_strdup_printf("<tt> %02d° %02d' %05.2f\"</tt>", dd, mm, ss);
+	dd = round(gal.lat);
+	mm = round(((gal.lat - dd) * 60.0));
+	ss = round(((gal.lat - dd) * 60. - mm) * 60.0);
+	mm = fabs(mm);
+	ss = fabs(ss);
+        lbl = g_strdup_printf("<tt> %02.0f° %02.0f' %05.2f\"</tt>", dd, mm, ss);
         gtk_label_set_markup(p->cfg->lbl_glat, lbl);
 
-	dd = (int) gal.lon;
-	mm = (int) ((gal.lon - (double) dd) * 60.);
-	ss = ((gal.lon - (double) dd) * 60. - (double) mm) * 60.0;
-        lbl = g_strdup_printf("<tt>%3d° %02d' %05.2f\"</tt>", dd, mm, ss);
+	dd = round(gal.lon);
+	mm = round(((gal.lon - dd) * 60.));
+	ss = round(((gal.lon - dd) * 60. - mm) * 60.0);
+	mm = fabs(mm);
+	ss = fabs(ss);
+        lbl = g_strdup_printf("<tt>%3.0f° %02.0f' %05.2f\"</tt>", dd, mm, ss);
         gtk_label_set_markup(p->cfg->lbl_glon, lbl);
 }
 
