@@ -38,11 +38,13 @@ GtkWidget *gui_create_desclabel(const gchar *text, const gchar *desc)
 	gtk_box_pack_start(GTK_BOX(box), label, FALSE, FALSE, 0);
 
 	label = gtk_label_new(NULL);
-	str = g_strconcat ("<span size='small'>", desc, "</span>", NULL);
+	str = g_strconcat("<span size='small'>", desc, "</span>", NULL);
 	gtk_label_set_markup(GTK_LABEL(label), str);
 	gtk_label_set_xalign(GTK_LABEL(label), 0.0);
 
 	gtk_box_pack_start(GTK_BOX(box), label, FALSE, FALSE, 0);
+
+	g_free(str);
 
 	return box;
 }
