@@ -30,11 +30,49 @@ struct _ObsAssistConfig {
 	gdouble glon;
 
 
+	gdouble az_min;
+	gdouble az_max;
+	gdouble az_res;
+	gdouble el_min;
+	gdouble el_max;
+	gdouble el_res;
 	gdouble lat;
 	gdouble lon;
 
+
 	guint id_pos;
 	guint id_cap;
+
+
+
+	struct {
+		gdouble az_pt;
+		gdouble el_pt;
+		gdouble deg;
+
+		gdouble az_cur;
+		gdouble el_cur;
+		gdouble az_cent;
+		gdouble el_cent;
+		gdouble az_min;
+		gdouble az_max;
+		gdouble el_min;
+		gdouble el_max;
+		gdouble az_cor;
+		gdouble az_off;
+		gdouble az_stp;
+		gdouble el_off;
+
+		GtkSpinButton *sb_az;
+		GtkSpinButton *sb_el;
+		GtkSpinButton *sb_deg;
+
+		GtkWidget *pbar_az;
+		GtkWidget *pbar_el;
+
+		GtkWidget *plt;
+
+	} cross;
 
 };
 
