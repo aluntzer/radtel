@@ -29,17 +29,17 @@ static void sys_status_update_hor_lbl(SysStatus *p)
 	gchar *lbl;
 
 
-	dd = round(p->cfg->az);
-	mm = round((p->cfg->az - dd) * 60.0);
+	dd = trunc(p->cfg->az);
+	mm = trunc((p->cfg->az - dd) * 60.0);
 	ss = ((p->cfg->az - dd) * 60.0 - mm) * 60.0;
 	mm = fabs(mm);
 	ss = fabs(ss);
         lbl = g_strdup_printf("<tt>%3.0f° %02.0f' %05.2f\"</tt>", dd, mm, ss);
         gtk_label_set_markup(p->cfg->lbl_az, lbl);
 
-	dd = round(p->cfg->el);
-	mm = round(((p->cfg->el - dd) * 60.0));
-	ss = round(((p->cfg->el - dd) * 60.0 - mm) * 60.0);
+	dd = trunc(p->cfg->el);
+	mm = trunc(((p->cfg->el - dd) * 60.0));
+	ss = trunc(((p->cfg->el - dd) * 60.0 - mm) * 60.0);
 	mm = fabs(mm);
 	ss = fabs(ss);
         lbl = g_strdup_printf("<tt> %02.0f° %02.0f' %05.2f\"</tt>", dd, mm, ss);
@@ -64,18 +64,18 @@ static void sys_status_update_equ_lbl(SysStatus *p)
 
 	equ = horizontal_to_equatorial(hor, p->cfg->lat, p->cfg->lon, 0.0);
 
-	hh = round(equ.ra);
-	mm = round(((equ.ra - hh) * 60.0));
-	ss = round(((equ.ra - hh) * 60.0 - mm) * 60.0);
+	hh = trunc(equ.ra);
+	mm = trunc(((equ.ra - hh) * 60.0));
+	ss = trunc(((equ.ra - hh) * 60.0 - mm) * 60.0);
 	mm = fabs(mm);
 	ss = fabs(ss);
         lbl = g_strdup_printf("<tt> %02.0fh %02.0fm %05.2fs</tt>", hh, mm, ss);
         gtk_label_set_markup(p->cfg->lbl_ra, lbl);
 
 
-	dd = round(equ.dec);
-	mm = round(((equ.dec - dd) * 60.));
-	ss = round(((equ.dec - dd) * 60. - mm) * 60.0);
+	dd = trunc(equ.dec);
+	mm = trunc(((equ.dec - dd) * 60.));
+	ss = trunc(((equ.dec - dd) * 60. - mm) * 60.0);
 	mm = fabs(mm);
 	ss = fabs(ss);
         lbl = g_strdup_printf("<tt> %02.0f° %02.0f' %05.2f\"</tt>", dd, mm, ss);
