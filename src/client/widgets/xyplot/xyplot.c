@@ -53,12 +53,6 @@ G_DEFINE_TYPE(XYPlot, xyplot, GTK_TYPE_DRAWING_AREA)
 #define GRAPH_G	0.592
 #define GRAPH_B	0.047
 
-gdouble x0_rub;
-gdouble y0_rub;
-gboolean autorange;
-
-gdouble px0, py0;
-gdouble px1, py1;
 
 struct graph {
 	gdouble *data_x;	/* the data to plot */
@@ -243,9 +237,33 @@ static void xyplot_drop_all_graphs_cb(GtkWidget *w, XYPlot *p)
 	xyplot_drop_all_graphs(GTK_WIDGET(p));
 }
 
+
+static void xyplot_rubberband_minmax_order(XYPlot *p)
+{
+	gdouble tmp;
+
+	if (p->rub.px0 > p->rub.px1) {
+		tmp = p->rub.px0;
+		p->rub.px0 = p->rub.px1;
+		p->rub.px1 = tmp;
+	}
+
+	if (p->rub.py0 > p->rub.py1) {
+		tmp = p->rub.py0;
+		p->rub.py0 = p->rub.py1;
+		p->rub.py1 = tmp;
+	}
+}
+
+
 static void xyplot_autorange_cb(GtkWidget *w, XYPlot *p)
 {
-	autorange = 1;
+	p->rub.autorange = TRUE;
+
+	p->rub.px0 = 0.0;
+	p->rub.px1 = 0.0;
+	p->rub.py0 = 0.0;
+	p->rub.py1 = 0.0;
 
 	xyplot_auto_range(p);
 	xyplot_auto_axes(p);
@@ -256,10 +274,10 @@ static void xyplot_autorange_cb(GtkWidget *w, XYPlot *p)
 
 static void xyplot_clear_selection_cb(GtkWidget *w, XYPlot *p)
 {
-	p->sel.xmin = p->xmin;
-	p->sel.xmax = p->xmax;
-	p->sel.ymin = p->ymin;
-	p->sel.ymax = p->ymax;
+	p->sel.xmin = 0.0;
+	p->sel.xmax = 0.0;
+	p->sel.ymin = 0.0;
+	p->sel.ymax = 0.0;
 
 	p->sel.active = FALSE;
 	/* XXX to clear fit */
@@ -1780,7 +1798,7 @@ static void xyplot_auto_range(XYPlot *p)
 	struct graph *g;
 
 
-	if (!autorange) /* XXX */
+	if (!p->rub.autorange)
 		return;
 
 	p->xmin = DBL_MAX;
@@ -2084,11 +2102,14 @@ static gboolean xyplot_motion_notify_event_cb(GtkWidget *widget,
 
 
 		/* get plot pixel reference */
-		px0 = (x0_rub - p->plot_x) / p->scale_x + p->x_ax.min;
-		py0 = (p->plot_y + p->plot_h - y0_rub) / p->scale_y + p->y_ax.min;
+		p->rub.px0 = (p->rub.x0 - p->plot_x) / p->scale_x + p->x_ax.min;
+		p->rub.py0 = (p->plot_y + p->plot_h - p->rub.y0) / p->scale_y
+			     + p->y_ax.min;
 
-		px1 = x;
-		py1 = y;
+		p->rub.px1 = x;
+		p->rub.py1 = y;
+
+		xyplot_rubberband_minmax_order(p);
 
 		cairo_save(cr);
 
@@ -2101,25 +2122,17 @@ static gboolean xyplot_motion_notify_event_cb(GtkWidget *widget,
 
 		cairo_set_line_width(cr, 2.0);
 
-		cairo_rectangle(cr, x0_rub, y0_rub, event->x - x0_rub, event->y - y0_rub);
+		cairo_rectangle(cr,
+				p->rub.x0, p->rub.y0,
+				event->x - p->rub.x0, event->y - p->rub.y0);
 
 		if (event->state & GDK_BUTTON2_MASK) {
-		if (px0 < px1) {
-			p->sel.xmin = px0;
-			p->sel.xmax = px1;
-		} else {
-			p->sel.xmin = px1;
-			p->sel.xmax = px0;
+			p->sel.xmin = p->rub.px0;
+			p->sel.xmax = p->rub.px1;
+			p->sel.ymin = p->rub.py0;
+			p->sel.ymax = p->rub.py1;
 		}
 
-		if (py0 < py1) {
-			p->sel.ymin = py0;
-			p->sel.ymax = py1;
-		} else {
-			p->sel.ymin = py1;
-			p->sel.ymax = py0;
-		}
-		}
 		cairo_stroke(cr);
 		cairo_restore(cr);
 	}
@@ -2150,6 +2163,9 @@ static gboolean xyplot_button_release_cb(GtkWidget *widget,
 	gdouble px;
 	gdouble py;
 
+	gdouble xlen;
+	gdouble ylen;
+
 
 	p = XYPLOT(widget);
 
@@ -2158,24 +2174,25 @@ static gboolean xyplot_button_release_cb(GtkWidget *widget,
 
 	if (event->button == 1) {
 
-		g_message("WAS X: %g to %g and Y: %g to %g",
-			  p->xmin, p->xmax, p->ymin, p->ymax);
+		xlen = p->rub.px1 - p->rub.px0;
+		ylen = p->rub.py1 - p->rub.py0;
 
-		autorange = 0;
-		p->xmin = px0;
-		p->xmax = px1;
-		p->ymin = py1;
-		p->ymax = py0;
-		p->xlen = p->xmax - p->xmin;
-		p->ylen = p->ymax - p->ymin;
+		if (xlen == 0.0 || ylen == 0.0)
+			return TRUE;
+
+		p->xmin = p->rub.px0;
+		p->xmax = p->rub.px1;
+		p->ymin = p->rub.py0;
+		p->ymax = p->rub.py1;
+		p->xlen = xlen;
+		p->ylen = ylen;
+
+		p->rub.autorange = FALSE;
 
 		xyplot_auto_range(p);
 		xyplot_auto_axes(p);
 
 		xyplot_plot(p);
-
-		g_message("NOW X: %g to %g and Y: %g to %g",
-			  p->xmin, p->xmax, p->ymin, p->ymax);
 	}
 
 
@@ -2186,9 +2203,7 @@ static gboolean xyplot_button_release_cb(GtkWidget *widget,
 
 		p->sel.active = TRUE;
 		g_signal_emit_by_name(widget, "xyplot-fit-selection");
-
 	}
-
 
 	return TRUE;
 }
@@ -2231,8 +2246,8 @@ static gboolean xyplot_button_press_cb(GtkWidget *widget, GdkEventButton *event,
 		if (py > p->plot_h)
 			goto exit;
 
-		x0_rub = event->x;
-		y0_rub = event->y;
+		p->rub.x0 = event->x;
+		p->rub.y0 = event->y;
 	}
 
 	if (event->button == 3)
@@ -2348,8 +2363,7 @@ static void xyplot_init(XYPlot *p)
 	p->ax_colour.blue  = AXES_B;
 	p->ax_colour.alpha = 1.0;
 
-	/* XXX */
-	autorange = 1;
+	p->rub.autorange = TRUE;
 
 
 	/* connect the relevant signals of the DrawingArea */

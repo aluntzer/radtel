@@ -82,6 +82,17 @@ struct _XYPlot {
 		gboolean active;
 	} sel;
 
+	struct {
+		gdouble x0;	/* start of rubber band */
+		gdouble y0;
+
+		gdouble px0;	/* rubber band selection in plot pixel ref. */
+		gdouble px1;
+		gdouble py0;
+		gdouble py1;
+
+		gboolean autorange;
+	} rub;
 
 
 
