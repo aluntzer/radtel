@@ -14,10 +14,14 @@ AM_CFLAGS += $(GTHREAD_CFLAGS)
 AM_CFLAGS += $(GLIB_CFLAGS)
 AM_CFLAGS += $(GIO_CFLAGS)
 
-AM_LDFLAGS := $(GTK3_LIBS)
-AM_LDFLAGS += $(GTHREAD_LIBS)
-AM_LDFLAGS += $(GLIB_LIBS)
-AM_LDFLAGS += $(GIO_LIBS)
+client_LDFLAGS = -lm $(client_LIBS)
+
+client_LDADD := $(GTK3_LIBS)
+client_LDADD += $(GTHREAD_LIBS)
+client_LDADD += $(GLIB_LIBS)
+client_LDADD += $(GIO_LIBS)
+client_LDADD += $(top_builddir)/src/net/libproto.a
+client_LDADD += $(top_builddir)/src/util/libutil.a
 
 bin_PROGRAMS = client
 
@@ -81,6 +85,3 @@ client_SOURCES += widgets/obs_assist/obs_assist.c
 
 
 
-client_LDADD = -lm $(client_LIBS)
-client_LDADD += $(top_builddir)/src/net/libproto.a
-client_LDADD += $(top_builddir)/src/util/libutil.a
