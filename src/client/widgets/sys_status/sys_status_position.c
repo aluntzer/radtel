@@ -98,17 +98,17 @@ static void sys_status_update_gal_lbl(SysStatus *p)
 
 	gal = horizontal_to_galactic(hor, p->cfg->lat, p->cfg->lon);
 
-	dd = round(gal.lat);
-	mm = round(((gal.lat - dd) * 60.0));
-	ss = round(((gal.lat - dd) * 60. - mm) * 60.0);
+	dd = trunc(gal.lat);
+	mm = trunc(((gal.lat - dd) * 60.0));
+	ss = trunc(((gal.lat - dd) * 60. - mm) * 60.0);
 	mm = fabs(mm);
 	ss = fabs(ss);
         lbl = g_strdup_printf("<tt> %02.0f° %02.0f' %05.2f\"</tt>", dd, mm, ss);
         gtk_label_set_markup(p->cfg->lbl_glat, lbl);
 
-	dd = round(gal.lon);
-	mm = round(((gal.lon - dd) * 60.));
-	ss = round(((gal.lon - dd) * 60. - mm) * 60.0);
+	dd = trunc(gal.lon);
+	mm = trunc(((gal.lon - dd) * 60.));
+	ss = trunc(((gal.lon - dd) * 60. - mm) * 60.0);
 	mm = fabs(mm);
 	ss = fabs(ss);
         lbl = g_strdup_printf("<tt>%3.0f° %02.0f' %05.2f\"</tt>", dd, mm, ss);
