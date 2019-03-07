@@ -27,7 +27,7 @@ void proc_pr_getpos_azel(struct packet *pkt)
 	struct getpos *pos;
 
 
-	g_message("Server sent spectral data");
+	g_debug("Server sent spectral data");
 
 	pos = g_malloc(pkt->data_size);
 

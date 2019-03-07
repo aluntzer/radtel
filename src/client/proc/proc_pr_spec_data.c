@@ -27,7 +27,7 @@ void proc_pr_spec_data(struct packet *pkt)
 	struct spec_data *s;
 
 
-	g_message("Server sent spectral data");
+	g_debug("Server sent spectral data");
 
 	s = g_malloc(pkt->data_size);
 

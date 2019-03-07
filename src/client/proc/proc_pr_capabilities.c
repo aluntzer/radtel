@@ -26,7 +26,7 @@ void proc_pr_capabilities(struct packet *pkt)
 	const struct capabilities *c;
 
 	
-	g_message("Server sent capabilities");
+	g_debug("Server sent capabilities");
 
 	if (pkt->data_size != sizeof(struct capabilities)) {
 		g_message("\tcapabilities payload size mismatch %d != %d",

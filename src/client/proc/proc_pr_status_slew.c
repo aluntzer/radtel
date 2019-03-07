@@ -26,7 +26,7 @@ void proc_pr_status_slew(struct packet *pkt)
 	const struct status *s;
 
 
-	g_message("Server sent status_slew");
+	g_debug("Server sent status_slew");
 
 	if (pkt->data_size != sizeof(struct status)) {
 		g_message("\tstatus payload size mismatch %d != %d",

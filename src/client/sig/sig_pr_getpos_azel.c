@@ -25,7 +25,7 @@
 
 void sig_pr_getpos_azel(const struct getpos *pos)
 {
-	g_message("Emit signal \"pr-getpos-azel\"");
+	g_debug("Emit signal \"pr-getpos-azel\"");
 
 	g_signal_emit_by_name(sig_get_instance(), "pr-getpos-azel", pos);
 }

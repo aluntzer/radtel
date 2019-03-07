@@ -24,7 +24,7 @@
 
 void sig_pr_spec_acq_disable(void)
 {
-	g_message("Emit signal \"pr-spec-acq-disable\"");
+	g_debug("Emit signal \"pr-spec-acq-disable\"");
 
 	g_signal_emit_by_name(sig_get_instance(), "pr-spec-acq-disable");
 }

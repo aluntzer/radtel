@@ -25,7 +25,7 @@
 
 void sig_pr_capabilities(const struct capabilities *c)
 {
-	g_message("Emit signal \"pr-capabilities\"");
+	g_debug("Emit signal \"pr-capabilities\"");
 
 	g_signal_emit_by_name(sig_get_instance(), "pr-capabilities", c);
 }

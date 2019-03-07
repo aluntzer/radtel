@@ -26,7 +26,7 @@ void proc_pr_status_acq(struct packet *pkt)
 	const struct status *s;
 
 
-	g_message("Server sent status_acq");
+	g_debug("Server sent status_acq");
 
 	if (pkt->data_size != sizeof(struct status)) {
 		g_message("\tstatus payload size mismatch %d != %d",

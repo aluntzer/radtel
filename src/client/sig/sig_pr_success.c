@@ -24,7 +24,7 @@
 
 void sig_pr_success(void)
 {
-	g_message("Emit signal \"pr-success\"");
+	g_debug("Emit signal \"pr-success\"");
 
 	g_signal_emit_by_name(sig_get_instance(), "pr-success");
 }

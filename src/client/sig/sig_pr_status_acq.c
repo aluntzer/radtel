@@ -25,7 +25,7 @@
 
 void sig_pr_status_acq(const struct status *s)
 {
-	g_message("Emit signal \"pr-status-acq\"");
+	g_debug("Emit signal \"pr-status-acq\"");
 
 	g_signal_emit_by_name(sig_get_instance(), "pr-status-acq", s);
 }

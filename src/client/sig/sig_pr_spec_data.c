@@ -25,7 +25,7 @@
 
 void sig_pr_spec_data(const struct spec_data *s)
 {
-	g_message("Emit signal \"pr-spec-data\"");
+	g_debug("Emit signal \"pr-spec-data\"");
 
 	g_signal_emit_by_name(sig_get_instance(), "pr-spec-data", s);
 }

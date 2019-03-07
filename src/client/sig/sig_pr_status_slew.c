@@ -25,7 +25,7 @@
 
 void sig_pr_status_slew(const struct status *s)
 {
-	g_message("Emit signal \"pr-status-slew\"");
+	g_debug("Emit signal \"pr-status-slew\"");
 
 	g_signal_emit_by_name(sig_get_instance(), "pr-status-slew", s);
 }

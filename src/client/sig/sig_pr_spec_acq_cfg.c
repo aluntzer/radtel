@@ -24,7 +24,7 @@
 
 void sig_pr_spec_acq_cfg(const struct spec_acq_cfg *acq)
 {
-	g_message("Emit signal \"pr-spec-acq-cfg\"");
+	g_debug("Emit signal \"pr-spec-acq-cfg\"");
 
 	g_signal_emit_by_name(sig_get_instance(), "pr-spec-acq-cfg", acq);
 }

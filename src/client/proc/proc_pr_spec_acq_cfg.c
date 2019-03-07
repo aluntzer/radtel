@@ -26,7 +26,7 @@ void proc_pr_spec_acq_cfg(struct packet *pkt)
 	const struct spec_acq_cfg *acq;
 
 
-	g_message("Server sent spectrometer acquisition configuration");
+	g_debug("Server sent spectrometer acquisition configuration");
 
 	if (pkt->data_size != sizeof(struct spec_acq_cfg)) {
 		g_message("\tacquisition configuration payload size mismatch "
