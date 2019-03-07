@@ -1128,8 +1128,15 @@ static void srt_spec_acq_enable(gboolean mode)
 
 
 	/* see if we currently hold the lock */
-	if (mode == last)
+	if (mode == last) {
+
+		if (mode)
+			ack_spec_acq_enable(PKT_TRANS_ID_UNDEF);
+		else
+			ack_spec_acq_disable(PKT_TRANS_ID_UNDEF);
+
 		return;
+	}
 
 	last = mode;
 
@@ -1164,7 +1171,6 @@ static gpointer srt_spec_thread(gpointer data)
 
 		g_mutex_lock(&acq_lock);
 
-		srt_spec_acq_enable(FALSE);
 		ack_spec_acq_disable(PKT_TRANS_ID_UNDEF);
 		g_message(MSG "spectrum acquisition stopped");
 
