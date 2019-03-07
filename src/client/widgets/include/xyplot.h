@@ -58,6 +58,10 @@ struct _XYPlot {
 	gdouble ymax;
 	gdouble ylen;
 
+	gdouble cmin;	/* data range in c-axis */
+	gdouble cmax;
+	gdouble clen;
+
 	XYPlotAxis x_ax;
 	XYPlotAxis y_ax;
 
@@ -72,6 +76,7 @@ struct _XYPlot {
 
 	gdouble scale_x; /* plot area to data scale */
 	gdouble scale_y;
+	gdouble scale_c;
 
 
 	struct {
@@ -115,7 +120,9 @@ void xyplot_set_ylabel(GtkWidget *widget, gchar *label);
 void xyplot_set_padding(GtkWidget *widget, gdouble pad);
 
 void *xyplot_add_graph(GtkWidget *widget,
-		       gdouble *x, gdouble *y, gsize size, gchar *label);
+		       gdouble *x, gdouble *y, gdouble *c,
+		       gsize size, gchar *label);
+
 void xyplot_drop_graph(GtkWidget *widget, void *ref);
 void xyplot_drop_all_graphs(GtkWidget *widget);
 
@@ -127,7 +134,8 @@ void xyplot_set_graph_rgba(GtkWidget *widget, void *ref,
 			   GdkRGBA colour);
 int xyplot_get_graph_rgba(GtkWidget *widget, void *ref, GdkRGBA *colour);
 
-size_t xyplot_get_selection_data(GtkWidget *widget, double **x, double **y);
+size_t xyplot_get_selection_data(GtkWidget *widget,
+				 gdouble **x, gdouble **y, gdouble **c);
 
 void xyplot_get_sel_axis_range(GtkWidget *widget,
 			   gdouble *xmin, gdouble *xmax,

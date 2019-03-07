@@ -57,6 +57,7 @@ G_DEFINE_TYPE(XYPlot, xyplot, GTK_TYPE_DRAWING_AREA)
 struct graph {
 	gdouble *data_x;	/* the data to plot */
 	gdouble *data_y;
+	gdouble *data_c;
 	gsize    data_len;
 
 	gchar *label;
@@ -77,6 +78,148 @@ static void xyplot_plot_render(XYPlot *p, cairo_t *cr,
 
 static void xyplot_auto_range(XYPlot *p);
 static void xyplot_auto_axes(XYPlot *p);
+
+
+
+// stolen from gnuplot
+static double get_color_value_from_formula(int formula, double x)
+{
+	double DEG2RAD = M_PI/180.0;
+	/* the input gray x is supposed to be in interval [0,1] */
+	if (formula < 0) {		/* negate the value for negative formula */
+		x = 1 - x;
+		formula = -formula;
+	}
+	switch (formula) {
+		case 0:
+			return 0;
+		case 1:
+			return 0.5;
+		case 2:
+			return 1;
+		case 3:			/* x = x */
+			break;
+		case 4:
+			x = x * x;
+			break;
+		case 5:
+			x = x * x * x;
+			break;
+		case 6:
+			x = x * x * x * x;
+			break;
+		case 7:
+			x = sqrt(x);
+			break;
+		case 8:
+			x = sqrt(sqrt(x));
+			break;
+		case 9:
+			x = sin(90 * x * DEG2RAD);
+			break;
+		case 10:
+			x = cos(90 * x * DEG2RAD);
+			break;
+		case 11:
+			x = fabs(x - 0.5);
+			break;
+		case 12:
+			x = (2 * x - 1) * (2.0 * x - 1);
+			break;
+		case 13:
+			x = sin(180 * x * DEG2RAD);
+			break;
+		case 14:
+			x = fabs(cos(180 * x * DEG2RAD));
+			break;
+		case 15:
+			x = sin(360 * x * DEG2RAD);
+			break;
+		case 16:
+			x = cos(360 * x * DEG2RAD);
+			break;
+		case 17:
+			x = fabs(sin(360 * x * DEG2RAD));
+			break;
+		case 18:
+			x = fabs(cos(360 * x * DEG2RAD));
+			break;
+		case 19:
+			x = fabs(sin(720 * x * DEG2RAD));
+			break;
+		case 20:
+			x = fabs(cos(720 * x * DEG2RAD));
+			break;
+		case 21:
+			x = 3 * x;
+			break;
+		case 22:
+			x = 3 * x - 1;
+			break;
+		case 23:
+			x = 3 * x - 2;
+			break;
+		case 24:
+			x = fabs(3 * x - 1);
+			break;
+		case 25:
+			x = fabs(3 * x - 2);
+			break;
+		case 26:
+			x = (1.5 * x - 0.5);
+			break;
+		case 27:
+			x = (1.5 * x - 1);
+			break;
+		case 28:
+			x = fabs(1.5 * x - 0.5);
+			break;
+		case 29:
+			x = fabs(1.5 * x - 1);
+			break;
+		case 30:
+			if (x <= 0.25)
+				return 0;
+			if (x >= 0.57)
+				return 1;
+			x = x / 0.32 - 0.78125;
+			break;
+		case 31:
+			if (x <= 0.42)
+				return 0;
+			if (x >= 0.92)
+				return 1;
+			x = 2 * x - 0.84;
+			break;
+		case 32:
+			if (x <= 0.42)
+				x *= 4;
+			else
+				x = (x <= 0.92) ? -2 * x + 1.84 : x / 0.08 - 11.5;
+			break;
+		case 33:
+			x = fabs(2 * x - 0.5);
+			break;
+		case 34:
+			x = 2 * x;
+			break;
+		case 35:
+			x = 2 * x - 0.5;
+			break;
+		case 36:
+			x = 2 * x - 1;
+			break;
+
+		default:
+			g_warning("Fatal: undefined color formula\n");
+			break;
+	}
+	if (x <= 0)
+		return 0;
+	if (x >= 1)
+		return 1;
+	return x;
+}
 
 
 
@@ -1364,6 +1507,55 @@ static void xyplot_draw_squares(XYPlot *p, cairo_t *cr, struct graph *g)
 
 
 /**
+ * @brief draw the plot data as 2d map data
+ */
+
+static void xyplot_draw_map(XYPlot *p, cairo_t *cr, struct graph *g)
+{
+	size_t i;
+
+	gdouble sx, sy, sc;
+
+	gdouble *x, *y, *c;
+
+	gdouble r, cg, b, grey;
+
+
+	sx = p->scale_x;
+	sy = p->scale_y;
+	sc = 1.0 / (p->cmax - p->cmin);
+
+	x  = g->data_x;
+	y  = g->data_y;
+	c  = g->data_c;
+
+	cairo_save(cr);
+
+	xyplot_transform_origin(p, cr);
+
+
+	for(i = 0; i < g->data_len; i++) {
+		grey = (c[i] - p->cmin) * sc;
+
+		r = get_color_value_from_formula( 7, grey);
+		cg = get_color_value_from_formula( 5, grey);
+		b = get_color_value_from_formula(15, grey);
+
+		cairo_set_source_rgba(cr, r, cg, b, 0.8);
+		cairo_rectangle(cr, (x[i] - p->x_ax.min) * sx - 4.0,
+				    (y[i] - p->y_ax.min) * sy - 4.0,
+				    8.0, 8.0);
+		cairo_fill(cr);
+		cairo_stroke(cr);
+	}
+
+	cairo_restore(cr);
+}
+
+
+
+
+/**
  * @brief draw the plot data connected straight dashed lines
  */
 
@@ -1616,6 +1808,12 @@ static void xyplot_draw_graphs(XYPlot *p, cairo_t *cr)
 
 		g = (struct graph *) elem->data;
 
+		/* draw map data */
+		if (g->data_c) {
+			xyplot_draw_map(p, cr, g);
+			continue;
+		}
+
 		switch (g->style) {
 		case STAIRS:
 			xyplot_draw_stairs(p, cr, g);
@@ -1737,48 +1935,37 @@ double xyplot_nicenum(const double num, const gboolean round)
 }
 
 
+static void xyplot_auto_axis(XYPlot *p, XYPlotAxis *ax,
+			     gdouble min, gdouble max, gdouble len)
+{
+
+	ax->len  = xyplot_nicenum(len, FALSE);
+	ax->step = xyplot_nicenum(ax->len / (ax->ticks_maj - 1.0), TRUE);
+
+	ax->min = floor(min / ax->step) * ax->step;
+	ax->max =  ceil(max / ax->step) * ax->step;
+
+	/* make sure there always is some space left and right */
+	if (ax->min == min)
+		ax->min -= ax->step;
+
+	if (ax->max == max)
+		ax->max += ax->step;
+
+	ax->len  = ax->max - ax->min;
+	ax->prec = MAX(-floor(log10(ax->step)), 0);
+}
+
+
+
 /**
  * @brief auto-set the plot axes given the data
  */
 
 static void xyplot_auto_axes(XYPlot *p)
 {
-	p->x_ax.len  = xyplot_nicenum(p->xlen, FALSE);
-	p->x_ax.step = xyplot_nicenum(p->x_ax.len /
-				      (p->x_ax.ticks_maj - 1.0),
-				      TRUE);
-
-	p->x_ax.min = floor(p->xmin / p->x_ax.step) * p->x_ax.step;
-	p->x_ax.max = ceil(p->xmax / p->x_ax.step) * p->x_ax.step;
-
-	/* make sure there always is some space left and right */
-	if (p->x_ax.min == p->xmin)
-		p->x_ax.min -= p->x_ax.step;
-
-	if (p->x_ax.max == p->xmax)
-		p->x_ax.max += p->x_ax.step;
-
-	p->x_ax.len  = p->x_ax.max - p->x_ax.min;
-	p->x_ax.prec = MAX(-floor(log10(p->x_ax.step)), 0);
-
-
-	p->y_ax.len  = xyplot_nicenum(p->ylen, FALSE);
-	p->y_ax.step = xyplot_nicenum(p->y_ax.len / (p->y_ax.ticks_maj - 1.0),
-				      TRUE);
-
-	p->y_ax.min = floor(p->ymin / p->y_ax.step) * p->y_ax.step;
-	p->y_ax.max =  ceil(p->ymax / p->y_ax.step) * p->y_ax.step;
-
-	/* as above, for bottom and top */
-	if (p->y_ax.min == p->ymin)
-		p->y_ax.min -= p->y_ax.step;
-
-	if (p->y_ax.max == p->ymax)
-		p->y_ax.max += p->y_ax.step;
-
-
-	p->y_ax.len  = p->y_ax.max - p->y_ax.min;
-	p->y_ax.prec = MAX(-floor(log10(p->y_ax.step)), 0);
+	xyplot_auto_axis(p, &p->x_ax, p->xmin, p->xmax, p->xlen);
+	xyplot_auto_axis(p, &p->y_ax, p->ymin, p->ymax, p->ylen);
 }
 
 
@@ -1803,9 +1990,11 @@ static void xyplot_auto_range(XYPlot *p)
 
 	p->xmin = DBL_MAX;
 	p->ymin = DBL_MAX;
+	p->cmin = DBL_MAX;
 
 	p->xmax = -DBL_MAX;
 	p->ymax = -DBL_MAX;
+	p->cmax = -DBL_MAX;
 
 
 	for (elem = p->graphs; elem; elem = elem->next) {
@@ -1833,13 +2022,27 @@ static void xyplot_auto_range(XYPlot *p)
 
 			if(tmp > p->ymax)
 				p->ymax = tmp;
+		}
 
+		if (!g->data_c)
+			continue;
+
+		for(i = 0; i < g->data_len; i++) {
+
+			tmp = g->data_c[i];
+
+			if(tmp < p->cmin)
+				p->cmin = tmp;
+
+			if(tmp > p->cmax)
+				p->cmax = tmp;
 		}
 	}
 
 
 	p->xlen = p->xmax - p->xmin;
 	p->ylen = p->ymax - p->ymin;
+	p->clen = p->cmax - p->cmin;
 }
 
 
@@ -2410,6 +2613,7 @@ static void xyplot_free_graph(struct graph *g)
 
 	g_free(g->data_x);
 	g_free(g->data_y);
+	g_free(g->data_c);
 	g_free(g->label);
 	g_free(g);
 }
@@ -2421,6 +2625,7 @@ static void xyplot_free_graph(struct graph *g)
  * @param widget the XYPlot widget
  * @param x pointer-to-pointer where the x-data will be stored
  * @param y pointer-to-pointer where the y-data will be stored
+ * @param c pointer-to-pointer where the color-data will be stored (may be NULL)
  *
  * @returns the number of elements in the arrays
  *
@@ -2430,7 +2635,7 @@ static void xyplot_free_graph(struct graph *g)
  * @note the caller must deallocate the buffers
  */
 
-size_t xyplot_get_selection_data(GtkWidget *widget, gdouble **x, gdouble **y)
+size_t xyplot_get_selection_data(GtkWidget *widget, gdouble **x, gdouble **y, gdouble **c)
 {
 	size_t i;
 	size_t n = 0;
@@ -2441,7 +2646,7 @@ size_t xyplot_get_selection_data(GtkWidget *widget, gdouble **x, gdouble **y)
 
 	struct graph *g;
 
-	GArray *gx, *gy;
+	GArray *gx, *gy, *gc;
 
 
 	p = XYPLOT(widget);
@@ -2452,6 +2657,7 @@ size_t xyplot_get_selection_data(GtkWidget *widget, gdouble **x, gdouble **y)
 
 	gx = g_array_new(FALSE, FALSE, sizeof(gdouble));
 	gy = g_array_new(FALSE, FALSE, sizeof(gdouble));
+	gc = g_array_new(FALSE, FALSE, sizeof(gdouble));
 
 
 	for (elem = p->graphs; elem; elem = elem->next) {
@@ -2466,6 +2672,8 @@ size_t xyplot_get_selection_data(GtkWidget *widget, gdouble **x, gdouble **y)
 						if (g->data_y[i] <= p->sel.ymax) {
 							g_array_append_val(gx, g->data_x[i]);
 							g_array_append_val(gy, g->data_y[i]);
+							if (c && g->data_c)
+								g_array_append_val(gc, g->data_c[i]);
 							n++;
 						}
 					}
@@ -2479,9 +2687,12 @@ size_t xyplot_get_selection_data(GtkWidget *widget, gdouble **x, gdouble **y)
 
 	(*x) = (gdouble *) gx->data;
 	(*y) = (gdouble *) gy->data;
+	if (c)
+		(*c) = (gdouble *) gc->data;
 
 	g_array_free(gx, FALSE);
 	g_array_free(gy, FALSE);
+	g_array_free(gc, FALSE);
 
 
 	return n;
@@ -2636,11 +2847,12 @@ void xyplot_drop_graph(GtkWidget *widget, void *ref)
  * @param widget the XYPlot widget
  * @param x an array of x axis values
  * @param y an array of y axis values
+ * @param c an array of c axis (color, z) values (may be NULL)
  * @param size the number of elements in the arrays
  * @param label the name of the graph (may be NULL)
  *
  *
- * @note we expect len(x) == len(y)
+ * @note we expect len(x) == len(y) == len(c)
  * @note the data an the label must be allocated on the heap, so we can g_free()
  *
  * @returns a reference to the data set in the plot or NULL on error
@@ -2649,7 +2861,8 @@ void xyplot_drop_graph(GtkWidget *widget, void *ref)
  */
 
 void *xyplot_add_graph(GtkWidget *widget,
-		       gdouble *x, gdouble *y, gsize size, gchar *label)
+		       gdouble *x, gdouble *y, gdouble *c,
+		       gsize size, gchar *label)
 {
 	XYPlot *p;
 
@@ -2672,6 +2885,7 @@ void *xyplot_add_graph(GtkWidget *widget,
 
 	g->data_x   = x;
 	g->data_y   = y;
+	g->data_c   = c;
 	g->data_len = size;
 	g->label    = label;
 	g->parent   = p;
