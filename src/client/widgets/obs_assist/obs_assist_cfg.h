@@ -20,6 +20,15 @@
 #include <obs_assist.h>
 #include <cmd.h>
 
+
+
+struct spectrum {
+	gdouble *x;
+	gdouble *y;
+	gsize    n;
+};
+
+
 struct _ObsAssistConfig {
 
 	gdouble az;
@@ -42,8 +51,13 @@ struct _ObsAssistConfig {
 
 	guint id_pos;
 	guint id_cap;
+	guint id_aen;
+	guint id_adi;
+	guint id_spd;
 
+	gboolean acq_enabled;
 
+	struct spectrum spec;
 
 	struct {
 		gdouble az_pt;
@@ -71,6 +85,18 @@ struct _ObsAssistConfig {
 		GtkWidget *pbar_el;
 
 		GtkWidget *plt;
+
+		struct {
+			GArray *off;
+			GArray *amp;
+		} az;
+
+		struct {
+			GArray *off;
+			GArray *amp;
+		} el;
+
+
 
 	} cross;
 

@@ -9,7 +9,7 @@ AM_CPPFLAGS += -Iwidgets/spectrum
 AM_CPPFLAGS += -Iwidgets/sys_status
 AM_CPPFLAGS += -Iwidgets/obs_assist
 
-AM_CFLAGS := $(GTK3_CFLAGS)
+AM_CFLAGS := $(GTK3_CFLAGS) -Wunused
 AM_CFLAGS += $(GTHREAD_CFLAGS)
 AM_CFLAGS += $(GLIB_CFLAGS)
 AM_CFLAGS += $(GIO_CFLAGS)
@@ -81,7 +81,8 @@ client_SOURCES += widgets/sys_status/sys_status.c \
 		  widgets/sys_status/sys_status_position.c \
 		  widgets/sys_status/sys_status_info_bar.c
 
-client_SOURCES += widgets/obs_assist/obs_assist.c
+client_SOURCES += widgets/obs_assist/obs_assist.c \
+		  widgets/obs_assist/obs_assist_cross.c
 
 
 

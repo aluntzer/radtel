@@ -43,6 +43,9 @@ struct _ObsAssistClass {
 };
 
 
+GType obs_assist_get_type(void) G_GNUC_CONST;
+
+
 GtkWidget *obs_assist_new(void);
 
 
