@@ -60,6 +60,16 @@ struct graph {
 	gdouble *data_c;
 	gsize    data_len;
 
+	gdouble xmin;		/* contained data ranges */
+	gdouble xmax;
+
+	gdouble ymin;
+	gdouble ymax;
+
+	gdouble cmin;
+	gdouble cmax;
+
+
 	gchar *label;
 
 	GdkRGBA colour;
@@ -304,7 +314,7 @@ static void xyplot_export_graph_xy_asc(const gchar *fname, struct graph *g)
 
 	fprintf(f, "#\t%s\t%s\n", g->parent->xlabel, g->parent->ylabel);
 
-	for(i = 0; i < g->data_len; i++)
+	for (i = 0; i < g->data_len; i++)
 		fprintf(f, "\t%f\t%f\n", g->data_x[i], g->data_y[i]);
 
 
@@ -321,8 +331,6 @@ static void xyplot_export_xy_graph_cb(GtkWidget *w, struct graph *g)
 	GtkWidget *win;
 
 	gchar *fname;
-
-	FILE *f;
 
 
 	win = gtk_widget_get_toplevel(GTK_WIDGET(w));
@@ -725,10 +733,6 @@ static void xyplot_popup_menu_add_plot_cfg(XYPlot *p)
 	GtkWidget *w;
 	GtkWidget *sub;
 
-	GList *l;
-
-	struct graph *g;
-
 
 	w = gtk_menu_item_new_with_label("Plot");
 	gtk_menu_shell_append(GTK_MENU_SHELL(p->menu), w);
@@ -1098,7 +1102,7 @@ static void xyplot_draw_ticks_x(XYPlot *p, cairo_t *cr,
 		cairo_move_to(cr, (idx - min) * scl, 0.0);
 		cairo_rel_line_to(cr, 0.0, 10.);
 
-		if(idx < stp) {
+		if (idx < stp) {
 			cairo_move_to(cr, (idx + 0.5 * inc - min) * scl, 0.0);
 			cairo_rel_line_to(cr, 0.0, 5.);
 		}
@@ -1153,7 +1157,7 @@ static void xyplot_draw_ticks_y(XYPlot *p, cairo_t *cr,
 		cairo_move_to(cr, 0.0, (idx - min) * scl);
 		cairo_rel_line_to(cr, 10.0, 0.0);
 
-		if(idx < stp) {
+		if (idx < stp) {
 			cairo_move_to(cr, 0.0, (idx + 0.5 * inc - min) * scl);
 			cairo_rel_line_to(cr, 5.0, 0.0);
 		}
@@ -1389,8 +1393,6 @@ static void xyplot_draw_stairs(XYPlot *p, cairo_t *cr, struct graph *g)
 
 	gdouble *x, *y;
 
-	int cnt = 0;
-
 
 	/* can't connect a single point by a line */
 	if (g->data_len < 2)
@@ -1419,7 +1421,7 @@ static void xyplot_draw_stairs(XYPlot *p, cairo_t *cr, struct graph *g)
 	cairo_rel_line_to(cr, 0.0, (y[0] - p->y_ax.min) * sy);
 	cairo_rel_line_to(cr, (x[1] - x[0]) * sx, 0.0);
 
-	for(i = 1; i < g->data_len; i++) {
+	for (i = 1; i < g->data_len; i++) {
 		cairo_rel_line_to(cr, 0.0, (y[i] - y[i - 1]) * sy);
 		cairo_rel_line_to(cr, (x[i] - x[i - 1]) * sx, 0.0);
 	}
@@ -1458,7 +1460,7 @@ static void xyplot_draw_circles(XYPlot *p, cairo_t *cr, struct graph *g)
 	cairo_set_source_rgba(cr, g->colour.red,  g->colour.green,
 			          g->colour.blue, g->colour.alpha);
 
-	for(i = 0; i < g->data_len; i++) {
+	for (i = 0; i < g->data_len; i++) {
 		cairo_arc(cr,
 			  (x[i] - p->x_ax.min) * sx,
 			  (y[i] - p->y_ax.min) * sy,
@@ -1495,7 +1497,7 @@ static void xyplot_draw_squares(XYPlot *p, cairo_t *cr, struct graph *g)
 	cairo_set_source_rgba(cr, g->colour.red,  g->colour.green,
 			          g->colour.blue, g->colour.alpha);
 
-	for(i = 0; i < g->data_len; i++) {
+	for (i = 0; i < g->data_len; i++) {
 		cairo_rectangle(cr, (x[i] - p->x_ax.min) * sx - 2.0,
 				    (y[i] - p->y_ax.min) * sy - 2.0,
 				    4.0, 4.0);
@@ -1534,7 +1536,7 @@ static void xyplot_draw_map(XYPlot *p, cairo_t *cr, struct graph *g)
 	xyplot_transform_origin(p, cr);
 
 
-	for(i = 0; i < g->data_len; i++) {
+	for (i = 0; i < g->data_len; i++) {
 		grey = (c[i] - p->cmin) * sc;
 
 		r = get_color_value_from_formula( 7, grey);
@@ -1594,7 +1596,7 @@ static void xyplot_draw_dashes(XYPlot *p, cairo_t *cr, struct graph *g)
 		      (x[0] - p->x_ax.min) * sx,
 		      (y[0] - p->y_ax.min) * sy);
 
-	for(i = 1; i < g->data_len; i++) {
+	for (i = 1; i < g->data_len; i++) {
 		cairo_rel_line_to(cr,
 				  (x[i] - x[i - 1]) * sx,
 				  (y[i] - y[i - 1]) * sy);
@@ -1640,7 +1642,7 @@ static void xyplot_draw_lines(XYPlot *p, cairo_t *cr, struct graph *g)
 	cairo_move_to(cr, (x[0] - p->x_ax.min) * sx,
 		          (y[0] - p->y_ax.min) * sy);
 
-	for(i = 1; i < g->data_len; i++) {
+	for (i = 1; i < g->data_len; i++) {
 		cairo_rel_line_to(cr,
 				  (x[i] - x[i - 1]) * sx,
 				  (y[i] - y[i - 1]) * sy);
@@ -1688,7 +1690,7 @@ static void xyplot_draw_nan_lines(XYPlot *p, cairo_t *cr, struct graph *g)
 			          g->colour.blue, g->colour.alpha);
 	cairo_set_line_width(cr, 2.0);
 
-	for(i = 0; i < g->data_len; i++) {
+	for (i = 0; i < g->data_len; i++) {
 		if (!isnan(x[i]) && !isnan(y[i]))
 			break;
 	}
@@ -1698,7 +1700,7 @@ static void xyplot_draw_nan_lines(XYPlot *p, cairo_t *cr, struct graph *g)
 	cairo_move_to(cr, (x[i] - p->x_ax.min) * sx,
 		          (y[i] - p->y_ax.min) * sy);
 
-	for(i = i + 1; i < g->data_len; i++) {
+	for (i = i + 1; i < g->data_len; i++) {
 		if (isnan(x[i]) || isnan(y[i])) {
 			restart = TRUE;
 			continue;
@@ -1756,18 +1758,15 @@ static void xyplot_draw_curves(XYPlot *p, cairo_t *cr, struct graph *g)
 			          g->colour.blue, g->colour.alpha);
 	cairo_set_line_width(cr, 2.0);
 
-	gdouble ax0, ax1, ax2, ax3;
-	gdouble ay0, ay1, ay2, ay3;
+	gdouble ax1, ax2, ax3;
+	gdouble ay1, ay2, ay3;
 
 
 	cairo_move_to(cr, (x[0] - p->x_ax.min) * sx,
 		          (y[0] - p->y_ax.min) * sy);
 
 
-	for(i = 1; i < g->data_len - 2 ; i += 2) {
-
-		ax0 = (x[i - 1] + x[i]) * 0.5;
-		ay0 = (y[i - 1] + y[i]) * 0.5;
+	for (i = 1; i < g->data_len - 2 ; i += 2) {
 
 		ax1 = x[i];
 		ay1 = y[i];
@@ -1909,26 +1908,24 @@ double xyplot_nicenum(const double num, const gboolean round)
 
 	f = num / pow(10, exp);
 
-	if(round) {
-		if (f < 1.5) {
+	if (round) {
+		if (f < 1.5)
 			nf = 1.0;
-		} else if (f < 3.0) {
+		else if (f < 3.0)
 			nf = 2.0;
-		} else if(f < 7.0) {
+		else if (f < 7.0)
 			nf = 5.0;
-		} else {
+		else
 			nf = 10.0;
-		}
 	} else {
-		if (f <= 1.0) {
+		if (f <= 1.0)
 			nf = 1.0;
-		} else if (f < 2.0) {
+		else if (f < 2.0)
 			nf = 2.0;
-		} else if(f<5.0) {
+		else if (f<5.0)
 			nf=5.0;
-		} else {
+		else
 			nf=10.0;
-		}
 	}
 
 	return nf * pow(10, exp);
@@ -1976,11 +1973,8 @@ static void xyplot_auto_axes(XYPlot *p)
 
 static void xyplot_auto_range(XYPlot *p)
 {
-	size_t i;
-
-	gdouble tmp;
-
 	GList *elem;
+
 
 	struct graph *g;
 
@@ -2001,48 +1995,93 @@ static void xyplot_auto_range(XYPlot *p)
 
 		g = (struct graph *) elem->data;
 
-		for(i = 0; i < g->data_len; i++) {
+		if (g->xmin < p->xmin)
+			p->xmin = g->xmin;
 
-			tmp = g->data_x[i];
+		if (g->xmax > p->xmax)
+			p->xmax = g->xmax;
 
-			if(tmp < p->xmin)
-				p->xmin = tmp;
+		if (g->ymin < p->ymin)
+			p->ymin = g->ymin;
 
-			if(tmp > p->xmax)
-				p->xmax = tmp;
+		if (g->ymax > p->ymax)
+			p->ymax = g->ymax;
 
-		}
 
-		for(i = 0; i < g->data_len; i++) {
-
-			tmp = g->data_y[i];
-
-			if(tmp < p->ymin)
-				p->ymin = tmp;
-
-			if(tmp > p->ymax)
-				p->ymax = tmp;
-		}
-
+		/* 3rd axis is optional */
 		if (!g->data_c)
 			continue;
 
-		for(i = 0; i < g->data_len; i++) {
+		if (g->cmin < p->cmin)
+			p->cmin = g->cmin;
 
-			tmp = g->data_c[i];
-
-			if(tmp < p->cmin)
-				p->cmin = tmp;
-
-			if(tmp > p->cmax)
-				p->cmax = tmp;
-		}
+		if (g->cmax > p->cmax)
+			p->cmax = g->cmax;
 	}
-
 
 	p->xlen = p->xmax - p->xmin;
 	p->ylen = p->ymax - p->ymin;
 	p->clen = p->cmax - p->cmin;
+}
+
+
+/**
+ * @brief determine the ranges of the supplied data
+ */
+
+static void xyplot_data_range(struct graph *g)
+{
+	size_t i;
+
+	gdouble tmp;
+
+
+	g->xmin = DBL_MAX;
+	g->ymin = DBL_MAX;
+	g->cmin = DBL_MAX;
+
+	g->xmax = -DBL_MAX;
+	g->ymax = -DBL_MAX;
+	g->cmax = -DBL_MAX;
+
+
+	for (i = 0; i < g->data_len; i++) {
+
+		tmp = g->data_x[i];
+
+		if (tmp < g->xmin)
+			g->xmin = tmp;
+
+		if (tmp > g->xmax)
+			g->xmax = tmp;
+
+	}
+
+	for (i = 0; i < g->data_len; i++) {
+
+		tmp = g->data_y[i];
+
+		if (tmp < g->ymin)
+			g->ymin = tmp;
+
+		if (tmp > g->ymax)
+			g->ymax = tmp;
+	}
+
+	/* third axis is optional */
+	if (!g->data_c)
+		return;
+
+	for (i = 0; i < g->data_len; i++) {
+
+		tmp = g->data_c[i];
+
+		if (tmp < g->cmin)
+			g->cmin = tmp;
+
+		if (tmp > g->cmax)
+			g->cmax = tmp;
+	}
 }
 
 
@@ -2363,8 +2402,6 @@ static gboolean xyplot_button_release_cb(GtkWidget *widget,
 {
 	XYPlot *p;
 
-	gdouble px;
-	gdouble py;
 
 	gdouble xlen;
 	gdouble ylen;
@@ -2392,7 +2429,6 @@ static gboolean xyplot_button_release_cb(GtkWidget *widget,
 
 		p->rub.autorange = FALSE;
 
-		xyplot_auto_range(p);
 		xyplot_auto_axes(p);
 
 		xyplot_plot(p);
@@ -2853,7 +2889,8 @@ void xyplot_drop_graph(GtkWidget *widget, void *ref)
  *
  *
  * @note we expect len(x) == len(y) == len(c)
- * @note the data an the label must be allocated on the heap, so we can g_free()
+ * @note the data AND the label string must be allocated on the heap,
+ *	 so we can g_free()
  *
  * @returns a reference to the data set in the plot or NULL on error
  *
@@ -2895,6 +2932,8 @@ void *xyplot_add_graph(GtkWidget *widget,
 	g->colour.green = GRAPH_G;
 	g->colour.blue  = GRAPH_B;
 	g->colour.alpha = 1.0;
+
+	xyplot_data_range(g);
 
 	g_ref_count_init(&g->ref);
 	p->graphs = g_list_append(p->graphs, g);
