@@ -183,6 +183,7 @@ static gboolean sys_status_destroy(GtkWidget *w, void *data)
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_cap);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_acq);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_slw);
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_mov);
 
 	return TRUE;
 }
