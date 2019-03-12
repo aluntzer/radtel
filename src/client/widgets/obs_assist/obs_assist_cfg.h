@@ -28,6 +28,15 @@ struct spectrum {
 	gsize    n;
 };
 
+struct crossax {
+	GArray *off;
+	GArray *amp;
+
+	void *plt_ref_in;
+	void *plt_ref_out;
+
+	GtkLabel *fitpar;
+};
 
 struct _ObsAssistConfig {
 
@@ -54,8 +63,11 @@ struct _ObsAssistConfig {
 	guint id_aen;
 	guint id_adi;
 	guint id_spd;
+	guint id_mov;
 
 	gboolean acq_enabled;
+	gboolean moving;
+	gboolean abort;
 
 	struct spectrum spec;
 
@@ -64,18 +76,25 @@ struct _ObsAssistConfig {
 		gdouble el_pt;
 		gdouble deg;
 
+		gdouble az_cent;	/* horizon center */
+		gdouble el_cent;
+		gdouble ra_cent;	/* equatorial center, for tracking */
+		gdouble de_cent;
+
 		gdouble az_cur;
 		gdouble el_cur;
-		gdouble az_cent;
-		gdouble el_cent;
+
 		gdouble az_min;
 		gdouble az_max;
 		gdouble el_min;
 		gdouble el_max;
 		gdouble az_cor;
 		gdouble az_off;
-		gdouble az_stp;
 		gdouble el_off;
+		gdouble az_stp;
+		gdouble el_stp;
+
+		gboolean track;
 
 		GtkSpinButton *sb_az;
 		GtkSpinButton *sb_el;
@@ -84,19 +103,12 @@ struct _ObsAssistConfig {
 		GtkWidget *pbar_az;
 		GtkWidget *pbar_el;
 
-		GtkWidget *plt;
-
-		struct {
-			GArray *off;
-			GArray *amp;
-		} az;
-
-		struct {
-			GArray *off;
-			GArray *amp;
-		} el;
+		GtkWidget *plt_az;
+		GtkWidget *plt_el;
 
 
+		struct crossax az;
+		struct crossax el;
 
 	} cross;
 

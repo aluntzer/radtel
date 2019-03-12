@@ -37,13 +37,12 @@ G_DEFINE_TYPE_WITH_PRIVATE(ObsAssist, obs_assist, GTK_TYPE_BOX)
 
 void obs_assist_clear_spec(ObsAssist *p)
 {
-	free(p->cfg->spec.x);
-	free(p->cfg->spec.y);
+	g_free(p->cfg->spec.x);
+	g_free(p->cfg->spec.y);
 
 	p->cfg->spec.x = NULL;
 	p->cfg->spec.y = NULL;
 	p->cfg->spec.n = 0;
-
 }
 
 /**
@@ -91,14 +90,29 @@ static void obs_assist_handle_pr_spec_data(gpointer instance,
 static gboolean obs_assist_getpos_azel_cb(gpointer instance, struct getpos *pos,
 					  gpointer data)
 {
+	struct coord_horizontal hor;
+	struct coord_equatorial	equ;
+	struct coord_galactic gal;
+
 	ObsAssist *p;
 
 
 	p = OBS_ASSIST(data);
 
-	p->cfg->az = (gdouble) pos->az_arcsec / 3600.0;
-	p->cfg->el = (gdouble) pos->el_arcsec / 3600.0;
+	hor.az = (gdouble) pos->az_arcsec / 3600.0;
+	hor.el = (gdouble) pos->el_arcsec / 3600.0;
 
+	equ = horizontal_to_equatorial(hor, p->cfg->lat, p->cfg->lon, 0.0);
+	gal = horizontal_to_galactic(hor, p->cfg->lat, p->cfg->lon);
+
+	p->cfg->az = hor.az;
+	p->cfg->el = hor.el;
+
+	p->cfg->ra = equ.ra;
+	p->cfg->de = equ.dec;
+
+	p->cfg->glat = gal.lat;
+	p->cfg->glon = gal.lon;
 
 	return TRUE;
 }
@@ -160,6 +174,23 @@ static void obs_assist_handle_spec_acq_disable(gpointer instance, gpointer data)
 }
 
 
+/**
+ * @brief handle status-move
+ */
+
+static void obs_assist_handle_pr_status_move(gpointer instance,
+					     const struct status *s,
+					     gpointer data)
+{
+	ObsAssist *p;
+
+
+	p = OBS_ASSIST(data);
+
+	p->cfg->moving = s->busy;
+}
+
+
 
 /**
  * @brief create hardware axis limit exceeded warning label
@@ -212,6 +243,19 @@ void obs_assist_close_cancel(GtkWidget *widget, gpointer data)
 	gtk_widget_destroy(GTK_WIDGET(data));
 }
 
+void obs_assist_abort(GtkWidget *w, gpointer data)
+{
+	ObsAssist *p;
+
+
+	p = OBS_ASSIST(data);
+
+	p->cfg->abort = TRUE;
+
+
+	gtk_widget_destroy(gtk_widget_get_parent(w));
+	gtk_widget_show_all(GTK_WIDGET(p));
+}
 
 
 /**
@@ -342,6 +386,7 @@ static gboolean obs_assist_destroy(GtkWidget *w, void *data)
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_aen);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_adi);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_spd);
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_mov);
 
 	return TRUE;
 }
@@ -379,6 +424,7 @@ static void obs_assist_init(ObsAssist *p)
 	p->cfg->spec.x = NULL;
 	p->cfg->spec.y = NULL;
 	p->cfg->spec.n = 0;
+	p->cfg->moving = FALSE;
 
 	gtk_orientable_set_orientation(GTK_ORIENTABLE(p),
 				       GTK_ORIENTATION_VERTICAL);
@@ -407,6 +453,11 @@ static void obs_assist_init(ObsAssist *p)
 	p->cfg->id_spd = g_signal_connect(sig_get_instance(), "pr-spec-data",
 				G_CALLBACK(obs_assist_handle_pr_spec_data),
 				(gpointer) p);
+
+	p->cfg->id_mov = g_signal_connect(sig_get_instance(), "pr-status-move",
+				 G_CALLBACK(obs_assist_handle_pr_status_move),
+				 (void *) p);
+
 
 	g_signal_connect(p, "destroy", G_CALLBACK(obs_assist_destroy), NULL);
 }

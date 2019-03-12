@@ -30,6 +30,7 @@ GtkWidget *obs_assist_limits_exceeded_warning(const gchar *direction,
 					      const double limit_deg);
 void obs_assist_on_ignore_warning(GtkWidget *w, gpointer data);
 void obs_assist_close_cancel(GtkWidget *widget, gpointer data);
+void obs_assist_abort(GtkWidget *w, gpointer data);
 
 void obs_assist_clear_spec(ObsAssist *p);
 
