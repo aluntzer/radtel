@@ -790,14 +790,14 @@ static gpointer srt_drive_thread(gpointer data)
 
 		s.busy = 1;
 		s.eta_msec = 0; /** XXX add estimate **/
-		ack_status_moving(PKT_TRANS_ID_UNDEF, &s);
+		ack_status_move(PKT_TRANS_ID_UNDEF, &s);
 
 		/* move until complete */
 		while (srt_drive_move());
 
 		s.busy = 0;
 		s.eta_msec = 0;
-		ack_status_moving(PKT_TRANS_ID_UNDEF, &s);
+		ack_status_move(PKT_TRANS_ID_UNDEF, &s);
 
 		g_mutex_unlock(&mutex);
 	}
