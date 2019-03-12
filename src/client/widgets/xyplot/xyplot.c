@@ -2656,6 +2656,62 @@ static void xyplot_free_graph(struct graph *g)
 
 
 /**
+ * @brief extract all data within x/y limits
+ *
+ * @param p the XYPlot widget
+ * @param x the array where the x-data will be stored
+ * @param y the array where the y-data will be stored
+ * @param c the array where the color-data will be stored (may be NULL)
+ *
+ * @returns the number of elements in the arrays
+ *
+ * XXX this function is pretty inefficient for large amounts of data, but
+ *     it'll do for now
+ */
+
+static ssize_t xyplot_extract_data(XYPlot *p,
+				   GArray *gx, GArray *gy, GArray *gc,
+				   gdouble xmin, gdouble xmax,
+				   gdouble  ymin, gdouble ymax)
+{
+	size_t i;
+	size_t n = 0;
+
+	GList *elem;
+
+	struct graph *g;
+
+
+	for (elem = p->graphs; elem; elem = elem->next) {
+
+		g  = (struct graph *) elem->data;
+
+		for (i = 0; i < g->data_len; i++) {
+
+			if (g->data_x[i] >= xmin) {
+				if (g->data_x[i] <= xmax) {
+					if (g->data_y[i] >= ymin) {
+						if (g->data_y[i] <= ymax) {
+							g_array_append_val(gx, g->data_x[i]);
+							g_array_append_val(gy, g->data_y[i]);
+							if (gc && g->data_c)
+								g_array_append_val(gc, g->data_c[i]);
+							n++;
+						}
+					}
+				}
+			}
+		}
+	}
+
+
+	return n;
+}
+
+
+
+
+/**
  * @brief get the data inside the selection box
  *
  * @param widget the XYPlot widget
@@ -2665,73 +2721,78 @@ static void xyplot_free_graph(struct graph *g)
  *
  * @returns the number of elements in the arrays
  *
- * XXX this function is pretty inefficient for large amounts of data, but
- *     it'll do for now
- *
  * @note the caller must deallocate the buffers
  */
 
-size_t xyplot_get_selection_data(GtkWidget *widget, gdouble **x, gdouble **y, gdouble **c)
+size_t xyplot_get_selection_data(GtkWidget *widget,
+				 gdouble **x, gdouble **y, gdouble **c)
 {
-	size_t i;
-	size_t n = 0;
+	size_t n;
 
 	XYPlot *p;
-
-	GList *elem;
-
-	struct graph *g;
 
 	GArray *gx, *gy, *gc;
 
 
 	p = XYPLOT(widget);
 
-
 	if (!p->sel.active)
 		return 0;
 
 	gx = g_array_new(FALSE, FALSE, sizeof(gdouble));
 	gy = g_array_new(FALSE, FALSE, sizeof(gdouble));
-	gc = g_array_new(FALSE, FALSE, sizeof(gdouble));
+
+	if (c)
+		gc = g_array_new(FALSE, FALSE, sizeof(gdouble));
+	else
+		gc = NULL;
 
 
-	for (elem = p->graphs; elem; elem = elem->next) {
-
-		g  = (struct graph *) elem->data;
-
-		for (i = 0; i < g->data_len; i++) {
-
-			if (g->data_x[i] >= p->sel.xmin) {
-				if (g->data_x[i] <= p->sel.xmax) {
-					if (g->data_y[i] >= p->sel.ymin) {
-						if (g->data_y[i] <= p->sel.ymax) {
-							g_array_append_val(gx, g->data_x[i]);
-							g_array_append_val(gy, g->data_y[i]);
-							if (c && g->data_c)
-								g_array_append_val(gc, g->data_c[i]);
-							n++;
-						}
-					}
-				}
-			}
-
-
-		}
-	}
-
+	n = xyplot_extract_data(p, gx, gy, gc,
+				p->sel.xmin, p->sel.xmax,
+				p->sel.ymin, p->sel.ymax);
 
 	(*x) = (gdouble *) gx->data;
 	(*y) = (gdouble *) gy->data;
-	if (c)
+	if (gc)
 		(*c) = (gdouble *) gc->data;
 
 	g_array_free(gx, FALSE);
 	g_array_free(gy, FALSE);
-	g_array_free(gc, FALSE);
+
+	if (gc)
+		g_array_free(gc, FALSE);
 
 
 	return n;
+}
+
+
+/**
+ * @brief select all data in plot and emit fit selection signal
+ *
+ * @param widget the XYPlot widget
+ *
+ * @note this clears the prior active selection
+ */
+
+void xyplot_select_all_data(GtkWidget *widget)
+
+{
+	XYPlot *p;
+
+
+	p = XYPLOT(widget);
+
+
+	p->sel.xmin = p->xmin;
+	p->sel.xmax = p->xmax;
+	p->sel.ymin = p->xmin;
+	p->sel.ymax = p->ymax;
+
+	p->sel.active = TRUE;
+
+	g_signal_emit_by_name(widget, "xyplot-fit-selection");
 }
 
 
@@ -2746,7 +2807,6 @@ void xyplot_drop_all_graphs(GtkWidget *widget)
 	XYPlot *plot;
 
 	GList *elem;
-
 
 	plot = XYPLOT(widget);
 
@@ -2895,6 +2955,8 @@ void xyplot_drop_graph(GtkWidget *widget, void *ref)
  * @returns a reference to the data set in the plot or NULL on error
  *
  * @note call xyplot_redraw() to update plot!
+ *
+ * XXX: need mechanism to mark "fit" data other than the graph label!
  */
 
 void *xyplot_add_graph(GtkWidget *widget,

@@ -136,6 +136,7 @@ int xyplot_get_graph_rgba(GtkWidget *widget, void *ref, GdkRGBA *colour);
 
 size_t xyplot_get_selection_data(GtkWidget *widget,
 				 gdouble **x, gdouble **y, gdouble **c);
+void xyplot_select_all_data(GtkWidget *widget);
 
 void xyplot_get_sel_axis_range(GtkWidget *widget,
 			   gdouble *xmin, gdouble *xmax,
