@@ -73,7 +73,25 @@ static void sys_status_handle_pr_status_slew(gpointer instance,
 
 }
 
+/**
+ * @brief handle status move
+ */
 
+static void sys_status_handle_pr_status_move(gpointer instance,
+					     const struct status *s,
+					     gpointer data)
+{
+	SysStatus *p;
+
+
+	p = SYS_STATUS(data);
+
+	if (s->busy)
+		gtk_spinner_start(GTK_SPINNER(p->cfg->spin_move));
+	else
+		gtk_spinner_stop(GTK_SPINNER(p->cfg->spin_move));
+
+}
 
 
 /**
@@ -133,6 +151,12 @@ static void gui_create_sys_status_controls(SysStatus *p)
 		w = gtk_spinner_new();
 		gtk_grid_attach(GTK_GRID(grid2), w, 1, 1, 1, 1);
 		p->cfg->spin_slew = w;
+
+		w = gtk_label_new("MOVE:");
+		gtk_grid_attach(GTK_GRID(grid2), w, 0, 2, 1, 1);
+		w = gtk_spinner_new();
+		gtk_grid_attach(GTK_GRID(grid2), w, 1, 2, 1, 1);
+		p->cfg->spin_move = w;
 
 		gtk_grid_attach(GTK_GRID(grid), grid2, 2, 0, 1, 1);
 	}
@@ -207,6 +231,10 @@ static void sys_status_init(SysStatus *p)
 
 	p->cfg->id_slw = g_signal_connect(sig_get_instance(), "pr-status-slew",
 				 G_CALLBACK(sys_status_handle_pr_status_slew),
+				 (void *) p);
+
+	p->cfg->id_mov = g_signal_connect(sig_get_instance(), "pr-status-move",
+				 G_CALLBACK(sys_status_handle_pr_status_move),
 				 (void *) p);
 
 	g_signal_connect(p, "destroy", G_CALLBACK(sys_status_destroy), NULL);

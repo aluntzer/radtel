@@ -1,5 +1,5 @@
 /**
- * @file    acks/ack_status_slew.c
+ * @file    acks/ack_status_move.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -22,10 +22,10 @@
 
 
 /**
- * @brief acknowledge slew status
+ * @brief acknowledge move-to-target status
  */
 
-void ack_status_slew(uint16_t trans_id, struct status *c)
+void ack_status_move(uint16_t trans_id, struct status *c)
 {
 	gsize pkt_size;
 
@@ -37,7 +37,7 @@ void ack_status_slew(uint16_t trans_id, struct status *c)
 	/* allocate zeroed packet + payload */
 	pkt = g_malloc0(pkt_size);
 
-	pkt->service   = PR_STATUS_SLEW;
+	pkt->service   = PR_STATUS_MOVE;
 	pkt->trans_id  = trans_id;
 	pkt->data_size = sizeof(struct status);
 
@@ -48,7 +48,7 @@ void ack_status_slew(uint16_t trans_id, struct status *c)
 
 	pkt_hdr_to_net_order(pkt);
 
-	g_message("Sending SLEW status");
+	g_message("Sending MOVE status");
 	net_send((void *) pkt, pkt_size);
 
 	/* clean up */

@@ -37,6 +37,7 @@ struct _SysStatusConfig {
 
 	GtkWidget  *spin_acq;
 	GtkWidget  *spin_slew;
+	GtkWidget  *spin_move;
 
 	GtkWidget *info_bar;
 	GtkLabel  *info_bar_lbl;
@@ -47,6 +48,7 @@ struct _SysStatusConfig {
 	guint id_cap;
 	guint id_acq;
 	guint id_slw;
+	guint id_mov;
 };
 
 

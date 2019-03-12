@@ -775,6 +775,9 @@ static int srt_drive_move(void)
 
 static gpointer srt_drive_thread(gpointer data)
 {
+	struct status s;
+
+
 	while (1) {
 		g_mutex_lock(&mutex);
 
@@ -785,8 +788,16 @@ static gpointer srt_drive_thread(gpointer data)
 		g_message(MSG "coordinates updated %g %g",
 			  srt.pos.az_tgt, srt.pos.el_tgt);
 
+		s.busy = 1;
+		s.eta_msec = 0; /** XXX add estimate **/
+		ack_status_moving(PKT_TRANS_ID_UNDEF, &s);
+
 		/* move until complete */
 		while (srt_drive_move());
+
+		s.busy = 0;
+		s.eta_msec = 0;
+		ack_status_moving(PKT_TRANS_ID_UNDEF, &s);
 
 		g_mutex_unlock(&mutex);
 	}

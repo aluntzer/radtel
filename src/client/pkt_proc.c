@@ -79,6 +79,10 @@ void process_pkt(struct packet *pkt)
 		proc_pr_status_slew(pkt);
 		break;
 
+	case PR_STATUS_MOVE:
+		proc_pr_status_move(pkt);
+		break;
+
 
 	default:
 		g_message("Service command %x not understood\n", pkt->service);
