@@ -637,23 +637,13 @@ static double srt_drive_motor_cmd_eval(gchar *cmd)
 
 	gchar *response;
 
-	struct status s;
 
+	g_debug(MSG "CMD: %s", cmd);
 
-	g_message(MSG "CMD: %s", cmd);
-
-	s.busy = 1;
-	s.eta_msec = 0; /** XXX add estimate **/
-	ack_status_slew(PKT_TRANS_ID_UNDEF, &s);
 
 	be_shared_comlink_write(cmd, strlen(cmd));
 
 	response = be_shared_comlink_read(&len);
-
-	s.busy = 0;
-	s.eta_msec = 0;
-	ack_status_slew(PKT_TRANS_ID_UNDEF, &s);
-
 
 	if (sscanf(response, "%c %d %d %d", &c, &cnts, &f1, &f2) != 4)
 		g_warning(MSG, "error scanning com link response: %s", response);
@@ -661,19 +651,19 @@ static double srt_drive_motor_cmd_eval(gchar *cmd)
 
 	switch(c) {
 	case 'M':
-		g_message(MSG "CMD OK, %d counts, f1: %d, motor: %d",
+		g_debug(MSG "CMD OK, %d counts, f1: %d, motor: %d",
 			  cnts, f1, f2);
 		ret = (double) cnts + (double) f1 * 0.5;
 		break;
 
 	case 'T':
-		g_message(MSG "CMD TIMEOUT, %d counts, motor: %d, f2: %d",
+		g_warning(MSG "CMD TIMEOUT, %d counts, motor: %d, f2: %d",
 			  cnts, f1, f2);
 		ret = 0.0;
 		break;
 	default:
 		/* XXX: issue cmd_drive_error(); */
-		g_message(MSG, "error in com link response: %s", response);
+		g_warning(MSG, "error in com link response: %s", response);
 		ret = 0.0;
 		break;
 	}
@@ -696,6 +686,13 @@ static void srt_drive_cmd_motors(double *az_cnt, double *el_cnt)
 
 	gchar *cmd;
 
+	GTimer *tm;
+
+	struct status s;
+
+
+	tm = g_timer_new();
+
 
 	g_message(MSG "rotating AZ/EL counts: %d %d", azc, elc);
 
@@ -704,7 +701,20 @@ static void srt_drive_cmd_motors(double *az_cnt, double *el_cnt)
 		cmd = g_strdup_printf("move %d %d\n",
 				      srt_drive_get_az_motor_id(azc),
 				      abs(azc));
+
+		s.busy = 1;
+		s.eta_msec = 174.1202 * azc; /** XXX add config file entry **/
+		ack_status_slew(PKT_TRANS_ID_UNDEF, &s);
+
+		g_timer_start(tm);
 		(*az_cnt) = copysign(srt_drive_motor_cmd_eval(cmd), azc);
+		g_timer_stop(tm);
+
+		s.busy = 0;
+		s.eta_msec = 0;
+		ack_status_slew(PKT_TRANS_ID_UNDEF, &s);
+
+		g_message("Azimuth: %f sec/count", g_timer_elapsed(tm, NULL) / (*az_cnt));
 		g_free(cmd);
 	}
 
@@ -713,9 +723,25 @@ static void srt_drive_cmd_motors(double *az_cnt, double *el_cnt)
 		cmd = g_strdup_printf("move %d %d\n",
 				      srt_drive_get_el_motor_id(elc),
 				      abs(elc));
+
+		/* note: assuming worst-case speed */
+		s.busy = 1;
+		s.eta_msec = 304.33578 * elc; /** XXX add config file entry **/
+		ack_status_slew(PKT_TRANS_ID_UNDEF, &s);
+
+		g_timer_start(tm);
 		(*el_cnt) = copysign(srt_drive_motor_cmd_eval(cmd), elc);
+		g_timer_stop(tm);
+
+		s.busy = 0;
+		s.eta_msec = 0;
+		ack_status_slew(PKT_TRANS_ID_UNDEF, &s);
+
+		g_message("Elevation: %f sec/count", g_timer_elapsed(tm, NULL) /(*el_cnt));
 		g_free(cmd);
 	}
+
+	g_timer_destroy(tm);
 }
 
 
@@ -775,6 +801,9 @@ static int srt_drive_move(void)
 
 static gpointer srt_drive_thread(gpointer data)
 {
+	double az_cnt;
+	double el_cnt;
+
 	struct status s;
 
 
@@ -788,8 +817,11 @@ static gpointer srt_drive_thread(gpointer data)
 		g_message(MSG "coordinates updated %g %g",
 			  srt.pos.az_tgt, srt.pos.el_tgt);
 
+		az_cnt = fabs(srt_drive_az_counts(srt.pos.az_tgt) - srt.pos.az_cnts);
+		el_cnt = fabs(srt_drive_cassi_el_counts(srt.pos.el_tgt) - srt.pos.el_cnts);
+
 		s.busy = 1;
-		s.eta_msec = 0; /** XXX add estimate **/
+		s.eta_msec = 174.1202 * az_cnt + 304.33578 * el_cnt; /** XXX config file! **/
 		ack_status_move(PKT_TRANS_ID_UNDEF, &s);
 
 		/* move until complete */
@@ -825,7 +857,7 @@ static int srt_drive_moveto(double az, double el)
 		return -1;
 
 
-	g_message(MSG "rotating to AZ/EL %g/%g", az, el);
+	g_debug(MSG "rotating to AZ/EL %g/%g", az, el);
 
 	srt.pos.az_tgt = srt_drive_az_to_drive_ref(az);
 	srt.pos.el_tgt = srt_drive_el_to_drive_ref(el);

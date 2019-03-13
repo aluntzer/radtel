@@ -401,7 +401,6 @@ static guint16 *srt_spec_acquire_raw(guint32 refdiv, int mode, gsize *len)
 
 
 	timer = g_timer_new();
-	g_timer_start(timer);
 
 
 	be_shared_comlink_acquire();
@@ -410,11 +409,13 @@ static guint16 *srt_spec_acquire_raw(guint32 refdiv, int mode, gsize *len)
 	s.eta_msec = 0; /** XXX add estimate **/
 	ack_status_acq(PKT_TRANS_ID_UNDEF, &s);
 
+	g_timer_start(timer);
 	/* give size explicitly, as command starts with '\0' */
 	be_shared_comlink_write(cmd, 9);
 
 	/* actual raw data is 16 bit unsigned @128 bytes total */
 	response = (guint16 *) be_shared_comlink_read(len);
+	g_timer_stop(timer);
 
 	s.busy = 0;
 	s.eta_msec = 0;
@@ -423,11 +424,8 @@ static guint16 *srt_spec_acquire_raw(guint32 refdiv, int mode, gsize *len)
 	be_shared_comlink_release();
 
 
-
-	g_timer_stop(timer);
-
-	g_debug(MSG "raw spectrum acquisition time: %fs\n",
-		     g_timer_elapsed(timer, NULL));
+	g_message(MSG "raw spectrum acquisition time: %f sec %d bwdiv",
+		     g_timer_elapsed(timer, NULL), g_timer_elapsed(timer, NULL), mode);
 
 	g_timer_destroy(timer);
 

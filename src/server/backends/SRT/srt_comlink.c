@@ -220,7 +220,7 @@ static gboolean srt_com_serial_glib_callback(GIOChannel *src,
 
 	/* something arrived when noone listened, release it so we don't leak */
 	if (line) {
-		g_message(MSG "a serial read was lost: %s", line);
+		g_warning(MSG "a serial read was lost: %s", line);
 		g_free(line);
 	}
 
@@ -351,7 +351,7 @@ gchar *be_shared_comlink_read(gsize *nbytes)
 
 	g_mutex_lock(&readmutex);
 
-	g_message(MSG "waiting for serial response");
+	g_debug(MSG "waiting for serial response");
 	g_cond_wait(&cond, &readmutex);
 
 
@@ -396,7 +396,7 @@ void be_shared_comlink_acquire(void)
 {
 	g_usleep(1000.0);
 	g_mutex_lock(&linkmutex);
-	g_message(MSG "shared comlink acquired");
+	g_debug(MSG "shared comlink acquired");
 }
 
 
@@ -408,7 +408,7 @@ G_MODULE_EXPORT
 void be_shared_comlink_release(void)
 {
 	g_mutex_unlock(&linkmutex);
-	g_message(MSG "shared comlink released");
+	g_debug(MSG "shared comlink released");
 }
 
 
