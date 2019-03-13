@@ -113,7 +113,7 @@ static gboolean gui_fitbox_selected(GtkWidget *w, gpointer data)
 
 
 
-	n = xyplot_get_selection_data(w, &x, &y);
+	n = xyplot_get_selection_data(w, &x, &y, NULL);
 
 	if (!n) {
 
@@ -194,7 +194,7 @@ static gboolean gui_fitbox_selected(GtkWidget *w, gpointer data)
 	}
 
 	xyplot_drop_graph(w, ref);
-	ref = xyplot_add_graph(w, x, y, DLEN, g_strdup_printf("FIT"));
+	ref = xyplot_add_graph(w, x, y, NULL, DLEN, g_strdup_printf("FIT"));
 
 	const GdkRGBA red = {1.0, 0.0, 0.0, 1.0};
 	xyplot_set_graph_style(w, ref, DASHES);
@@ -216,7 +216,7 @@ static gboolean gui_fitbox_selected(GtkWidget *w, gpointer data)
 	}
 
 	xyplot_drop_graph(w, ref2);
-	ref2 = xyplot_add_graph(w, x, y, DLEN, g_strdup_printf("FIT"));
+	ref2 = xyplot_add_graph(w, x, y, NULL, DLEN, g_strdup_printf("FIT"));
 
 	xyplot_set_graph_style(w, ref2, LINES);
 	xyplot_set_graph_rgba(w, ref2, red);
@@ -411,9 +411,23 @@ static void spectrum_append_data(Spectrum *p, struct spectrum *sp)
 		}
 	}
 
-
-	ref = xyplot_add_graph(p->cfg->plot, sp->x, sp->y, sp->n,
+	/* waterfall test */
+#if 1
+	ref = xyplot_add_graph(p->cfg->plot, sp->x, sp->y, NULL, sp->n,
 			       g_strdup_printf("SPECTRUM"));
+#else
+	{
+	gsize i;
+	static double cnt = 0.0;
+	gdouble *y = (gdouble *) g_malloc(sp->n * sizeof(gdouble));
+	for (i = 0; i < sp->n; i++)
+		y[i] = cnt;
+
+	ref = xyplot_add_graph(p->cfg->plot, y, sp->x, sp->y, sp->n,
+			       g_strdup_printf("SPECTRUM"));
+	cnt += 1.0;
+	}
+#endif
 
 	xyplot_set_graph_style(p->cfg->plot, ref, p->cfg->s_per);
 	xyplot_set_graph_rgba(p->cfg->plot, ref, p->cfg->c_per);
@@ -518,7 +532,7 @@ static void spectrum_append_avg(Spectrum *p, struct spectrum *sp)
 	p->cfg->avg = g_list_append(p->cfg->avg, sp);
 
 
-	p->cfg->r_avg = xyplot_add_graph(p->cfg->plot, x, y, sp->n,
+	p->cfg->r_avg = xyplot_add_graph(p->cfg->plot, x, y, NULL, sp->n,
 					 g_strdup_printf("AVERAGE"));
 	xyplot_set_graph_style(p->cfg->plot, p->cfg->r_avg, p->cfg->s_avg);
 	xyplot_set_graph_rgba(p->cfg->plot, p->cfg->r_avg, p->cfg->c_avg);
