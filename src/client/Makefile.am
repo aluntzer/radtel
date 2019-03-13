@@ -84,7 +84,8 @@ client_SOURCES += widgets/sys_status/sys_status.c \
 		  widgets/sys_status/sys_status_info_bar.c
 
 client_SOURCES += widgets/obs_assist/obs_assist.c \
-		  widgets/obs_assist/obs_assist_cross.c
+		  widgets/obs_assist/obs_assist_cross.c \
+		  widgets/obs_assist/obs_assist_gal_plane.c
 
 
 

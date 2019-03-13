@@ -115,6 +115,34 @@ struct _ObsAssistConfig {
 
 	} cross;
 
+
+	struct {
+		gdouble glon_lo;
+		gdouble glon_hi;
+		gdouble glon_stp;
+
+		gdouble glon_cur;
+		gint rpt_cur;
+
+		gint n_avg;
+		gint n_rpt;
+
+		gboolean wait;
+
+		GtkSpinButton *sb_deg;
+		GtkSpinButton *sb_lo;
+		GtkSpinButton *sb_hi;
+		GtkSpinButton *sb_avg;
+		GtkSpinButton *sb_rpt;
+
+		GtkWidget *pbar_glon;
+		GtkWidget *pbar_rpt;
+
+		GtkWidget *plt;
+
+	} gal_plane;
+
+
 };
 
 

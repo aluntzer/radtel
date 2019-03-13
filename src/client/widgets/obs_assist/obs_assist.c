@@ -47,6 +47,11 @@ void obs_assist_clear_spec(ObsAssist *p)
 
 /**
  * @brief handle spectral data
+ *
+ * XXX we currently run observations on .5s timeouts; with the SRT spectrometer,
+ *     this is fine, but for other backends, we might want to do partial
+ *     data accumulation in this function (or accumulation/averaging on the
+ *     server), so we don't waste observation data.
  */
 
 static void obs_assist_handle_pr_spec_data(gpointer instance,
@@ -259,38 +264,6 @@ void obs_assist_abort(GtkWidget *w, gpointer data)
 
 
 /**
- * @brief create galactic plane scan selection
- */
-
-GtkWidget *ob_assist_gal_line_scan_new(ObsAssist *p)
-{
-	GtkGrid *grid;
-	GtkWidget *w;
-
-
-	grid = GTK_GRID(new_default_grid());
-
-	w = gui_create_desclabel("Galactic Line Scan",
-				 "Scan along galactic longitude.");
-
-	gtk_grid_attach(GTK_GRID(grid), w, 0, 0, 1, 1);
-
-	w = gtk_button_new_with_label("Start");
-	gtk_widget_set_tooltip_text(w, "Start Galactic Line Scan");
-
-	gtk_widget_set_hexpand(w, TRUE);
-	gtk_widget_set_halign(w, GTK_ALIGN_END);
-	gtk_grid_attach(grid, w, 1, 0, 1, 1);
-#if 0
-	g_signal_connect(G_OBJECT(w), "clicked",
-			 G_CALLBACK(obs_assist_cross_setup_cb), p);
-#endif
-
-	return GTK_WIDGET(grid);
-}
-
-
-/**
  * @brief create beam switching selection
  */
 
@@ -363,7 +336,7 @@ static void gui_create_obs_assist_controls(ObsAssist *p)
 
 	w = obs_assist_cross_scan_new(p);
 	gtk_box_pack_start(GTK_BOX(p), w, FALSE, FALSE, 0);
-	w = ob_assist_gal_line_scan_new(p);
+	w = obs_assist_gal_plane_scan_new(p);
 	gtk_box_pack_start(GTK_BOX(p), w, FALSE, FALSE, 0);
 	w = ob_assist_beam_switching_new(p);
 	gtk_box_pack_start(GTK_BOX(p), w, FALSE, FALSE, 0);
