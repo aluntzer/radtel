@@ -94,11 +94,14 @@ struct _ObsAssistConfig {
 		gdouble az_stp;
 		gdouble el_stp;
 
+		guint samples;
+
 		gboolean track;
 
 		GtkSpinButton *sb_az;
 		GtkSpinButton *sb_el;
 		GtkSpinButton *sb_deg;
+		GtkSpinButton *sb_sa;
 
 		GtkWidget *pbar_az;
 		GtkWidget *pbar_el;

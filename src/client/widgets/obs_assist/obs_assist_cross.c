@@ -245,8 +245,8 @@ static gboolean cross_plt_fitbox_selected(GtkWidget *w, gpointer data)
 
 	lbl = g_strdup_printf("Fit Results:\n\n"
 			      "<tt>"
-			      "Peak shift:       <b>%5.0f°</b>\n"
-			      "Height over base: <b>%5.0fK</b>\n"
+			      "Peak shift:       <b>%5.2f°</b>\n"
+			      "Height over base: <b>%6.2fK</b>\n"
 			      "FWHM:             <b>%5.2f°</b>\n\n"
 			      "</tt>",
 			      par[2], par[0],
@@ -505,12 +505,11 @@ static gboolean cross_in_position(ObsAssist *p, gdouble az, gdouble el)
 
 	if ((d_az > az_tol) || (d_el > el_tol)) {
 
+		obs_assist_clear_spec(p);
+
 		/* disable acquisition first */
-		if (p->cfg->acq_enabled) {
+		if (p->cfg->acq_enabled)
 			cmd_spec_acq_disable(PKT_TRANS_ID_UNDEF);
-			obs_assist_clear_spec(p);
-			return FALSE;
-		}
 
 		/* update position if telescope is not moving already */
 		if (!p->cfg->moving)
@@ -539,6 +538,8 @@ static gboolean cross_measure(ObsAssist *p, gboolean az)
 	gdouble avg = 0.0;
 	gdouble offset;
 
+	static guint sample;
+
 
 	/* enable acquisition at current position */
 	if (!p->cfg->acq_enabled) {
@@ -565,6 +566,13 @@ static gboolean cross_measure(ObsAssist *p, gboolean az)
 		g_array_append_val(p->cfg->cross.el.off, offset);
 		g_array_append_val(p->cfg->cross.el.amp, avg);
 	}
+
+	if (sample < p->cfg->cross.samples) {
+		sample++;
+		return FALSE;
+	}
+
+	sample = 0;
 
 	return TRUE;
 }
@@ -815,9 +823,11 @@ static void obs_assist_on_prepare_cross(GtkWidget *as, GtkWidget *pg,
 
 
 	/* set configuration */
-	p->cfg->cross.az_pt = gtk_spin_button_get_value(p->cfg->cross.sb_az);
-	p->cfg->cross.el_pt = gtk_spin_button_get_value(p->cfg->cross.sb_el);
-	p->cfg->cross.deg   = gtk_spin_button_get_value(p->cfg->cross.sb_deg);
+	p->cfg->cross.az_pt   = gtk_spin_button_get_value(p->cfg->cross.sb_az);
+	p->cfg->cross.el_pt   = gtk_spin_button_get_value(p->cfg->cross.sb_el);
+	p->cfg->cross.deg     = gtk_spin_button_get_value(p->cfg->cross.sb_deg);
+	p->cfg->cross.samples = gtk_spin_button_get_value(p->cfg->cross.sb_sa);
+
 	p->cfg->cross.az_cent = p->cfg->az;
 	p->cfg->cross.el_cent = p->cfg->el;
 	p->cfg->cross.ra_cent = p->cfg->ra;
@@ -858,6 +868,7 @@ static void obs_assist_on_prepare_cross(GtkWidget *as, GtkWidget *pg,
 	      "Center Elevation:          <b>%5.2f°</b>\n"
 	      "Scan range in Azimuth:     <b>%5.2f°</b> to <b>%5.2f°</b>\n"
 	      "Scan range in Elevation:   <b>%5.2f°</b> to <b>%5.2f°</b>\n"
+	      "Samples per position:      <b>%u</b>\n"
 	      "Tracking:                  <b>%s</b>\n"
 	      "</tt>",
 	      p->cfg->cross.az_pt, p->cfg->cross.el_pt,
@@ -866,6 +877,7 @@ static void obs_assist_on_prepare_cross(GtkWidget *as, GtkWidget *pg,
 	      p->cfg->cross.az_cent, p->cfg->cross.el_cent,
 	      az_min, az_max,
 	      p->cfg->cross.el_min, p->cfg->cross.el_max,
+	      p->cfg->cross.samples,
 	      p->cfg->cross.track ? "ENABLED" : "DISABLED");
 
         gtk_label_set_markup(GTK_LABEL(w), lbl);
@@ -1029,16 +1041,30 @@ static void obs_assist_cross_create_page_2(GtkAssistant *as, ObsAssist *p)
 	gtk_grid_attach(grid, GTK_WIDGET(sb), 1, 2, 1, 1);
 	p->cfg->cross.sb_el = GTK_SPIN_BUTTON(sb);
 
+	/** EL **/
+	w = gui_create_desclabel("Samples per position",
+				 "Specify the number of measurements taken at "
+				 "each position.");
+	gtk_grid_attach(grid, w, 0, 3, 1, 1);
+
+	sb = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(1, 101, 1));
+	gtk_spin_button_set_value(sb, 1);
+	gtk_spin_button_set_numeric(sb, TRUE);
+	gtk_spin_button_set_snap_to_ticks(sb, TRUE);
+	gtk_widget_set_valign(GTK_WIDGET(sb), GTK_ALIGN_CENTER);
+	gtk_grid_attach(grid, GTK_WIDGET(sb), 1, 3, 1, 1);
+	p->cfg->cross.sb_sa = GTK_SPIN_BUTTON(sb);
+
 
 	w = gui_create_desclabel("Enable Tracking",
 				 "If enabled, the current on-sky position is "
 				 "tracked at sidereal rate.");
-	gtk_grid_attach(grid, w, 0, 3, 1, 1);
+	gtk_grid_attach(grid, w, 0, 4, 1, 1);
 
 	w = gtk_check_button_new_with_label("Track Sky");
 	g_signal_connect(G_OBJECT(w), "toggled",
 				 G_CALLBACK(obs_assist_on_cross_track), p);
-	gtk_grid_attach(grid, w, 1, 3, 1, 1);
+	gtk_grid_attach(grid, w, 1, 4, 1, 1);
 
 
 
