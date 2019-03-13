@@ -48,7 +48,7 @@ void ack_capabilities(uint16_t trans_id, struct capabilities *c)
 
 	pkt_hdr_to_net_order(pkt);
 
-	g_message("Sending capabilities");
+	g_debug("Sending capabilities");
 	net_send((void *) pkt, pkt_size);
 
 	/* clean up */

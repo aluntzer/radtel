@@ -38,7 +38,7 @@ void cmd_spec_acq_enable(uint16_t trans_id)
 
 	pkt_hdr_to_net_order(pkt);
 
-	g_message("Requesting enable of spectral acquisition");
+	g_debug("Requesting enable of spectral acquisition");
 	net_send((void *) pkt, pkt_size);
 
 	/* clean up */

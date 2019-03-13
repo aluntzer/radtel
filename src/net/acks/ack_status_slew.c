@@ -48,7 +48,7 @@ void ack_status_slew(uint16_t trans_id, struct status *c)
 
 	pkt_hdr_to_net_order(pkt);
 
-	g_message("Sending SLEW status");
+	g_debug("Sending SLEW status");
 	net_send((void *) pkt, pkt_size);
 
 	/* clean up */

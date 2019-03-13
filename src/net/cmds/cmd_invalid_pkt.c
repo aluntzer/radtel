@@ -38,7 +38,7 @@ void cmd_invalid_pkt(uint16_t trans_id)
 
 	pkt_hdr_to_net_order(pkt);
 
-	g_message("Signalling invalid packet");
+	g_debug("Signalling invalid packet");
 	net_send((void *) pkt, pkt_size);
 
 	/* clean up */

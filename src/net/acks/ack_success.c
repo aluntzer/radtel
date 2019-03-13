@@ -38,7 +38,7 @@ void ack_success(uint16_t trans_id)
 
 	pkt_hdr_to_net_order(pkt);
 
-	g_message("Signalling successful operation");
+	g_debug("Signalling successful operation");
 	net_send((void *) pkt, pkt_size);
 
 	/* clean up */

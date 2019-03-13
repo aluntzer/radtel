@@ -49,7 +49,7 @@ void cmd_moveto_azel(uint16_t trans_id, double az, double el)
 
 	pkt_hdr_to_net_order(pkt);
 
-	g_message("Sending command moveto AZ/EL %g/%g", az, el);
+	g_debug("Sending command moveto AZ/EL %g/%g", az, el);
 	net_send((void *) pkt, pkt_size);
 
 	/* clean up */

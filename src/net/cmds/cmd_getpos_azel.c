@@ -38,7 +38,7 @@ void cmd_getpos_azel(uint16_t trans_id)
 
 	pkt_hdr_to_net_order(pkt);
 
-	g_message("Requesting telescope AZEL");
+	g_debug("Requesting telescope AZEL");
 	net_send((void *) pkt, pkt_size);
 
 	/* clean up */

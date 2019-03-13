@@ -48,7 +48,7 @@ void ack_status_move(uint16_t trans_id, struct status *c)
 
 	pkt_hdr_to_net_order(pkt);
 
-	g_message("Sending MOVE status");
+	g_debug("Sending MOVE status");
 	net_send((void *) pkt, pkt_size);
 
 	/* clean up */

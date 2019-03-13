@@ -45,7 +45,7 @@ void ack_spec_acq_enable(uint16_t trans_id)
 
 	pkt_hdr_to_net_order(pkt);
 
-	g_message("Sending SPEC ACQ ENABLE");
+	g_debug("Sending SPEC ACQ ENABLE");
 	net_send((void *) pkt, pkt_size);
 
 	g_free(pkt);

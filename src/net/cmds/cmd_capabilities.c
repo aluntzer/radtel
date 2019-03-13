@@ -38,7 +38,7 @@ void cmd_capabilities(uint16_t trans_id)
 
 	pkt_hdr_to_net_order(pkt);
 
-	g_message("Requesting capabilities");
+	g_debug("Requesting capabilities");
 	net_send((void *) pkt, pkt_size);
 
 	/* clean up */

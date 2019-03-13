@@ -51,7 +51,7 @@ void ack_spec_data(uint16_t trans_id, struct spec_data *s)
 
 	pkt_hdr_to_net_order(pkt);
 
-	g_message("Transmitting spectral data");
+	g_debug("Transmitting spectral data");
 
 	net_send((void *) pkt, pkt_size);
 

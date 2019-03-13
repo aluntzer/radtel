@@ -48,7 +48,7 @@ void ack_status_acq(uint16_t trans_id, struct status *c)
 
 	pkt_hdr_to_net_order(pkt);
 
-	g_message("Sending ACQ status");
+	g_debug("Sending ACQ status");
 	net_send((void *) pkt, pkt_size);
 
 	/* clean up */

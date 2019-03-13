@@ -43,7 +43,7 @@ void ack_spec_acq_cfg(uint16_t trans_id, struct spec_acq_cfg *acq)
 
 	pkt_hdr_to_net_order(pkt);
 
-	g_message("Sending current spectrometer configuration "
+	g_debug("Sending current spectrometer configuration "
 		  "FREQ range: %g - %g MHz, BW div: %d, BIN div %d,"
 		  "STACK: %d, ACQ %d",
 		  acq->freq_start_hz / 1e6,

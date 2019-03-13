@@ -49,7 +49,7 @@ void ack_getpos_azel(uint16_t trans_id, struct getpos *pos)
 
 	pkt_hdr_to_net_order(pkt);
 
-	g_message("Sending AZEL");
+	g_debug("Sending AZEL");
 	net_send((void *) pkt, pkt_size);
 
 	g_free(pkt);

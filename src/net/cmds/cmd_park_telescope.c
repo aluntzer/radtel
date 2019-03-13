@@ -38,7 +38,7 @@ void cmd_park_telescope(uint16_t trans_id)
 
 	pkt_hdr_to_net_order(pkt);
 
-	g_message("Requesting park_telescope");
+	g_debug("Requesting park_telescope");
 	net_send((void *) pkt, pkt_size);
 
 	/* clean up */
