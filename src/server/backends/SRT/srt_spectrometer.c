@@ -406,7 +406,18 @@ static guint16 *srt_spec_acquire_raw(guint32 refdiv, int mode, gsize *len)
 	be_shared_comlink_acquire();
 
 	s.busy = 1;
-	s.eta_msec = 0; /** XXX add estimate **/
+	switch (mode) {
+		case 0:
+			s.eta_msec = (typeof(s.eta_msec)) 2389.112;
+			break;
+		case 1:
+			s.eta_msec = (typeof(s.eta_msec)) 2908.880;
+			break;
+		case 2:
+			s.eta_msec = (typeof(s.eta_msec)) 3957.814;
+			break;
+	}
+
 	ack_status_acq(PKT_TRANS_ID_UNDEF, &s);
 
 	g_timer_start(timer);
@@ -906,6 +917,10 @@ static void srt_determine_bin_selection(struct spec_acq_cfg  *acq,
  * @param acs the allocated array of observation steps
  *
  * @returns the number of steps
+ *
+ * XXX there is a bug here where it is possible that zero bins are used from
+ *     the last refdiv recorded. This affects only performance, but should still
+ *     be addressed.
  */
 
 static gsize srt_comp_obs_strategy(struct spec_acq_cfg  *acq,
@@ -984,6 +999,8 @@ static uint32_t srt_spec_acquire(struct observation *obs)
 
 	gchar *cmd;
 
+	struct status st;
+
 
 
 	const struct acq_strategy *acs = obs->acs;
@@ -1011,6 +1028,21 @@ static uint32_t srt_spec_acquire(struct observation *obs)
 	}
 
 
+	st.busy = 1;
+	switch (obs->acq.bw_div) {
+		case 0:
+			st.eta_msec = (typeof(st.eta_msec)) 2389.112;
+			break;
+		case 1:
+			st.eta_msec = (typeof(st.eta_msec)) 2908.880;
+			break;
+		case 2:
+			st.eta_msec = (typeof(st.eta_msec)) 3957.814;
+			break;
+	}
+
+	st.eta_msec *= n;
+	ack_status_rec(PKT_TRANS_ID_UNDEF, &st);
 
 	for (i = 0; i < n; i++) {
 
@@ -1059,6 +1091,10 @@ static uint32_t srt_spec_acquire(struct observation *obs)
 
 	/* handover for transmission */
 	ack_spec_data(PKT_TRANS_ID_UNDEF, s);
+
+	st.busy = 0;
+	st.eta_msec = 0;
+	ack_status_rec(PKT_TRANS_ID_UNDEF, &st);
 
 	obs->acq.acq_max--;
 

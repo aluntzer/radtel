@@ -19,6 +19,7 @@ AM_LDFLAGS += -u ack_spec_acq_enable
 AM_LDFLAGS += -u ack_status_acq
 AM_LDFLAGS += -u ack_status_slew
 AM_LDFLAGS += -u ack_status_move
+AM_LDFLAGS += -u ack_status_rec
 
 bin_PROGRAMS = server 
 

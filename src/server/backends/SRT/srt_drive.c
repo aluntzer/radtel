@@ -703,7 +703,7 @@ static void srt_drive_cmd_motors(double *az_cnt, double *el_cnt)
 				      abs(azc));
 
 		s.busy = 1;
-		s.eta_msec = 174.1202 * azc; /** XXX add config file entry **/
+		s.eta_msec = (typeof(s.eta_msec)) 174.1202 * fabs(*az_cnt); /** XXX add config file entry **/
 		ack_status_slew(PKT_TRANS_ID_UNDEF, &s);
 
 		g_timer_start(tm);
@@ -726,7 +726,7 @@ static void srt_drive_cmd_motors(double *az_cnt, double *el_cnt)
 
 		/* note: assuming worst-case speed */
 		s.busy = 1;
-		s.eta_msec = 304.33578 * elc; /** XXX add config file entry **/
+		s.eta_msec = (typeof(s.eta_msec)) 304.33578 * fabs(*el_cnt); /** XXX add config file entry **/
 		ack_status_slew(PKT_TRANS_ID_UNDEF, &s);
 
 		g_timer_start(tm);
@@ -821,7 +821,7 @@ static gpointer srt_drive_thread(gpointer data)
 		el_cnt = fabs(srt_drive_cassi_el_counts(srt.pos.el_tgt) - srt.pos.el_cnts);
 
 		s.busy = 1;
-		s.eta_msec = 174.1202 * az_cnt + 304.33578 * el_cnt; /** XXX config file! **/
+		s.eta_msec = (typeof(s.eta_msec)) 174.1202 * az_cnt + 304.33578 * el_cnt; /** XXX config file! **/
 		ack_status_move(PKT_TRANS_ID_UNDEF, &s);
 
 		/* move until complete */
@@ -877,6 +877,8 @@ static int srt_drive_moveto(double az, double el)
 
 static gpointer srt_park_thread(gpointer data)
 {
+	double msec;
+	struct status s;
 
 	g_mutex_lock(&mutex);
 
@@ -885,6 +887,18 @@ static gpointer srt_park_thread(gpointer data)
 
 	g_message(MSG "current sensor counts: AZ: %g EL: %g",
 		  srt.pos.az_cnts, srt.pos.el_cnts);
+
+	s.busy = 1;
+	/** XXX config file! **/
+	msec = 174.1202 * srt.pos.az_cnts + 304.33578 * srt.pos.el_cnts;
+
+	/** worst-case scenario: full rotation and then some **/
+	if (msec == 0.0)
+		msec = 174.1202 * 5000. + 304.33578 * 5000.;
+
+	s.eta_msec = (typeof(s.eta_msec)) msec;
+	ack_status_move(PKT_TRANS_ID_UNDEF, &s);
+	ack_status_slew(PKT_TRANS_ID_UNDEF, &s);
 
 
 	/* move to stow in azimuth */
@@ -911,6 +925,11 @@ static gpointer srt_park_thread(gpointer data)
 
 	srt_drive_notify_pos_update();
 
+	s.busy = 0;
+	s.eta_msec = 0;
+	ack_status_move(PKT_TRANS_ID_UNDEF, &s);
+	ack_status_slew(PKT_TRANS_ID_UNDEF, &s);
+
 	g_thread_exit(NULL);
 }
 
@@ -921,11 +940,26 @@ static gpointer srt_park_thread(gpointer data)
 
 static gpointer srt_recal_thread(gpointer data)
 {
+	double msec;
+	struct status s;
 
 	g_mutex_lock(&mutex);
 
 	g_message(MSG "current sensor counts: AZ: %g EL: %g",
 		  srt.pos.az_cnts, srt.pos.el_cnts);
+
+	s.busy = 1;
+	/** XXX config file! **/
+	msec = 174.1202 * srt.pos.az_cnts + 304.33578 * srt.pos.el_cnts;
+
+	/** worst-case scenario: full rotation and then some **/
+	if (msec == 0.0)
+		msec = 174.1202 * 5000. + 304.33578 * 5000.;
+
+	s.eta_msec = (typeof(s.eta_msec)) msec;
+	ack_status_move(PKT_TRANS_ID_UNDEF, &s);
+	ack_status_slew(PKT_TRANS_ID_UNDEF, &s);
+
 
 	be_shared_comlink_acquire();
 	/* move to stow in azimuth */
@@ -950,6 +984,11 @@ static gpointer srt_recal_thread(gpointer data)
 	/* rotate back to where we are supposed to be */
 	g_cond_signal(&cond);
 	g_mutex_unlock(&mutex);
+
+	s.busy = 0;
+	s.eta_msec = 0;
+	ack_status_move(PKT_TRANS_ID_UNDEF, &s);
+	ack_status_slew(PKT_TRANS_ID_UNDEF, &s);
 
 	g_thread_exit(NULL);
 }
