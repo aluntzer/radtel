@@ -50,6 +50,31 @@ static void sys_status_handle_pr_status_acq(gpointer instance,
 		gtk_spinner_start(GTK_SPINNER(p->cfg->spin_acq));
 	else
 		gtk_spinner_stop(GTK_SPINNER(p->cfg->spin_acq));
+
+	p->cfg->eta_acq = (gdouble) s->eta_msec / 1000.;
+}
+
+
+/**
+ * @brief handle status rec
+ */
+
+static void sys_status_handle_pr_status_rec(gpointer instance,
+					    const struct status *s,
+					    gpointer data)
+{
+	SysStatus *p;
+
+
+	p = SYS_STATUS(data);
+
+
+	if (s->busy)
+		gtk_spinner_start(GTK_SPINNER(p->cfg->spin_rec));
+	else
+		gtk_spinner_stop(GTK_SPINNER(p->cfg->spin_rec));
+
+	p->cfg->eta_rec = (gdouble) s->eta_msec / 1000.;
 }
 
 
@@ -66,12 +91,15 @@ static void sys_status_handle_pr_status_slew(gpointer instance,
 
 	p = SYS_STATUS(data);
 
+
 	if (s->busy)
 		gtk_spinner_start(GTK_SPINNER(p->cfg->spin_slew));
 	else
 		gtk_spinner_stop(GTK_SPINNER(p->cfg->spin_slew));
 
+	p->cfg->eta_slew = (gdouble) s->eta_msec / 1000.;
 }
+
 
 /**
  * @brief handle status move
@@ -86,12 +114,17 @@ static void sys_status_handle_pr_status_move(gpointer instance,
 
 	p = SYS_STATUS(data);
 
+	g_message("MOV! %d", s->eta_msec);
+
 	if (s->busy)
 		gtk_spinner_start(GTK_SPINNER(p->cfg->spin_move));
 	else
 		gtk_spinner_stop(GTK_SPINNER(p->cfg->spin_move));
 
+	p->cfg->eta_move = (gdouble) s->eta_msec / 1000.;
 }
+
+
 
 
 /**
@@ -140,23 +173,45 @@ static void gui_create_sys_status_controls(SysStatus *p)
 		grid2 = gtk_grid_new();
 		gtk_grid_set_row_spacing(GTK_GRID(grid2), 6);
 		gtk_grid_set_column_spacing(GTK_GRID(grid2), 12);
+
+
 		w = gtk_label_new("ACQ:");
 		gtk_grid_attach(GTK_GRID(grid2), w, 0, 0, 1, 1);
 		w = gtk_spinner_new();
 		gtk_grid_attach(GTK_GRID(grid2), w, 1, 0, 1, 1);
 		p->cfg->spin_acq = w;
+		w = gtk_label_new("");
+		gtk_grid_attach(GTK_GRID(grid2), w, 2, 0, 1, 1);
+		p->cfg->lbl_eta_acq = GTK_LABEL(w);
 
-		w = gtk_label_new("SLEW:");
+		w = gtk_label_new("REC:");
 		gtk_grid_attach(GTK_GRID(grid2), w, 0, 1, 1, 1);
 		w = gtk_spinner_new();
 		gtk_grid_attach(GTK_GRID(grid2), w, 1, 1, 1, 1);
-		p->cfg->spin_slew = w;
+		p->cfg->spin_rec = w;
+		w = gtk_label_new("");
+		gtk_grid_attach(GTK_GRID(grid2), w, 2, 1, 1, 1);
+		p->cfg->lbl_eta_rec = GTK_LABEL(w);
 
-		w = gtk_label_new("MOVE:");
+		w = gtk_label_new("SLEW:");
 		gtk_grid_attach(GTK_GRID(grid2), w, 0, 2, 1, 1);
 		w = gtk_spinner_new();
 		gtk_grid_attach(GTK_GRID(grid2), w, 1, 2, 1, 1);
+		p->cfg->spin_slew = w;
+		w = gtk_label_new("");
+		gtk_grid_attach(GTK_GRID(grid2), w, 2, 2, 1, 1);
+		p->cfg->lbl_eta_slew = GTK_LABEL(w);
+
+		w = gtk_label_new("MOVE:");
+		gtk_grid_attach(GTK_GRID(grid2), w, 0, 3, 1, 1);
+		w = gtk_spinner_new();
+		gtk_grid_attach(GTK_GRID(grid2), w, 1, 3, 1, 1);
 		p->cfg->spin_move = w;
+		w = gtk_label_new("");
+		gtk_grid_attach(GTK_GRID(grid2), w, 2, 3, 1, 1);
+		p->cfg->lbl_eta_move = GTK_LABEL(w);
+
+
 
 		gtk_grid_attach(GTK_GRID(grid), grid2, 2, 0, 1, 1);
 	}
@@ -184,6 +239,7 @@ static gboolean sys_status_destroy(GtkWidget *w, void *data)
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_acq);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_slw);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_mov);
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_rec);
 
 	return TRUE;
 }
@@ -236,6 +292,10 @@ static void sys_status_init(SysStatus *p)
 
 	p->cfg->id_mov = g_signal_connect(sig_get_instance(), "pr-status-move",
 				 G_CALLBACK(sys_status_handle_pr_status_move),
+				 (void *) p);
+
+	p->cfg->id_rec = g_signal_connect(sig_get_instance(), "pr-status-rec",
+				 G_CALLBACK(sys_status_handle_pr_status_rec),
 				 (void *) p);
 
 	g_signal_connect(p, "destroy", G_CALLBACK(sys_status_destroy), NULL);

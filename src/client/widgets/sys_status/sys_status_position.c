@@ -147,6 +147,60 @@ static gboolean sys_status_timeout_cb(void *data)
 	sys_status_update_equ_lbl(p);
 	sys_status_update_gal_lbl(p);
 
+	/** XXX separate function! */
+	gchar *lbl = NULL;
+
+	if (p->cfg->eta_acq > 0.0) {
+	        lbl = g_strdup_printf("<tt> %03.2fs</tt>", p->cfg->eta_acq);
+		gtk_label_set_markup(p->cfg->lbl_eta_acq, lbl);
+		p->cfg->eta_acq = p->cfg->eta_acq - 1.0; /* 1 sec updates */
+		g_free(lbl);
+	} else {
+		gtk_label_set_text(p->cfg->lbl_eta_acq, "");
+	}
+
+	if (p->cfg->eta_rec > 0.0) {
+		gboolean  active;
+	        lbl = g_strdup_printf("<tt> %03.2fs</tt>", p->cfg->eta_rec);
+		gtk_label_set_markup(p->cfg->lbl_eta_rec, lbl);
+
+		/* ugly temporary hack: update only when slew spinner is active
+		 * (i.e. telescope actually moving */
+		g_object_get(G_OBJECT(p->cfg->spin_acq), "active", &active, NULL);
+		if (active)
+			p->cfg->eta_rec = p->cfg->eta_rec - 1.0; /* 1 sec updates */
+		g_free(lbl);
+	} else {
+		gtk_label_set_text(p->cfg->lbl_eta_rec, "");
+	}
+
+
+	if (p->cfg->eta_slew > 0.0) {
+	        lbl = g_strdup_printf("<tt> %03.2fs</tt>", p->cfg->eta_slew);
+		gtk_label_set_markup(p->cfg->lbl_eta_slew, lbl);
+		p->cfg->eta_slew = p->cfg->eta_slew - 1.0; /* 1 sec updates */
+		g_free(lbl);
+	} else {
+		gtk_label_set_text(p->cfg->lbl_eta_slew, "");
+	}
+
+
+	if (p->cfg->eta_move > 0.0) {
+		gboolean  active;
+	        lbl = g_strdup_printf("<tt> %03.2fs</tt>", p->cfg->eta_move);
+		gtk_label_set_markup(p->cfg->lbl_eta_move, lbl);
+
+		/* ugly temporary hack: update only when slew spinner is active
+		 * (i.e. telescope actually moving */
+		g_object_get(G_OBJECT(p->cfg->spin_slew), "active", &active, NULL);
+		if (active)
+			p->cfg->eta_move = p->cfg->eta_move - 1.0; /* 1 sec updates */
+		g_free(lbl);
+	} else {
+		gtk_label_set_text(p->cfg->lbl_eta_move, "");
+	}
+
+
 
 	return G_SOURCE_CONTINUE;
 }

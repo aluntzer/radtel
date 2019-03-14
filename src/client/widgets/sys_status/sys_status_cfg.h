@@ -35,9 +35,25 @@ struct _SysStatusConfig {
 	GtkLabel  *lbl_glat;
 	GtkLabel  *lbl_glon;
 
+
+
 	GtkWidget  *spin_acq;
 	GtkWidget  *spin_slew;
 	GtkWidget  *spin_move;
+	GtkWidget  *spin_rec;
+
+	GtkLabel  *lbl_eta_acq;
+	GtkLabel  *lbl_eta_slew;
+	GtkLabel  *lbl_eta_move;
+	GtkLabel  *lbl_eta_rec;
+
+
+	gdouble eta_acq;
+	gdouble eta_slew;
+	gdouble eta_move;
+	gdouble eta_rec;
+
+
 
 	GtkWidget *info_bar;
 	GtkLabel  *info_bar_lbl;
@@ -49,6 +65,7 @@ struct _SysStatusConfig {
 	guint id_acq;
 	guint id_slw;
 	guint id_mov;
+	guint id_rec;
 };
 
 
