@@ -45,7 +45,8 @@ client_SOURCES += pkt_proc.c \
 		  proc/proc_pr_spec_acq_cfg.c \
 		  proc/proc_pr_status_acq.c \
 		  proc/proc_pr_status_slew.c \
-		  proc/proc_pr_status_move.c
+		  proc/proc_pr_status_move.c \
+		  proc/proc_pr_status_rec.c
 
 
 client_SOURCES += sig/sig_pr_success.c \
@@ -58,6 +59,7 @@ client_SOURCES += sig/sig_pr_success.c \
 		  sig/sig_pr_status_acq.c \
 		  sig/sig_pr_status_slew.c \
 		  sig/sig_pr_status_move.c \
+		  sig/sig_pr_status_rec.c \
 		  sig/signals.c
 
 client_SOURCES += widgets/radio/radio.c \

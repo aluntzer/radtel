@@ -62,6 +62,7 @@
 #define PR_STATUS_ACQ		0xa010	/* spectrum acquisition status */
 #define PR_STATUS_SLEW		0xa011	/* drive slew status */
 #define PR_STATUS_MOVE		0xa012	/* drive move (to target) status */
+#define PR_STATUS_REC		0xa013	/* (full) spectrum record status */
 
 
 

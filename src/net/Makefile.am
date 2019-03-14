@@ -29,5 +29,6 @@ libproto_a_SOURCES = protocol.c \
 		     acks/ack_spec_acq_cfg.c \
 		     acks/ack_status_acq.c \
 		     acks/ack_status_slew.c \
-		     acks/ack_status_move.c
+		     acks/ack_status_move.c \
+		     acks/ack_status_rec.c
 
