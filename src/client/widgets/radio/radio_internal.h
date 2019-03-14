@@ -36,6 +36,8 @@ void radio_update_bin_divider(Radio *p);
 void radio_update_bw_divider(Radio *p);
 void radio_update_avg_range(Radio *p);
 
+gboolean radio_spec_acq_cmd_spec_acq_enable(gpointer instance, gpointer data);
+gboolean radio_spec_acq_cmd_spec_acq_disable(gpointer instance, gpointer data);
 
 
 

@@ -45,20 +45,6 @@ static void radio_handle_pr_capabilities(gpointer instance,
 	p = RADIO(data);
 
 	p->cfg->c = (*c);
-#if 0
-	g_message("Event \"pr-capabilities\" signalled:");
-
-	g_message("\tfreq_min_hz %lu",		p->cfg->c.freq_min_hz);
-	g_message("\tfreq_max_hz %lu",		p->cfg->c.freq_max_hz);
-	g_message("\tfreq_inc_hz %d",		p->cfg->c.freq_inc_hz);
-	g_message("\tbw_max_hz %d",		p->cfg->c.bw_max_hz);
-	g_message("\tbw_max_div_lin %d",	p->cfg->c.bw_max_div_lin);
-	g_message("\tbw_max_div_rad2 %d",	p->cfg->c.bw_max_div_rad2);
-	g_message("\tbw_max_bins %d",		p->cfg->c.bw_max_bins);
-	g_message("\tbw_max_bin_div_lin %d",	p->cfg->c.bw_max_bin_div_lin);
-	g_message("\tbw_max_bin_div_rad2 %d",	p->cfg->c.bw_max_bin_div_rad2);
-	g_message("\tn_stack_max %d",		p->cfg->c.n_stack_max);
-#endif
 
 	radio_update_bw_divider(p);
 	radio_update_bin_divider(p);
@@ -85,16 +71,6 @@ static void radio_handle_pr_spec_acq_cfg(gpointer instance,
 	p = RADIO(data);
 
 
-	g_message("Event \"pr-spec-acq-cfg\" signalled:");
-
-	g_message("\tfreq_start_hz %lu", acq->freq_start_hz);
-	g_message("\tfreq_stop_hz  %lu", acq->freq_stop_hz);
-	g_message("\tbw_div        %u",  acq->bw_div);
-	g_message("\tbin_div       %u",  acq->bin_div);
-	g_message("\tn_stack       %u",  acq->n_stack);
-	g_message("\tacq_max       %u",  acq->acq_max);
-
-
 	f0 = (gdouble) acq->freq_start_hz * 1e-6;
 	f1 = (gdouble) acq->freq_stop_hz  * 1e-6;
 
@@ -116,6 +92,35 @@ static void radio_handle_pr_spec_acq_cfg(gpointer instance,
 
 	/* acq_max is useless (counts down if running), ignore */
 }
+
+
+
+/**
+ * @brief handle status acq
+ *
+ * @note we use the acq status to update the state of the acqusition control
+ *       button, because there is no status-get command and I don't want to add
+ *       one because the spectrometer backend is supposed to push the acq status
+ *       anyway
+ */
+
+static void radio_handle_pr_status_acq(gpointer instance,
+					    const struct status *s,
+					    gpointer data)
+{
+	Radio *p;
+
+
+	p = RADIO(data);
+
+	if (!s->busy)
+		return;
+
+	if (!gtk_switch_get_active(p->cfg->sw_acq))
+		radio_spec_acq_cmd_spec_acq_enable(instance, data);
+}
+
+
 
 
 
@@ -146,6 +151,27 @@ static void gui_create_radio_controls(Radio *p)
 	/* XXX move out of here */
 	w = radio_spec_acq_ctrl_new(p);
 	gtk_box_pack_start(GTK_BOX(p), w, FALSE, FALSE, 0);
+}
+
+
+/**
+ * @brief destroy signal handler
+ */
+
+static gboolean radio_destroy(GtkWidget *w, void *data)
+{
+	Radio *p;
+
+
+	p = RADIO(w);
+
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_cap);
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_cfg);
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_acq);
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_ena);
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_dis);
+
+	return TRUE;
 }
 
 
@@ -184,14 +210,29 @@ static void radio_init(Radio *p)
 	gtk_box_set_spacing(GTK_BOX(p), 0);
 	gui_create_radio_controls(p);
 
-	g_signal_connect(sig_get_instance(), "pr-capabilities",
+	p->cfg->id_cap = g_signal_connect(sig_get_instance(), "pr-capabilities",
 			 G_CALLBACK(radio_handle_pr_capabilities),
 			 (void *) p);
 
-	g_signal_connect(sig_get_instance(), "pr-spec-acq-cfg",
+	p->cfg->id_cfg = g_signal_connect(sig_get_instance(), "pr-spec-acq-cfg",
 			 G_CALLBACK(radio_handle_pr_spec_acq_cfg),
 			 (void *) p);
 
+	p->cfg->id_acq = g_signal_connect(sig_get_instance(), "pr-status-acq",
+			 G_CALLBACK(radio_handle_pr_status_acq),
+			 (void *) p);
+
+	p->cfg->id_ena = g_signal_connect(sig_get_instance(),
+			 "pr-spec-acq-enable",
+			 G_CALLBACK(radio_spec_acq_cmd_spec_acq_enable),
+			 (gpointer) p);
+
+	p->cfg->id_dis = g_signal_connect(sig_get_instance(),
+			 "pr-spec-acq-disable",
+			 G_CALLBACK(radio_spec_acq_cmd_spec_acq_disable),
+			 (gpointer) p);
+
+	g_signal_connect(p, "destroy", G_CALLBACK(radio_destroy), NULL);
 }
 
 

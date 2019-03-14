@@ -45,9 +45,18 @@ struct _RadioConfig {
 	GtkLabel *bw_cfg;
 	GtkLabel *avg_cfg;
 
+	GtkSwitch *sw_acq;
+
 
 	int bw_div;		/* bandwidth divider */
 	int bin_div;		/* per-bandwidth bin divider */
+
+
+	guint id_cap;
+	guint id_acq;
+	guint id_cfg;
+	guint id_ena;
+	guint id_dis;
 };
 
 

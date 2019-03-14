@@ -32,7 +32,7 @@
  */
 
 static gboolean radio_spec_acq_toggle_cb(GtkWidget *w,
-					 gboolean state, Radio *p)
+					 gboolean state, gpointer data)
 {
 	if (gtk_switch_get_active(GTK_SWITCH(w)))
 		cmd_spec_acq_enable(PKT_TRANS_ID_UNDEF);
@@ -74,9 +74,14 @@ static void radio_spec_acq_toggle_button(GtkSwitch *s, gboolean state)
  *	 transported via the userdata argument
  */
 
-static gboolean radio_spec_acq_cmd_spec_acq_enable(GObject *o, gpointer data)
+gboolean radio_spec_acq_cmd_spec_acq_enable(gpointer instance, gpointer data)
 {
-	radio_spec_acq_toggle_button(GTK_SWITCH(data), TRUE);
+	Radio *p;
+
+
+	p = RADIO(data);
+
+	radio_spec_acq_toggle_button(p->cfg->sw_acq, TRUE);
 
 	return FALSE;
 }
@@ -89,9 +94,14 @@ static gboolean radio_spec_acq_cmd_spec_acq_enable(GObject *o, gpointer data)
  *	 transported via the userdata argument
  */
 
-static gboolean radio_spec_acq_cmd_spec_acq_disable(GObject *o, gpointer data)
+gboolean radio_spec_acq_cmd_spec_acq_disable(gpointer instance, gpointer data)
 {
-	radio_spec_acq_toggle_button(GTK_SWITCH(data), FALSE);
+	Radio *p;
+
+
+	p = RADIO(data);
+
+	radio_spec_acq_toggle_button(p->cfg->sw_acq, FALSE);
 
 	return FALSE;
 }
@@ -161,14 +171,10 @@ GtkWidget *radio_spec_acq_ctrl_new(Radio *p)
 	gtk_widget_set_halign(w, GTK_ALIGN_END);
 
 	gtk_grid_attach(grid, w, 2, 0, 1, 1);
-	g_signal_connect(sig_get_instance(), "pr-spec-acq-enable",
-			 G_CALLBACK(radio_spec_acq_cmd_spec_acq_enable),
-			 (gpointer) w);
-	g_signal_connect(sig_get_instance(), "pr-spec-acq-disable",
-			 G_CALLBACK(radio_spec_acq_cmd_spec_acq_disable),
-			 (gpointer) w);
 	g_signal_connect(G_OBJECT(w), "state-set",
 			 G_CALLBACK(radio_spec_acq_toggle_cb), p);
+
+	p->cfg->sw_acq = GTK_SWITCH(w);
 
 
 	return GTK_WIDGET(grid);

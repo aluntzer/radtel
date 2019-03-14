@@ -42,6 +42,7 @@ struct _RadioClass {
 	GtkBoxClass parent_class;
 };
 
+GType radio_get_type(void) G_GNUC_CONST;
 
 GtkWidget *radio_new(void);
 
