@@ -723,6 +723,9 @@ static void on_assistant_apply(GtkWidget *as, ObsAssist *p)
 	p->cfg->cross.el.off = g_array_new(FALSE, FALSE, sizeof(gdouble));
 	p->cfg->cross.el.amp = g_array_new(FALSE, FALSE, sizeof(gdouble));
 
+
+	g_signal_emit_by_name(sig_get_instance(), "tracking", FALSE);
+
 	gtk_container_foreach(GTK_CONTAINER(p),
 			      (GtkCallback) gtk_widget_hide, NULL);
 

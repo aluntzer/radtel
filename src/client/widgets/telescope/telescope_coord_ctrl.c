@@ -24,19 +24,23 @@
 
 
 
-static gint telescope_coord_value_changed(GtkSpinButton *sb, Telescope *p)
+/**
+ * @brief update the horizontal reference if any other coordinate input mode
+ *        is selected
+ */
+
+void telescope_update_azel_internal(Telescope *p)
 {
 	struct coord_horizontal hor;
 	struct coord_equatorial	equ = {0};
 	struct coord_galactic gal = {0};
-
 
 	gtk_widget_show(GTK_WIDGET(p->cfg->not_vis_lbl));
 
 	switch (gtk_combo_box_get_active(p->cfg->coord_ref_cb)) {
 	case 0:
 		gtk_widget_hide(GTK_WIDGET(p->cfg->not_vis_lbl));
-		return TRUE;
+		return;
 	case 1:
 		equ.ra  = gtk_spin_button_get_value(p->cfg->sb_ra_glat);
 		equ.dec = gtk_spin_button_get_value(p->cfg->sb_de_glon);
@@ -52,18 +56,20 @@ static gint telescope_coord_value_changed(GtkSpinButton *sb, Telescope *p)
 					     0.0);
 		break;
 	default:
-		return TRUE;
+		g_warning("Unknown coord. ref. in %s:%d", __func__, __LINE__);
+		break;
 	};
+
 
 	/* is negative ? try to wrap */
 	if (hor.az > p->cfg->az_max)
 		hor.az = hor.az - 360.0;
 
 	if (hor.az < p->cfg->az_min || hor.az > p->cfg->az_max)
-		return TRUE;
+		return;
 
 	if (hor.el < p->cfg->el_min || hor.el > p->cfg->el_max)
-		return TRUE;
+		return;
 
 	/* we're good, update azel spin buttons and hide warning */
 	gtk_widget_hide(GTK_WIDGET(p->cfg->not_vis_lbl));
@@ -71,7 +77,13 @@ static gint telescope_coord_value_changed(GtkSpinButton *sb, Telescope *p)
 	gtk_spin_button_set_value(p->cfg->sb_az, hor.az);
 	gtk_spin_button_set_value(p->cfg->sb_el, hor.el);
 
+	return;
+}
 
+
+static gint telescope_coord_value_changed(GtkSpinButton *sb, Telescope *p)
+{
+	telescope_update_azel_internal(p);
 	return TRUE;
 }
 
@@ -357,9 +369,6 @@ static void telescope_create_coord_input(GtkGrid *grid, Telescope *p)
 GtkWidget *telescope_coord_ctrl_new(Telescope *p)
 {
 	GtkGrid *grid;
-
-	GtkWidget *w;
-	GtkWidget *tmp;
 
 
 	grid = GTK_GRID(new_default_grid());

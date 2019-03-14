@@ -42,6 +42,7 @@ struct _TelescopeConfig {
 	gdouble track_de;
 
 	gboolean tracking;
+	gboolean moving;
 
 	GtkComboBox   *coord_ref_cb;
 
@@ -54,6 +55,14 @@ struct _TelescopeConfig {
 	GtkLabel      *sb_el_de_glon_lbl;
 
 	GtkLabel      *not_vis_lbl;
+
+	GtkSwitch *sw_trk;
+
+	guint id_to;
+	guint id_cap;
+	guint id_pos;
+	guint id_trk;
+	guint id_mov;
 };
 
 

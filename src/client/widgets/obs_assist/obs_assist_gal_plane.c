@@ -348,6 +348,8 @@ static void on_assistant_apply(GtkWidget *as, ObsAssist *p)
 	GtkGrid *grid;
 
 
+	g_signal_emit_by_name(sig_get_instance(), "tracking", FALSE);
+
 	gtk_container_foreach(GTK_CONTAINER(p),
 			      (GtkCallback) gtk_widget_hide, NULL);
 

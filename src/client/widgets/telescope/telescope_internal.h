@@ -27,6 +27,10 @@ GtkWidget *telescope_recal_pointing_new(Telescope *p);
 GtkWidget *telescope_track_sky_new(Telescope *p);
 
 void telescope_update_movement_range(Telescope *p);
+void telescope_update_azel_internal(Telescope *p);
+void telescope_tracker_ctrl(gpointer instance, gboolean state, Telescope *p);
+gboolean telescope_tracker_azel_cb(gpointer instance, struct getpos *pos,
+				   Telescope *p);
 
 
 

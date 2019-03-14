@@ -54,6 +54,24 @@ static void telescope_handle_pr_capabilities(gpointer instance,
 }
 
 
+/**
+ * @brief handle status-move
+ */
+
+static void telscope_handle_pr_status_move(gpointer instance,
+					   const struct status *s,
+					   gpointer data)
+{
+	Telescope *p;
+
+
+	p = TELESCOPE(data);
+
+	p->cfg->moving = s->busy;
+}
+
+
+
 
 static void gui_create_telescope_controls(Telescope *p)
 {
@@ -78,6 +96,30 @@ static void gui_create_telescope_controls(Telescope *p)
 	gtk_box_pack_start(GTK_BOX(p), w, FALSE, FALSE, 0);
 
 }
+
+
+/**
+ * @brief destroy signal handler
+ */
+
+static gboolean telescope_destroy(GtkWidget *w, void *data)
+{
+	Telescope *p;
+
+
+	p = TELESCOPE(w);
+
+	g_source_remove(p->cfg->id_to);
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_pos);
+
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_cap);
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_pos);
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_trk);
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_mov);
+
+	return TRUE;
+}
+
 
 
 
@@ -111,6 +153,8 @@ static void telescope_init(Telescope *p)
 	/* initialise with nosensical values */
 	p->cfg->track_ra = DBL_MIN;
 	p->cfg->track_de = DBL_MIN;
+	p->cfg->tracking = FALSE;
+	p->cfg->moving   = FALSE;
 
 	gtk_orientable_set_orientation(GTK_ORIENTABLE(p),
 				       GTK_ORIENTATION_VERTICAL);
@@ -118,15 +162,23 @@ static void telescope_init(Telescope *p)
 	gtk_box_set_spacing(GTK_BOX(p), 0);
 	gui_create_telescope_controls(p);
 
-	g_signal_connect(sig_get_instance(), "pr-capabilities",
-			 G_CALLBACK(telescope_handle_pr_capabilities),
-			 (void *) p);
+	p->cfg->id_cap = g_signal_connect(sig_get_instance(), "pr-capabilities",
+				  G_CALLBACK(telescope_handle_pr_capabilities),
+				  (void *) p);
 
-#if 0
-	g_signal_connect(sig_get_instance(), "pr-spec-acq-cfg",
-			 G_CALLBACK(telescope_handle_pr_spec_acq_cfg),
-			 (void *) p);
-#endif
+	p->cfg->id_pos = g_signal_connect(sig_get_instance(), "pr-getpos-azel",
+				  (GCallback) telescope_tracker_azel_cb,
+				  (gpointer) p);
+
+	p->cfg->id_pos = g_signal_connect(sig_get_instance(), "tracking",
+				  (GCallback) telescope_tracker_ctrl,
+				  (gpointer) p);
+
+	p->cfg->id_mov = g_signal_connect(sig_get_instance(), "pr-status-move",
+				 G_CALLBACK(telscope_handle_pr_status_move),
+				 (void *) p);
+
+	g_signal_connect(p, "destroy", G_CALLBACK(telescope_destroy), NULL);
 }
 
 
