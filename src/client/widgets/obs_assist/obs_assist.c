@@ -248,6 +248,47 @@ void obs_assist_close_cancel(GtkWidget *widget, gpointer data)
 	gtk_widget_destroy(GTK_WIDGET(data));
 }
 
+
+/**
+ * @brief hide the observation procedure selectors from show_all() calls
+ */
+
+void obs_assist_hide_procedure_selectors(ObsAssist *p)
+{
+	GList *l;
+
+
+	p->cfg->hidden = gtk_container_get_children(GTK_CONTAINER(p));
+
+	for(l = p->cfg->hidden; l; l = l->next) {
+		gtk_widget_set_no_show_all(GTK_WIDGET(l->data), TRUE);
+		gtk_widget_hide(GTK_WIDGET(l->data));
+	}
+}
+
+
+/**
+ * @brief unhide the observation procedure selectors from show_all() calls
+ */
+
+void obs_assist_unhide_procedure_selectors(ObsAssist *p)
+{
+	GList *l;
+
+
+	p->cfg->hidden = gtk_container_get_children(GTK_CONTAINER(p));
+
+	for(l = p->cfg->hidden; l; l = l->next)
+		gtk_widget_set_no_show_all(GTK_WIDGET(l->data), FALSE);
+
+	g_list_free(p->cfg->hidden);
+}
+
+
+/**
+ * @brief observation procedure abort handler
+ */
+
 void obs_assist_abort(GtkWidget *w, gpointer data)
 {
 	ObsAssist *p;
@@ -257,9 +298,13 @@ void obs_assist_abort(GtkWidget *w, gpointer data)
 
 	p->cfg->abort = TRUE;
 
-
 	gtk_widget_destroy(gtk_widget_get_parent(w));
+
+	obs_assist_unhide_procedure_selectors(p);
+
+	/* and show all the obs procedure selectors again */
 	gtk_widget_show_all(GTK_WIDGET(p));
+
 }
 
 
@@ -398,6 +443,8 @@ static void obs_assist_init(ObsAssist *p)
 	p->cfg->spec.y = NULL;
 	p->cfg->spec.n = 0;
 	p->cfg->moving = FALSE;
+	p->cfg->abort  = TRUE;
+	p->cfg->hidden = NULL;
 
 	gtk_orientable_set_orientation(GTK_ORIENTABLE(p),
 				       GTK_ORIENTATION_VERTICAL);

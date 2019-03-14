@@ -37,6 +37,7 @@ void obs_assist_clear_spec(ObsAssist *p);
 
 GtkWidget *obs_assist_create_default(GtkWidget *w);
 
+void obs_assist_hide_procedure_selectors(ObsAssist *p);
 
 
 

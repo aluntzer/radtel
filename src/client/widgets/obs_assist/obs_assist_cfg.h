@@ -69,6 +69,8 @@ struct _ObsAssistConfig {
 	gboolean moving;
 	gboolean abort;
 
+	GList *hidden;
+
 	struct spectrum spec;
 
 	struct {
