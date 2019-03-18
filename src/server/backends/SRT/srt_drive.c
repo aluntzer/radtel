@@ -848,6 +848,8 @@ static int srt_drive_moveto(double az, double el)
 	double el_cnts;
 
 
+	ack_moveto_azel(PKT_TRANS_ID_UNDEF, az, el);
+
 	az += srt_drive_az_tilt_corr(az, el);
 	el += srt_drive_el_tilt_corr(az);
 

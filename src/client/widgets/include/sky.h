@@ -1,5 +1,5 @@
 /**
- * @file    widgets/sky/
+ * @file    widgets/include/sky.h
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -22,24 +22,23 @@
 
 
 #define TYPE_SKY                  (sky_get_type())
-#define SKY(obj)                  (G_TYPE_CHECK_INSTANCE_CAST((obj), TYPE_SKY, SKY))
-#define SKY_CLASS(klass)          (G_TYPE_CHECK_CLASS_CAST((klass),  TYPE_SKY, SKYClass))
+#define SKY(obj)                  (G_TYPE_CHECK_INSTANCE_CAST((obj), TYPE_SKY, Sky))
+#define SKY_CLASS(klass)          (G_TYPE_CHECK_CLASS_CAST((klass),  TYPE_SKY, SkyClass))
 #define IS_SKY(obj)               (G_TYPE_CHECK_INSTANCE_TYPE((obj), TYPE_SKY))
 #define IS_SKY_CLASS(klass)       (G_TYPE_CHECK_CLASS_TYPE((klass),  TYPE_SKY))
-#define SKY_GET_CLASS(obj)        (G_TYPE_INSTANCE_GET_CLASS((obj),  TYPE_SKY, SKYClass))
+#define SKY_GET_CLASS(obj)        (G_TYPE_INSTANCE_GET_CLASS((obj),  TYPE_SKY, SkyClass))
 
-typedef struct _SKY       SKY;
-typedef struct _SKYClass  SKYClass;
-typedef struct _SKYConfig SKYConfig;
+typedef struct _Sky       Sky;
+typedef struct _SkyClass  SkyClass;
+typedef struct _SkyConfig SkyPrivate;
 
 
-
-struct _SKY {
+struct _Sky {
 	GtkDrawingArea parent;
-	SKYConfig *cfg;			/* private stuff */
+	SkyPrivate *cfg;
 };
 
-struct _SKYClass {
+struct _SkyClass {
 	GtkDrawingAreaClass parent_class;
 };
 

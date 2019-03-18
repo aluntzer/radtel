@@ -8,6 +8,7 @@ AM_CPPFLAGS += -Iwidgets/sswdnd/
 AM_CPPFLAGS += -Iwidgets/spectrum
 AM_CPPFLAGS += -Iwidgets/sys_status
 AM_CPPFLAGS += -Iwidgets/obs_assist
+AM_CPPFLAGS += -Iwidgets/sky
 
 AM_CFLAGS := $(GTK3_CFLAGS) -Wunused
 AM_CFLAGS += $(GTHREAD_CFLAGS)
@@ -46,7 +47,8 @@ client_SOURCES += pkt_proc.c \
 		  proc/proc_pr_status_acq.c \
 		  proc/proc_pr_status_slew.c \
 		  proc/proc_pr_status_move.c \
-		  proc/proc_pr_status_rec.c
+		  proc/proc_pr_status_rec.c \
+		  proc/proc_pr_moveto_azel.c
 
 
 client_SOURCES += sig/sig_pr_success.c \
@@ -60,6 +62,7 @@ client_SOURCES += sig/sig_pr_success.c \
 		  sig/sig_pr_status_slew.c \
 		  sig/sig_pr_status_move.c \
 		  sig/sig_pr_status_rec.c \
+		  sig/sig_pr_moveto_azel.c \
 		  sig/signals.c
 
 client_SOURCES += widgets/radio/radio.c \

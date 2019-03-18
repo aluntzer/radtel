@@ -1,5 +1,5 @@
 /**
- * @file    client/proc/proc_pr_getpos_azel.c
+ * @file    acks/ack_moveto_azel.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -15,26 +15,18 @@
  */
 
 #include <glib.h>
-#include <string.h>
 
-#include <protocol.h>
-#include <signals.h>
+#include <cmd.h>
+#include <ack.h>
+#include <net_common.h>
 
 
 
-void proc_pr_getpos_azel(struct packet *pkt)
+/**
+ * @brief acknowledge moveto_azel command
+ *
+ */
+void ack_moveto_azel(uint16_t trans_id, double az, double el)
 {
-	struct getpos *pos;
-
-
-	g_debug("Server getpos azel data");
-
-	pos = g_malloc(pkt->data_size);
-
-	memcpy(pos, pkt->data, pkt->data_size);
-
-	sig_pr_getpos_azel(pos);
-
-	/* cleanup */
-	g_free(pos);
+	cmd_moveto_azel(trans_id, az, el);
 }

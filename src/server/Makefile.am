@@ -20,8 +20,9 @@ AM_LDFLAGS += -u ack_status_acq
 AM_LDFLAGS += -u ack_status_slew
 AM_LDFLAGS += -u ack_status_move
 AM_LDFLAGS += -u ack_status_rec
+AM_LDFLAGS += -u ack_moveto_azel
 
-bin_PROGRAMS = server 
+bin_PROGRAMS = server
 
 server_SOURCES = main.c \
 		 cfg.c \

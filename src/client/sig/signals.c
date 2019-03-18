@@ -139,6 +139,14 @@ static void setup_sig_pr_status_rec(void)
 		     G_TYPE_NONE, 1, G_TYPE_POINTER);
 }
 
+static void setup_sig_pr_moveto_azel(void)
+{
+	g_signal_new("pr-moveto-azel",
+		     G_TYPE_OBJECT, G_SIGNAL_RUN_FIRST,
+		     0, NULL, NULL, NULL,
+		     G_TYPE_NONE, 2, G_TYPE_DOUBLE, G_TYPE_DOUBLE);
+}
+
 
 gpointer *sig_get_instance(void)
 {
@@ -165,4 +173,5 @@ void sig_init(void)
 	setup_sig_pr_status_slew();
 	setup_sig_pr_status_move();
 	setup_sig_pr_status_rec();
+	setup_sig_pr_moveto_azel();
 }

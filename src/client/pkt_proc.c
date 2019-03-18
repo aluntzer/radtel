@@ -87,6 +87,10 @@ void process_pkt(struct packet *pkt)
 		proc_pr_status_rec(pkt);
 		break;
 
+	case PR_MOVETO_AZEL:
+		proc_pr_moveto_azel(pkt);
+		break;
+
 
 
 	default:

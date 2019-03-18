@@ -23,13 +23,15 @@
 
 
 #include <sky.h>
+#include <sky_cfg.h>
 #include <milky_way.h>
 #include <coordinates.h>
+#include <signals.h>
 
 #include <string.h>
 #include <math.h>
 #include <float.h>
-#include <stdbool.h>
+
 
 #define SKY_OBJ_SIZE   5.0
 #define SKY_SUN_SIZE   7.0
@@ -37,68 +39,93 @@
 
 #define ARRAY_SIZE(x)	(sizeof(x)/sizeof(x[0]))
 
-G_DEFINE_TYPE(SKY, sky, GTK_TYPE_DRAWING_AREA)
+G_DEFINE_TYPE_WITH_PRIVATE(Sky, sky, GTK_TYPE_DRAWING_AREA)
 
 
-/**
- * a sky catalog object
- */
+static void sky_plot(GtkWidget *w);
 
-struct sky_obj {
-	gchar *name;
-	float x;
-	float y;
-	gdouble radius;
-	gboolean selected;
-	struct coord_equatorial eq;
-	struct coord_horizontal hor;
-};
 
 
 /**
- * private data
+ * @brief handle target position data
  */
 
-struct _SKYConfig {
-	cairo_surface_t *plot;		/* the plotting surface */
-	cairo_surface_t *render;	/* the rendered surface */
-
-	GList *obj;			/* list of sky objects */
-
-	struct {			/* reset button */
-		gdouble x0, x1;
-		gdouble y0, y1;
-	} rst;
+static void sky_handle_pr_moveto_azel(gpointer instance,
+				      const gdouble az, const gdouble el,
+				      gpointer data)
+{
+	Sky *p;
 
 
-	struct {			/* location of the telescope */
-		gdouble lat;
-		gdouble lon;
-	} loc;
+	p = SKY(data);
 
-	gdouble xc;			/* sky grid x center */
-	gdouble yc;			/* sky grid y center */
-	gdouble r;			/* sky grid radius   */
+	p->cfg->tgt.az = az;
+	p->cfg->tgt.el = el;
 
-	gdouble width;
-	gdouble height;
-
-	gdouble mb3_x;		/* last mouse button 3 click coordinate */
-	gdouble time_off;	/* current time offset */
+	sky_plot(GTK_WIDGET(p));
+}
 
 
-	guint id_to;
-};
+/**
+ * @brief handle current position data
+ */
 
+static void sky_handle_pr_getpos_azel(gpointer instance, struct getpos *pos,
+				      gpointer data)
+{
+	Sky *p;
+
+
+	p = SKY(data);
+
+	p->cfg->pos.az = (gdouble) pos->az_arcsec / 3600.0;
+	p->cfg->pos.el = (gdouble) pos->el_arcsec / 3600.0;
+
+	sky_plot(GTK_WIDGET(p));
+}
+
+
+/**
+ * @brief handle capabilities data
+ */
+
+static void sky_handle_pr_capabilities(gpointer instance,
+				       const struct capabilities *c,
+				       gpointer data)
+{
+	Sky *p;
+
+
+	p = SKY(data);
+
+
+	p->cfg->lat = (gdouble) c->lat_arcsec / 3600.0;
+	p->cfg->lon = (gdouble) c->lon_arcsec / 3600.0;
+
+	p->cfg->lim[0].az = (gdouble) c->az_min_arcsec / 3600.0;
+	p->cfg->lim[0].el = (gdouble) c->el_min_arcsec / 3600.0;
+
+	p->cfg->lim[1].az = (gdouble) c->az_max_arcsec / 3600.0;
+	p->cfg->lim[1].el = (gdouble) c->el_max_arcsec / 3600.0;
+
+	if (p->cfg->local_hor)
+		g_free(p->cfg->local_hor);
+
+	p->cfg->n_local_hor = c->n_hor;
+	p->cfg->local_hor = g_memdup(c->hor,
+				     c->n_hor * sizeof(struct local_horizon));
+
+	sky_plot(GTK_WIDGET(p));
+}
 
 
 /**
  * @brief update horizon system coordinates
  */
 
-static int sky_update_coord_hor(gpointer data)
+static gboolean sky_update_coord_hor(gpointer data)
 {
-	SKY *p;
+	Sky *p;
 	struct sky_obj *obj;
 	GList *l;
 
@@ -115,15 +142,17 @@ static int sky_update_coord_hor(gpointer data)
 			obj->eq = sun_ra_dec();
 
 		if (!strncmp("Moon", obj->name, 4))
-			obj->eq = moon_ra_dec(p->cfg->loc.lat, p->cfg->loc.lon);
+			obj->eq = moon_ra_dec(p->cfg->lat, p->cfg->lon);
 
 		obj->hor = equatorial_to_horizontal(obj->eq,
-						    p->cfg->loc.lat, p->cfg->loc.lon,
+						    p->cfg->lat, p->cfg->lon,
 						    p->cfg->time_off);
 		l = l->next;
 	}
 
-	return TRUE;
+	sky_plot(GTK_WIDGET(p));
+
+	return G_SOURCE_CONTINUE;
 }
 
 
@@ -131,7 +160,7 @@ static int sky_update_coord_hor(gpointer data)
  * @brief add an object to our list of objects
  */
 
-static void sky_append_object(SKY *p, gchar *name, struct coord_equatorial eq,
+static void sky_append_object(Sky *p, gchar *name, struct coord_equatorial eq,
 			      gdouble radius)
 {
 	struct sky_obj *obj;
@@ -151,7 +180,7 @@ static void sky_append_object(SKY *p, gchar *name, struct coord_equatorial eq,
  * @brief add a new sky object for equatorial coordinates
  */
 
-static void sky_add_object_eq(SKY *p, GKeyFile *kf, gchar *group)
+static void sky_add_object_eq(Sky *p, GKeyFile *kf, gchar *group)
 {
 	gsize len;
 	gdouble *c;
@@ -192,7 +221,7 @@ cleanup:
  * @brief add a new sky object for galactic coordinates
  */
 
-static void sky_add_object_gal(SKY *p, GKeyFile *kf, gchar *group)
+static void sky_add_object_gal(Sky *p, GKeyFile *kf, gchar *group)
 {
 	gsize len;
 	gdouble *c;
@@ -233,7 +262,7 @@ cleanup:
  * @brief add a new sky object from the config file
  */
 
-static void sky_add_object(SKY *p, GKeyFile *kf, gchar *group)
+static void sky_add_object(Sky *p, GKeyFile *kf, gchar *group)
 {
 	if (g_key_file_has_key(kf, group, "ga",  NULL))
 		sky_add_object_gal(p, kf, group);
@@ -248,7 +277,7 @@ static void sky_add_object(SKY *p, GKeyFile *kf, gchar *group)
  * @brief load configuration keys
  */
 
-static void sky_load_keys(SKY *p, GKeyFile *kf)
+static void sky_load_keys(Sky *p, GKeyFile *kf)
 {
 	gchar **g;
 	gchar **groups;
@@ -275,9 +304,8 @@ static void sky_load_keys(SKY *p, GKeyFile *kf)
  * @brief load the configuration file
  */
 
-static int sky_load_config(SKY *p)
+static int sky_load_config(Sky *p)
 {
-	gsize len;
 	gboolean ret;
 
 	GKeyFile *kf;
@@ -451,11 +479,12 @@ static void sky_draw_circle_filled(cairo_t *cr,
  */
 
 static void sky_draw_pointing_limits(cairo_t *cr,
-					 const double x, const double y,
-					 const double r,
-					 const struct coord_horizontal lim[2])
+				     const double x, const double y,
+				     const double r,
+				     const struct coord_horizontal lim[2])
 {
 	const double scale = 1.0 / 90.0 * r;
+
 
 	cairo_save(cr);
 
@@ -480,6 +509,99 @@ static void sky_draw_pointing_limits(cairo_t *cr,
 
 	cairo_restore(cr);
 }
+
+
+/**
+ * @brief draw the telescope's local horizon profile
+ *
+ * @param cr the cairo context to draw on
+ * @param x the central x coordinate
+ * @param y the central y coordinate
+ * @param r circle radius
+ * @param hor an array of struct local_horizon
+ * @param n  the number of elements in hor
+ *
+ * @note coordinate order is {"left", "lower"} - {"right", "upper}
+ */
+
+static void sky_draw_local_horizon(cairo_t *cr,
+				   const double xc, const double yc,
+				   const double r,
+				   struct local_horizon *loc,
+				   size_t n)
+{
+	guint32 i;
+
+	float x, y, x0, y0;
+
+	double j, k, steps;
+
+	struct coord_horizontal hor;
+
+
+	if (!n)
+		return;
+
+
+	cairo_save(cr);
+
+	cairo_set_source_rgb(cr, 0.0, 1.0, 0.0);
+
+
+
+	hor.az = loc[0].az;
+	hor.el = loc[0].el;
+	sky_horizontal_to_canvas_f(hor, xc, yc, r, &x, &y);
+
+
+	cairo_move_to(cr, (double) x, (double) y);
+	x0 = x;
+	y0 = y;
+
+	for (i = 0; i < n; i++) {
+
+		if ((i + 1) == n) {
+			steps = trunc(360.0f - loc[i].az);
+			k     = (gdouble) (loc[0].el - loc[i].el);
+		} else {
+			steps = (gdouble) (loc[i + 1].az - loc[i].az);
+			k     = (gdouble) (loc[i + 1].el - loc[i].el);
+		}
+
+		k /= steps;
+
+		hor.az = loc[0].az;
+		hor.el = loc[0].el;
+
+
+		/* linear interpolation; increment is arbitrary (4 deg is
+		 * sufficient)
+		 */
+		for (j = 0.0; j <= steps; j += 4.0) {
+			hor.az = (gdouble) loc[i].az + j;
+			hor.el = (gdouble) loc[i].el + j * k;
+
+			sky_horizontal_to_canvas_f(hor, xc, yc, r, &x, &y);
+
+			cairo_rel_line_to(cr, x - x0, y - y0);
+
+			x0 = x;
+			y0 = y;
+		}
+	}
+
+	cairo_close_path(cr);
+	cairo_stroke_preserve(cr);
+
+	/* shade "true" horizon inaccessible area */
+	cairo_arc(cr, xc, yc, r, 0.0, 2.0 * M_PI);
+	cairo_set_source_rgba(cr, 0.0, 0.6, 0.0, 0.1); /* shade color */
+
+	cairo_fill(cr);
+
+	cairo_restore(cr);
+}
+
 
 
 
@@ -512,7 +634,7 @@ static void sky_draw_array_gal(cairo_t *cr,
 
 	float delta;
 
-	bool line_start = false;
+	gboolean line_start = FALSE;
 
 	struct coord_horizontal hor;
 
@@ -542,14 +664,14 @@ static void sky_draw_array_gal(cairo_t *cr,
 			delta = (x - x0) * (x - x0) + (y - y0) * (y - y0);
 
 			if (delta > delta_len_max) {
-				line_start = false;
+				line_start = FALSE;
 				continue;
 			}
 
 			cairo_line_to(cr, (double) x0, (double) y0);
 		}
 
-		line_start = true;
+		line_start = TRUE;
 
 		x0 = x;
 		y0 = y;
@@ -591,7 +713,7 @@ static void sky_draw_array_eq(cairo_t *cr,
 
 	float delta;
 
-	bool line_start = false;
+	gboolean line_start = FALSE;
 
 	struct coord_horizontal hor;
 
@@ -621,14 +743,14 @@ static void sky_draw_array_eq(cairo_t *cr,
 			delta = (x - x0) * (x - x0) + (y - y0) * (y - y0);
 
 			if (delta > delta_len_max) {
-				line_start = false;
+				line_start = FALSE;
 				continue;
 			}
 
 			cairo_line_to(cr, (double) x0, (double) y0);
 		}
 
-		line_start = true;
+		line_start = TRUE;
 
 		x0 = x;
 		y0 = y;
@@ -639,6 +761,7 @@ static void sky_draw_array_eq(cairo_t *cr,
 
 	cairo_restore(cr);
 }
+
 
 /**
  *
@@ -694,7 +817,7 @@ void sky_gen_gal_plane_equatorial(void)
  * @param y the central y coordinate
  */
 
-static void sky_draw_cat_objects(SKY *p, cairo_t *cr)
+static void sky_draw_cat_objects(Sky *p, cairo_t *cr)
 {
 	struct sky_obj *obj;
 
@@ -738,15 +861,56 @@ static void sky_draw_cat_objects(SKY *p, cairo_t *cr)
 	}
 
 
+	cairo_restore(cr);
+}
+
+
+/**
+ * @brief draw current pointing and target pointing
+ * @param cr the cairo context to draw on
+ * @param x the central x coordinate
+ * @param y the central y coordinate
+ */
+
+static void sky_draw_pointing(Sky *p, cairo_t *cr)
+{
+	float x, y;
+
+	cairo_save(cr);
+
+
+
+	sky_horizontal_to_canvas_f(p->cfg->pos,
+				   p->cfg->xc, p->cfg->yc, p->cfg->r,
+				   &x, &y);
+
+	cairo_set_source_rgba(cr, 0.64, 0.73, 0.24, 0.2);
+	sky_draw_circle_filled(cr, x, y, 10.);
+
+	cairo_set_source_rgba(cr, 0.64, 0.73, 0.24, 1.0);
+	sky_draw_circle(cr, x, y, 10.);
+
+	sky_write_text(cr, x + 15., y + 5., "POS", 0.0);
+
+
+	/* do not draw when tgt el is > -90.0 */
+	if (p->cfg->tgt.el == -90.) {
+
+		sky_horizontal_to_canvas_f(p->cfg->tgt,
+					   p->cfg->xc, p->cfg->yc, p->cfg->r,
+					   &x, &y);
+
+		cairo_set_source_rgba(cr, 1.0, 1.0, 1.0, 1.0);
+		cairo_rectangle(cr, x - 10.0, y - 10.0, 20.0, 20.0);
+		cairo_stroke(cr);
+
+		sky_write_text(cr, x + 15., y + 5., "TGT", 0.0);
+	}
 
 
 
 	cairo_restore(cr);
 }
-
-
-
-
 
 
 /**
@@ -1080,7 +1244,7 @@ static void sky_render_layout(cairo_t *cr, PangoLayout *layout,
  * @return a PangoLayout
  */
 
-static PangoLayout *sky_coord_info_layout(cairo_t *cr, SKY *p,
+static PangoLayout *sky_coord_info_layout(cairo_t *cr, Sky *p,
 					  double x, double y)
 {
 	double r, phi;
@@ -1114,7 +1278,7 @@ static PangoLayout *sky_coord_info_layout(cairo_t *cr, SKY *p,
 	hor.az = phi;
 	hor.el = r;
 
-	eq  = horizontal_to_equatorial(hor, p->cfg->loc.lat, p->cfg->loc.lon,
+	eq  = horizontal_to_equatorial(hor, p->cfg->lat, p->cfg->lon,
 				       p->cfg->time_off);
 	gal = equatorial_to_galactic(eq);
 
@@ -1232,18 +1396,19 @@ static void sky_reset_button_rectangle(cairo_t *cr,
  * @brief render info text
  */
 
-static void sky_draw_mouse_coord(cairo_t *cr, SKY *p,
-				 const double x, const double y)
+static void sky_draw_mouse_coord(cairo_t *cr, Sky *p)
 {
-	int coord_width, text_height;
+	gint coord_width;
+	gint text_height;
 
 	PangoLayout *layout;
 
-	char buf[256];
+
+	if (!p->cfg->mptr.inside)
+		return;
 
 
-
-	layout = sky_coord_info_layout(cr, p, x, y);
+	layout = sky_coord_info_layout(cr, p, p->cfg->mptr.x, p->cfg->mptr.y);
 
 	pango_layout_get_pixel_size(layout, &coord_width, &text_height);
 
@@ -1259,14 +1424,13 @@ static void sky_draw_mouse_coord(cairo_t *cr, SKY *p,
  *
  */
 
-static void sky_draw_time_rst(cairo_t *cr, SKY *p)
+static void sky_draw_time_rst(cairo_t *cr, Sky *p)
 {
-	int w_off, text_height;
-	int w;
+	gint w;
+	gint w_off;
+	gint text_height;
 
 	PangoLayout *layout;
-
-	char buf[256];
 
 
 	if (p->cfg->time_off == 0.0)
@@ -1337,28 +1501,21 @@ static void sky_draw_bg(cairo_t *cr)
  *	 to redraw it every time we want to add or update an overlay
  */
 
-static void sky_plot(GtkWidget *widget)
+static void sky_plot(GtkWidget *w)
 {
 	double min;
 
-	/* TODO: part of class data */
-	const struct coord_horizontal lim[2] = {{5.0, 10.0}, {355.0, 85.0}};
-
-	GdkRGBA color;
-	GtkStyleContext *context;
-
-	SKY *p;
+	Sky *p;
 	cairo_t *cr;
 
 
-	p = SKY(widget);
+	p = SKY(w);
 
 	cr = cairo_create(p->cfg->plot);
 
-	context = gtk_widget_get_style_context(widget);
 
-	p->cfg->width  = gtk_widget_get_allocated_width(widget);
-	p->cfg->height = gtk_widget_get_allocated_height(widget);
+	p->cfg->width  = gtk_widget_get_allocated_width(w);
+	p->cfg->height = gtk_widget_get_allocated_height(w);
 
 	min = (gint) MIN(p->cfg->width, p->cfg->height);
 
@@ -1374,17 +1531,24 @@ static void sky_plot(GtkWidget *widget)
 
 
 	sky_draw_milkyway(cr, p->cfg->xc, p->cfg->yc, p->cfg->r,
-			  p->cfg->loc.lat, p->cfg->loc.lon, p->cfg->time_off);
+			  p->cfg->lat, p->cfg->lon, p->cfg->time_off);
 
 	sky_draw_galactic_plane(cr, p->cfg->xc, p->cfg->yc, p->cfg->r,
-				p->cfg->loc.lat, p->cfg->loc.lon, p->cfg->time_off);
+				p->cfg->lat, p->cfg->lon, p->cfg->time_off);
 
 	sky_draw_cat_objects(p, cr);
 
-	sky_draw_pointing_limits(cr, p->cfg->xc, p->cfg->yc, p->cfg->r, lim);
+	sky_draw_pointing_limits(cr, p->cfg->xc, p->cfg->yc, p->cfg->r,
+				 p->cfg->lim);
+
+	sky_draw_local_horizon(cr, p->cfg->xc, p->cfg->yc, p->cfg->r,
+			       p->cfg->local_hor, p->cfg->n_local_hor);
+
+	sky_draw_pointing(p, cr);
 
 	sky_draw_time_rst(cr, p);
 
+	sky_draw_mouse_coord(cr, p);
 
 	cairo_destroy(cr);
 
@@ -1395,7 +1559,7 @@ static void sky_plot(GtkWidget *widget)
 	cairo_destroy(cr);
 
 
-	gtk_widget_queue_draw(widget);
+	gtk_widget_queue_draw(w);
 }
 
 
@@ -1408,7 +1572,7 @@ static void sky_plot(GtkWidget *widget)
 
 static gboolean sky_draw_cb(GtkWidget *widget, cairo_t *cr, gpointer data)
 {
-	SKY *p;
+	Sky *p;
 
 	p = SKY(widget);
 
@@ -1465,7 +1629,7 @@ static gboolean sky_pointer_crossing_cb(GtkWidget *widget,
 
 static void sky_button_reset_time(GtkWidget *widget, GdkEventButton *event)
 {
-	SKY *p;
+	Sky *p;
 
 
 	p = SKY(widget);
@@ -1497,10 +1661,9 @@ static void sky_button_reset_time(GtkWidget *widget, GdkEventButton *event)
 
 static void sky_selection(GtkWidget *widget, GdkEventButton *event)
 {
-	gdouble x, y;
 	gdouble px, py;
 
-	SKY *p;
+	Sky *p;
 
 	struct sky_obj *obj;
 	GList *l;
@@ -1519,7 +1682,7 @@ static void sky_selection(GtkWidget *widget, GdkEventButton *event)
 	/* deselect all */
 	for (l = p->cfg->obj; l; l = l->next) {
 		obj = l->data;
-		obj->selected = false;
+		obj->selected = FALSE;
 	}
 
 	/* select at most one */
@@ -1542,7 +1705,7 @@ static void sky_selection(GtkWidget *widget, GdkEventButton *event)
 		g_message("Selected object: %s, RA: %g DEC: %g",
 			  obj->name, obj->eq.ra, obj->eq.dec);
 
-		obj->selected = true;
+		obj->selected = TRUE;
 		break;
 	}
 
@@ -1556,7 +1719,7 @@ static void sky_selection(GtkWidget *widget, GdkEventButton *event)
 static gboolean sky_button_press_cb(GtkWidget *widget, GdkEventButton *event,
 				    gpointer data)
 {
-	SKY *p;
+	Sky *p;
 
 
 	p = SKY(widget);
@@ -1586,17 +1749,10 @@ exit:
 static gboolean sky_motion_notify_event_cb(GtkWidget *widget,
 					   GdkEventMotion *event, gpointer data)
 {
-	int w, h, off;
-
-	int x0, y0;
-
-	gdouble x, y;
 	gdouble px, py;
 
-	SKY *p;
+	Sky *p;
 	cairo_t *cr;
-	PangoLayout *layout;
-	GdkDisplay *display;
 
 
 	p = SKY(widget);
@@ -1631,19 +1787,24 @@ static gboolean sky_motion_notify_event_cb(GtkWidget *widget,
 	px = event->x - p->cfg->xc;
 	py = p->cfg->yc - event->y;
 
-	if (px * px + py * py > p->cfg->r * p->cfg->r)
+	if (px * px + py * py > p->cfg->r * p->cfg->r) {
+		p->cfg->mptr.inside = FALSE;
+		sky_plot(GTK_WIDGET(p));
 		goto cleanup;
+	}
 
 
 	/* get data range reference */
-	x = px;
-	y = py;
+	p->cfg->mptr.x = px;
+	p->cfg->mptr.y = py;
+	p->cfg->mptr.inside = TRUE;
 
 
-	sky_draw_mouse_coord(cr, p, x, y);
+	sky_draw_mouse_coord(cr, p);
 
 cleanup:
 	cairo_destroy(cr);
+
 
 	/* _draw_area() may leave artefacts if the pointer is moved to fast */
 	gtk_widget_queue_draw(widget);
@@ -1657,39 +1818,42 @@ exit:
  * @brief create a new surface on configure event
  */
 
-static gboolean sky_configure_event_cb(GtkWidget *widget,
+static gboolean sky_configure_event_cb(GtkWidget *w,
 				       GdkEventConfigure *event,
 				       gpointer data)
 {
-	unsigned int width, height;
+	guint width, height;
+
+	Sky *p;
 
 	GdkWindow *win;
-	SKY *p;
 
 
-	win = gtk_widget_get_window(widget);
+	win = gtk_widget_get_window(w);
 
 	if (!win)
 		goto exit;
 
 
-	p = SKY(widget);
+	p = SKY(w);
 
 	if (p->cfg->render)
 	    cairo_surface_destroy(p->cfg->render);
 
 
-	width  = gtk_widget_get_allocated_width(widget);
-	height = gtk_widget_get_allocated_height(widget);
+	width  = gtk_widget_get_allocated_width(w);
+	height = gtk_widget_get_allocated_height(w);
 
-	p->cfg->plot = gdk_window_create_similar_surface(win, CAIRO_CONTENT_COLOR,
-						    width, height);
+	p->cfg->plot = gdk_window_create_similar_surface(win,
+							 CAIRO_CONTENT_COLOR,
+							 width, height);
 
-	p->cfg->render = gdk_window_create_similar_surface(win, CAIRO_CONTENT_COLOR,
-						      width, height);
+	p->cfg->render = gdk_window_create_similar_surface(win,
+							   CAIRO_CONTENT_COLOR,
+							   width, height);
 
 	sky_update_coord_hor((gpointer) p);
-	sky_plot(widget);
+	sky_plot(w);
 
 exit:
 	return TRUE;
@@ -1702,28 +1866,29 @@ exit:
 
 static gboolean sky_destroy(GtkWidget *w, void *data)
 {
-	SKY *p;
+	Sky *p;
 
 	p = SKY(data);
 
 
 	g_source_remove(p->cfg->id_to);
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_cap);
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_pos);
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_tgt);
 
 	return TRUE;
 }
 
 
 /**
- * @brief initialise the SKY class
+ * @brief initialise the Sky class
  */
 
-static void sky_class_init(SKYClass *klass)
+static void sky_class_init(SkyClass *klass)
 {
 	__attribute__((unused))
 	GtkWidgetClass *widget_class;
 
-
-	g_type_class_add_private(klass, sizeof(SKYConfig));
 
 	widget_class = GTK_WIDGET_CLASS(klass);
 
@@ -1735,15 +1900,31 @@ static void sky_class_init(SKYClass *klass)
  * @brief initialise the plot parameters
  */
 
-static void sky_init(SKY *p)
+static void sky_init(Sky *p)
 {
+	gpointer sig;
+
+
 	struct coord_equatorial eq = {0.0, 0.0};
 
 
 	g_return_if_fail(p != NULL);
 	g_return_if_fail(IS_SKY(p));
 
-	p->cfg = G_TYPE_INSTANCE_GET_PRIVATE(p, TYPE_SKY, SKYConfig);
+	sig = sig_get_instance();
+
+	p->cfg = sky_get_instance_private(p);
+
+	bzero(p->cfg, sizeof(struct _SkyConfig));
+
+	p->cfg->tgt.el = -90.0; /* do not draw target position on init */
+
+	sky_load_config(p);
+
+	/* add sun/moon objects, their coordinates are updated automatically */
+	sky_append_object(p, "Sun",  eq, SKY_SUN_SIZE);
+	sky_append_object(p, "Moon", eq, SKY_MOON_SIZE);
+
 
 	/* connect the relevant signals of the DrawingArea */
 	g_signal_connect(G_OBJECT(&p->parent), "configure-event",
@@ -1773,6 +1954,24 @@ static void sky_init(SKY *p)
 			  G_CALLBACK (sky_button_press_cb), NULL);
 #endif
 
+	p->cfg->id_cap = g_signal_connect(sig, "pr-capabilities",
+			  G_CALLBACK(sky_handle_pr_capabilities),
+			  (gpointer) p);
+
+	p->cfg->id_pos = g_signal_connect(sig, "pr-getpos-azel",
+			  G_CALLBACK(sky_handle_pr_getpos_azel),
+			  (gpointer) p);
+
+	p->cfg->id_tgt = g_signal_connect(sig, "pr-moveto-azel",
+			  G_CALLBACK(sky_handle_pr_moveto_azel),
+			  (gpointer) p);
+
+
+	/* update coordinates every second */
+	p->cfg->id_to = g_timeout_add_seconds(1, sky_update_coord_hor,
+					      (gpointer) p);
+
+
 	gtk_widget_set_events(GTK_WIDGET(&p->parent), GDK_EXPOSURE_MASK
 			       | GDK_LEAVE_NOTIFY_MASK
 			       | GDK_BUTTON_PRESS_MASK
@@ -1781,20 +1980,6 @@ static void sky_init(SKY *p)
 			       | GDK_ENTER_NOTIFY_MASK
 			       | GDK_LEAVE_NOTIFY_MASK);
 
-	sky_load_config(p);
-
-	/* XXX dummy */
-	p->cfg->loc.lat = 48.23;
-	p->cfg->loc.lon = -16.34;
-
-	/* add sun/moon objects, their coordinates are updated
-	 * automatically */
-	sky_append_object(p, "Sun",  eq, SKY_SUN_SIZE);
-	sky_append_object(p, "Moon", eq, SKY_MOON_SIZE);
-
-
-	/* update coordinates every second */
-	p->cfg->id_to = g_timeout_add_seconds(1, sky_update_coord_hor, (gpointer) p);
 
 }
 
@@ -1805,7 +1990,7 @@ static void sky_init(SKY *p)
 
 GtkWidget *sky_new(void)
 {
-	SKY *sky;
+	Sky *sky;
 
 	sky = g_object_new(TYPE_SKY, NULL);
 

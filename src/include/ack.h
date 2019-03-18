@@ -35,6 +35,7 @@ void ack_status_acq(uint16_t trans_id, struct status *s);
 void ack_status_slew(uint16_t trans_id, struct status *s);
 void ack_status_move(uint16_t trans_id, struct status *s);
 void ack_status_rec(uint16_t trans_id, struct status *s);
+void ack_moveto_azel(uint16_t trans_id, double az, double el);
 
 #endif /* _INCLUDE_ACK_H_ */
 

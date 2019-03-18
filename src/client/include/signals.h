@@ -30,6 +30,7 @@ void sig_pr_status_acq(const struct status *s);
 void sig_pr_status_slew(const struct status *s);
 void sig_pr_status_move(const struct status *s);
 void sig_pr_status_rec(const struct status *s);
+void sig_pr_moveto_azel(const gdouble az, const gdouble el);
 
 gpointer *sig_get_instance(void);
 void sig_init(void);

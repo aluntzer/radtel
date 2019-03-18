@@ -1,5 +1,5 @@
 /**
- * @file    client/proc/proc_pr_getpos_azel.c
+ * @file    client/proc/proc_pr_moveto_azel.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -15,26 +15,40 @@
  */
 
 #include <glib.h>
-#include <string.h>
 
 #include <protocol.h>
 #include <signals.h>
 
 
+/**
+ * @brief process ack moveto AZEL
+ */
 
-void proc_pr_getpos_azel(struct packet *pkt)
+void proc_pr_moveto_azel(struct packet *pkt)
 {
-	struct getpos *pos;
+	double az;
+	double el;
 
 
-	g_debug("Server getpos azel data");
+	struct moveto *m;
 
-	pos = g_malloc(pkt->data_size);
 
-	memcpy(pos, pkt->data, pkt->data_size);
+	g_debug("Server sent ACK moveto AZEL");
 
-	sig_pr_getpos_azel(pos);
+	if (pkt->data_size != sizeof(struct moveto)) {
+		g_message("\tmoveto payload size mismatch %d != %d",
+			  sizeof(struct moveto), pkt->data_size);
+		return;
+	}
 
-	/* cleanup */
-	g_free(pos);
+
+	m = (struct moveto *) pkt->data;
+
+	/* convert arcseconds to degrees */
+	az = (double) m->az_arcsec / 3600.0;
+	el = (double) m->el_arcsec / 3600.0;
+
+	sig_pr_moveto_azel(az, el);
+
+	return;
 }

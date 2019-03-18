@@ -1,5 +1,5 @@
 /**
- * @file    client/proc/proc_pr_getpos_azel.c
+ * @file    client/sig/sig_pr_moveto_azel.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -15,26 +15,17 @@
  */
 
 #include <glib.h>
-#include <string.h>
-
-#include <protocol.h>
+#include <glib-object.h>
 #include <signals.h>
 
 
+/**
+ * @brief emit pr-moveto-azel signal
+ */
 
-void proc_pr_getpos_azel(struct packet *pkt)
+void sig_pr_moveto_azel(const gdouble az, const gdouble el)
 {
-	struct getpos *pos;
+	g_debug("Emit signal \"pr-moveto-azel\"");
 
-
-	g_debug("Server getpos azel data");
-
-	pos = g_malloc(pkt->data_size);
-
-	memcpy(pos, pkt->data, pkt->data_size);
-
-	sig_pr_getpos_azel(pos);
-
-	/* cleanup */
-	g_free(pos);
+	g_signal_emit_by_name(sig_get_instance(), "pr-moveto-azel", az, el);
 }
