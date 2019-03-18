@@ -1854,6 +1854,22 @@ static gboolean sky_button_press_cb(GtkWidget *widget, GdkEventButton *event,
 					      "tracking", FALSE,
 					      hor.az, hor.el);
 
+			/* ignore click if outside of axis range, the external
+			 * tracker will take care of selected objects
+			 */
+
+			if (hor.az < p->cfg->lim[0].az)
+				return TRUE;
+
+			if (hor.el < p->cfg->lim[0].el)
+				return TRUE;
+
+			if (hor.az > p->cfg->lim[1].az)
+				return TRUE;
+
+			if (hor.el > p->cfg->lim[1].el)
+				return TRUE;
+
 
 			cmd_moveto_azel(PKT_TRANS_ID_UNDEF, hor.az, hor.el);
 
