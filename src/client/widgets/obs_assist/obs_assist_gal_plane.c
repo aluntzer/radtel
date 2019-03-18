@@ -348,7 +348,7 @@ static void on_assistant_apply(GtkWidget *as, ObsAssist *p)
 	GtkGrid *grid;
 
 
-	g_signal_emit_by_name(sig_get_instance(), "tracking", FALSE);
+	g_signal_emit_by_name(sig_get_instance(), "tracking", FALSE, 0.0, 0.0);
 
 	obs_assist_hide_procedure_selectors(p);
 

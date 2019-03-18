@@ -21,11 +21,11 @@
 #include <cairo.h>
 #include <gtk/gtk.h>
 
-
 #include <sky.h>
 #include <sky_cfg.h>
 #include <milky_way.h>
 #include <coordinates.h>
+#include <cmd.h>
 #include <signals.h>
 
 #include <string.h>
@@ -45,6 +45,30 @@ G_DEFINE_TYPE_WITH_PRIVATE(Sky, sky, GTK_TYPE_DRAWING_AREA)
 static void sky_plot(GtkWidget *w);
 
 
+/**
+ * @brief handle tracking signal and turn of internal object selection
+ */
+
+static void sky_handle_tracking(gpointer instance, gboolean state,
+				gdouble az, gdouble el,
+				Sky *p)
+{
+	struct sky_obj *obj;
+	GList *l;
+
+
+	if (state)
+		return;
+
+	/* deselect all */
+	p->cfg->sel = NULL;
+
+	for (l = p->cfg->obj; l; l = l->next) {
+		obj = l->data;
+		obj->selected = FALSE;
+	}
+}
+
 
 /**
  * @brief handle target position data
@@ -58,7 +82,6 @@ static void sky_handle_pr_moveto_azel(gpointer instance,
 
 
 	p = SKY(data);
-
 	p->cfg->tgt.az = az;
 	p->cfg->tgt.el = el;
 
@@ -102,6 +125,9 @@ static void sky_handle_pr_capabilities(gpointer instance,
 	p->cfg->lat = (gdouble) c->lat_arcsec / 3600.0;
 	p->cfg->lon = (gdouble) c->lon_arcsec / 3600.0;
 
+	p->cfg->az_res = (gdouble) c->az_res_arcsec / 3600.0;
+	p->cfg->el_res = (gdouble) c->el_res_arcsec / 3600.0;
+
 	p->cfg->lim[0].az = (gdouble) c->az_min_arcsec / 3600.0;
 	p->cfg->lim[0].el = (gdouble) c->el_min_arcsec / 3600.0;
 
@@ -116,6 +142,35 @@ static void sky_handle_pr_capabilities(gpointer instance,
 				     c->n_hor * sizeof(struct local_horizon));
 
 	sky_plot(GTK_WIDGET(p));
+}
+
+
+/**
+ * @brief update the tracked position
+ *
+ * @note this is useful for things which move relative to the
+ *	 celestial background, e.g. the moon or artificial satellites
+ */
+
+static void sky_update_tracked_pos(Sky *p)
+{
+	gdouble d_az;
+	gdouble d_el;
+
+	gdouble az_tol = 2.0 * p->cfg->az_res;
+	gdouble el_tol = 2.0 * p->cfg->el_res;
+
+
+	d_az = fabs(p->cfg->sel->hor.az - p->cfg->tgt.az);
+	d_el = fabs(p->cfg->sel->hor.el - p->cfg->tgt.el);
+
+
+	if ((d_az < az_tol) && (d_el < el_tol))
+		return;
+
+
+	g_signal_emit_by_name(sig_get_instance(), "tracking", TRUE,
+			      p->cfg->sel->hor.az, p->cfg->sel->hor.el);
 }
 
 
@@ -149,6 +204,10 @@ static gboolean sky_update_coord_hor(gpointer data)
 						    p->cfg->time_off);
 		l = l->next;
 	}
+
+	if (p->cfg->sel)
+		sky_update_tracked_pos(p);
+
 
 	sky_plot(GTK_WIDGET(p));
 
@@ -885,16 +944,16 @@ static void sky_draw_pointing(Sky *p, cairo_t *cr)
 				   &x, &y);
 
 	cairo_set_source_rgba(cr, 0.64, 0.73, 0.24, 0.2);
-	sky_draw_circle_filled(cr, x, y, 10.);
+	sky_draw_circle_filled(cr, x, y, 8.);
 
 	cairo_set_source_rgba(cr, 0.64, 0.73, 0.24, 1.0);
-	sky_draw_circle(cr, x, y, 10.);
+	sky_draw_circle(cr, x, y, 8.);
 
 	sky_write_text(cr, x + 15., y + 5., "POS", 0.0);
 
 
 	/* do not draw when tgt el is > -90.0 */
-	if (p->cfg->tgt.el == -90.) {
+	if (p->cfg->tgt.el > -90.) {
 
 		sky_horizontal_to_canvas_f(p->cfg->tgt,
 					   p->cfg->xc, p->cfg->yc, p->cfg->r,
@@ -904,7 +963,7 @@ static void sky_draw_pointing(Sky *p, cairo_t *cr)
 		cairo_rectangle(cr, x - 10.0, y - 10.0, 20.0, 20.0);
 		cairo_stroke(cr);
 
-		sky_write_text(cr, x + 15., y + 5., "TGT", 0.0);
+		sky_write_text(cr, x - 35., y + 5., "TGT", 0.0);
 	}
 
 
@@ -1234,26 +1293,22 @@ static void sky_render_layout(cairo_t *cr, PangoLayout *layout,
 	g_object_unref(layout);
 }
 
+
 /**
- * @brief create a coordinate info text layout
+ * @brief convert plot-center relativ x/y coordinates to horizontal azel
  *
- * @param cr the cairo context
+ * @param p the Sky widget
  * @param x the x coordinate relative to the plot center
  * @param y the y coordinate relative to the plot center
  *
- * @return a PangoLayout
+ * @returns a struct coord_horizontal
  */
 
-static PangoLayout *sky_coord_info_layout(cairo_t *cr, Sky *p,
-					  double x, double y)
+struct coord_horizontal sky_xy_rel_to_horizontal(Sky *p, double x, double y)
 {
 	double r, phi;
 
 	struct coord_horizontal hor;
-	struct coord_equatorial eq;
-	struct coord_galactic   gal;
-
-	char buf[256];
 
 
 	r = sqrt(x * x + y * y);
@@ -1277,6 +1332,33 @@ static PangoLayout *sky_coord_info_layout(cairo_t *cr, Sky *p,
 
 	hor.az = phi;
 	hor.el = r;
+
+	return hor;
+}
+
+
+/**
+ * @brief create a coordinate info text layout
+ *
+ * @param cr the cairo context
+ * @param x the x coordinate relative to the plot center
+ * @param y the y coordinate relative to the plot center
+ *
+ * @return a PangoLayout
+ */
+
+static PangoLayout *sky_coord_info_layout(cairo_t *cr, Sky *p,
+					  double x, double y)
+{
+
+	struct coord_horizontal hor;
+	struct coord_equatorial eq;
+	struct coord_galactic   gal;
+
+	char buf[256];
+
+
+	hor = sky_xy_rel_to_horizontal(p, x, y);
 
 	eq  = horizontal_to_equatorial(hor, p->cfg->lat, p->cfg->lon,
 				       p->cfg->time_off);
@@ -1669,6 +1751,7 @@ static void sky_selection(GtkWidget *widget, GdkEventButton *event)
 	GList *l;
 
 
+
 	p = SKY(widget);
 
 	px = event->x - p->cfg->xc;
@@ -1679,11 +1762,22 @@ static void sky_selection(GtkWidget *widget, GdkEventButton *event)
 		return;
 
 
+	/* if something was selected, it was tracked. signal disable */
+	if (p->cfg->sel)
+		g_signal_emit_by_name(sig_get_instance(), "tracking", FALSE,
+				      p->cfg->sel->hor.az, p->cfg->sel->hor.el);
 	/* deselect all */
+
+	p->cfg->sel = NULL;
+
 	for (l = p->cfg->obj; l; l = l->next) {
 		obj = l->data;
 		obj->selected = FALSE;
 	}
+
+	/* just deselect if ctrl was not held down */
+	if (!(event->state & GDK_CONTROL_MASK))
+		return;
 
 	/* select at most one */
 	for (l = p->cfg->obj; l; l = l->next) {
@@ -1702,10 +1796,11 @@ static void sky_selection(GtkWidget *widget, GdkEventButton *event)
 		if (obj->y - obj->radius > event->y)
 			continue;
 
-		g_message("Selected object: %s, RA: %g DEC: %g",
+		g_debug("Selected object: %s, RA: %g DEC: %g",
 			  obj->name, obj->eq.ra, obj->eq.dec);
 
 		obj->selected = TRUE;
+		p->cfg->sel = obj;
 		break;
 	}
 
@@ -1719,7 +1814,13 @@ static void sky_selection(GtkWidget *widget, GdkEventButton *event)
 static gboolean sky_button_press_cb(GtkWidget *widget, GdkEventButton *event,
 				    gpointer data)
 {
+	gdouble px, py;
+
+	struct coord_horizontal hor;
+
 	Sky *p;
+
+
 
 
 	p = SKY(widget);
@@ -1728,7 +1829,37 @@ static gboolean sky_button_press_cb(GtkWidget *widget, GdkEventButton *event,
 		goto exit;
 
 	if (event->button == 1) {
+
 		sky_selection(widget, event);
+
+		if (event->state & GDK_CONTROL_MASK) {
+
+
+			/* get plot center reference */
+			px = event->x - p->cfg->xc;
+			py = p->cfg->yc - event->y;
+
+			if ((px * px + py * py) > p->cfg->r * p->cfg->r)
+				return TRUE;
+
+			if (p->cfg->sel) {
+				sky_update_tracked_pos(p);
+				return TRUE;
+			}
+
+			hor = sky_xy_rel_to_horizontal(p, px, py);
+
+			/* always disable tracking, but update anyway */
+			g_signal_emit_by_name(sig_get_instance(),
+					      "tracking", FALSE,
+					      hor.az, hor.el);
+
+
+			cmd_moveto_azel(PKT_TRANS_ID_UNDEF, hor.az, hor.el);
+
+			return TRUE;
+		}
+
 		sky_button_reset_time(widget, event);
 	}
 
@@ -1875,6 +2006,7 @@ static gboolean sky_destroy(GtkWidget *w, void *data)
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_cap);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_pos);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_tgt);
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_trk);
 
 	return TRUE;
 }
@@ -1964,6 +2096,10 @@ static void sky_init(Sky *p)
 
 	p->cfg->id_tgt = g_signal_connect(sig, "pr-moveto-azel",
 			  G_CALLBACK(sky_handle_pr_moveto_azel),
+			  (gpointer) p);
+
+	p->cfg->id_trk = g_signal_connect(sig_get_instance(), "tracking",
+			  G_CALLBACK(sky_handle_tracking),
 			  (gpointer) p);
 
 

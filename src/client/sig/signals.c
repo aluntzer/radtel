@@ -45,7 +45,8 @@ static void setup_sig_tracking(void)
 	g_signal_new("tracking",
 		     G_TYPE_OBJECT, G_SIGNAL_RUN_FIRST,
 		     0, NULL, NULL, NULL,
-		     G_TYPE_NONE, 1, G_TYPE_BOOLEAN);
+		     G_TYPE_NONE, 3,
+		     G_TYPE_BOOLEAN, G_TYPE_DOUBLE, G_TYPE_DOUBLE);
 }
 
 

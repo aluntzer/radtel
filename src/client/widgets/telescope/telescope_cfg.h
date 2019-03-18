@@ -38,6 +38,9 @@ struct _TelescopeConfig {
 	gdouble az;
 	gdouble el;
 
+	gdouble tgt_az;
+	gdouble tgt_el;
+
 	gdouble track_ra;
 	gdouble track_de;
 
@@ -63,6 +66,7 @@ struct _TelescopeConfig {
 	guint id_pos;
 	guint id_trk;
 	guint id_mov;
+	guint id_tgt;
 };
 
 

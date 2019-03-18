@@ -167,8 +167,13 @@ static void telescope_init(Telescope *p)
 				  (void *) p);
 
 	p->cfg->id_pos = g_signal_connect(sig_get_instance(), "pr-getpos-azel",
-				  (GCallback) telescope_tracker_azel_cb,
+				  (GCallback) telescope_tracker_getpos_azel_cb,
 				  (gpointer) p);
+
+	p->cfg->id_tgt = g_signal_connect(sig_get_instance(), "pr-moveto-azel",
+				  (GCallback) telescope_tracker_moveto_azel_cb,
+				  (gpointer) p);
+
 
 	p->cfg->id_pos = g_signal_connect(sig_get_instance(), "tracking",
 				  (GCallback) telescope_tracker_ctrl,

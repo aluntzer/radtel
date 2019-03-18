@@ -256,9 +256,6 @@ GtkWidget *telescope_recal_pointing_new(Telescope *p)
 }
 
 
-
-
-
 /**
  * @brief signal handler (tracker) for the timeout callback
  *
@@ -295,18 +292,28 @@ static gboolean telescope_track_timeout_cb(void *data)
 
 	hor = equatorial_to_horizontal(equ, p->cfg->lat, p->cfg->lon, 0.0);
 
-	if ((fabs(hor.az - p->cfg->az) < p->cfg->az_res) &&
-	     fabs(hor.el - p->cfg->el) < p->cfg->el_res)
+	/* stop tracking if out of bounds */
+	if (hor.az > p->cfg->az_max)
+		p->cfg->tracking = G_SOURCE_REMOVE;
+
+	if (hor.az < p->cfg->az_min)
+		p->cfg->tracking = G_SOURCE_REMOVE;
+
+	if (hor.el > p->cfg->el_max)
+		p->cfg->tracking = G_SOURCE_REMOVE;
+
+	if (hor.el < p->cfg->el_min)
+		p->cfg->tracking = G_SOURCE_REMOVE;
+
+
+	if ((fabs(hor.az - p->cfg->tgt_az) < p->cfg->az_res) &&
+	     fabs(hor.el - p->cfg->tgt_el) < p->cfg->el_res)
 		return p->cfg->tracking;
 
-#if 0
-	/*** EMIT SIGNAL ***/
-	gtk_label_set_text(p->cfg->info_bar_lbl, "I tracked!");
-	gtk_info_bar_set_revealed(GTK_INFO_BAR (p->cfg->info_bar), TRUE);
-#endif
-
-	/* otherwise move */
-	cmd_moveto_azel(PKT_TRANS_ID_UNDEF, hor.az, hor.el);
+	if (p->cfg->tracking)
+		cmd_moveto_azel(PKT_TRANS_ID_UNDEF, hor.az, hor.el);
+	else
+		gtk_switch_set_state(GTK_SWITCH(p->cfg->sw_trk), FALSE);
 
 	return p->cfg->tracking;
 }
@@ -319,20 +326,29 @@ static gboolean telescope_track_timeout_cb(void *data)
 static gboolean telescope_track_sky_toggle_cb(GtkWidget *w,
 					      gboolean state, Telescope *p)
 {
+	const GSourceFunc sf = telescope_track_timeout_cb;
+
+
 	if (p->cfg->track_ra == DBL_MIN) {
 		gtk_switch_set_state(GTK_SWITCH(w), FALSE);
-#if 0
-		/** XXX signal **/
-		gtk_label_set_text(p->cfg->info_bar_lbl, "You have set crap!");
-		gtk_info_bar_set_revealed(GTK_INFO_BAR (p->cfg->info_bar), TRUE);
-#endif
+
 		return TRUE;
 	}
 
 	if (gtk_switch_get_active(GTK_SWITCH(w))) {
-		telescope_tracker_ctrl(NULL, TRUE, p);
+
+		if (p->cfg->tracking)	/* already at it */
+			return TRUE;
+
+		p->cfg->tracking = G_SOURCE_CONTINUE;
+		p->cfg->id_to = g_timeout_add_seconds(1, sf, p);
 	} else {
-		telescope_tracker_ctrl(NULL, FALSE, p);
+		g_source_remove(p->cfg->id_to);
+		p->cfg->tracking = G_SOURCE_REMOVE;
+
+		g_signal_emit_by_name(sig_get_instance(), "tracking", FALSE,
+				      0.0, 0.0);
+
 	}
 
 	return FALSE;
@@ -343,8 +359,8 @@ static gboolean telescope_track_sky_toggle_cb(GtkWidget *w,
  * @brief callback to update current equatorial position for tracking
  */
 
-gboolean telescope_tracker_azel_cb(gpointer instance, struct getpos *pos,
-				   Telescope *p)
+void telescope_tracker_getpos_azel_cb(gpointer instance, struct getpos *pos,
+					  Telescope *p)
 {
 	struct coord_horizontal hor;
 	struct coord_equatorial	equ;
@@ -353,9 +369,14 @@ gboolean telescope_tracker_azel_cb(gpointer instance, struct getpos *pos,
 	p->cfg->az = (gdouble) pos->az_arcsec / 3600.0;
 	p->cfg->el = (gdouble) pos->el_arcsec / 3600.0;
 
+
 	/* do not update reference from external source while tracking */
 	if (p->cfg->tracking)
-		return TRUE;
+		return;
+
+	/* update only if it has not been set yet */
+	if (p->cfg->track_ra != DBL_MIN)
+		return;
 
 	hor.az = p->cfg->az;
 	hor.el = p->cfg->el;
@@ -365,26 +386,70 @@ gboolean telescope_tracker_azel_cb(gpointer instance, struct getpos *pos,
 	p->cfg->track_ra = equ.ra;
 	p->cfg->track_de = equ.dec;
 
-	return TRUE;
+	return;
+}
+
+/**
+ * @brief callback to update target equatorial position for tracking
+ */
+
+void telescope_tracker_moveto_azel_cb(gpointer instance,
+					  gdouble az, gdouble el,
+					  Telescope *p)
+{
+	struct coord_horizontal hor;
+	struct coord_equatorial	equ;
+
+
+
+	p->cfg->tgt_az = (gdouble) az;
+	p->cfg->tgt_el = (gdouble) el;
+
+
+	/* do not update reference from external source while tracking */
+	if (p->cfg->tracking)
+		return;
+
+	hor.az = p->cfg->tgt_az;
+	hor.el = p->cfg->tgt_el;
+
+	equ = horizontal_to_equatorial(hor, p->cfg->lat, p->cfg->lon, 0.0);
+
+	p->cfg->track_ra = equ.ra;
+	p->cfg->track_de = equ.dec;
+
+	return;
 }
 
 
 
-void telescope_tracker_ctrl(gpointer instance, gboolean state, Telescope *p)
+void telescope_tracker_ctrl(gpointer instance, gboolean state,
+			    gdouble az, gdouble el,
+			    Telescope *p)
 {
-	const GSourceFunc sf = telescope_track_timeout_cb;
+	struct coord_horizontal hor;
+	struct coord_equatorial	equ;
 
+
+	if (state == p->cfg->tracking)
+		return;
 
 	if (state) {
-		gtk_switch_set_state(p->cfg->sw_trk, TRUE);
-		p->cfg->tracking = G_SOURCE_CONTINUE;
-		p->cfg->id_to = g_timeout_add_seconds(1, sf, p);
-		return;
+		hor.az = az;
+		hor.el = el;
+
+		equ = horizontal_to_equatorial(hor, p->cfg->lat, p->cfg->lon, 0.0);
+
+		p->cfg->track_ra = equ.ra;
+		p->cfg->track_de = equ.dec;
 	}
 
-	gtk_switch_set_state(GTK_SWITCH(p->cfg->sw_trk), FALSE);
 
-	p->cfg->tracking = G_SOURCE_REMOVE;
+	if (state)
+		gtk_switch_set_state(p->cfg->sw_trk, TRUE);
+	else
+		gtk_switch_set_state(GTK_SWITCH(p->cfg->sw_trk), FALSE);
+
 }
 
 

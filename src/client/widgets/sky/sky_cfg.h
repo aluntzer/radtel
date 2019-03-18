@@ -60,6 +60,11 @@ struct _SkyConfig {
 	gdouble lat;	/* telescope location */
 	gdouble lon;
 
+	gdouble az_res;	/* azel step resolution */
+	gdouble el_res;
+
+	struct sky_obj *sel;		/* the currently selected sky object */
+
 	struct coord_horizontal pos;	/* telescope current pointing */
 	struct coord_horizontal tgt;	/* telescope target pointing */
 
@@ -85,6 +90,7 @@ struct _SkyConfig {
 	guint id_cap;
 	guint id_pos;
 	guint id_tgt;
+	guint id_trk;
 };
 
 
