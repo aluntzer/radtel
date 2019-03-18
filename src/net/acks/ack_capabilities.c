@@ -28,21 +28,27 @@
 void ack_capabilities(uint16_t trans_id, struct capabilities *c)
 {
 	gsize pkt_size;
+	gsize data_size;
 
 	struct packet *pkt;
 
 
-	pkt_size = sizeof(struct packet) + sizeof(struct capabilities);
+	/* data size is packet plus horizon profile arrays */
+	data_size = sizeof(struct capabilities)
+		    + c->n_hor * sizeof(struct local_horizon);
+
+	pkt_size = sizeof(struct packet) + data_size;
+
 
 	/* allocate zeroed packet + payload */
 	pkt = g_malloc0(pkt_size);
 
 	pkt->service   = PR_CAPABILITIES;
 	pkt->trans_id  = trans_id;
-	pkt->data_size = sizeof(struct capabilities);
+	pkt->data_size = data_size;
 
 
-	memcpy(pkt->data, c, sizeof(struct capabilities));
+	memcpy(pkt->data, c, data_size);
 
 	pkt_set_data_crc16(pkt);
 

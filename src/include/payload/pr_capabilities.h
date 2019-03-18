@@ -19,27 +19,11 @@
 #ifndef _INCLUDE_PAYLOAD_PR_CAPABILITIES_H_
 #define _INCLUDE_PAYLOAD_PR_CAPABILITIES_H_
 
+struct local_horizon {
+	int32_t az;
+	int32_t el;
+};
 
-/*
- * Digital SRT radiometer values:
- *
- * freq_min_hz		 1370 000 000	(1370 MHz)
- * freq_max_hz		 1800 000 000  (1800 MHz)
- * freq_inc_hz		       40 000  (  40 kHź)
- *
- * bw_max_hz		      500 000	(500 kHz)
- *
- * bw_max_div_lin;	             0  (unused)
- * bw_max_div_rad2		     2  (0 = 500 kHz, 1 = 250 kHz, 2 = 125 kHz)
- *
- * bw_max_bins			    64
- *
- * bw_max_bin_div_lin		     0 (unused)
- * bw_max_bin_div_rad2		     0 (always 64)
- *
- * PR_CAPABILITIES packet payload structure
- *
- */
 
 struct capabilities {
 
@@ -49,8 +33,8 @@ struct capabilities {
 	 * position accuracy
 	 */
 
-	int32_t lat_arcsec;			/* station latitude  */
-	int32_t lon_arcsec;			/* station longitude */
+	int32_t lat_arcsec;		/* station latitude  */
+	int32_t lon_arcsec;		/* station longitude */
 
 	int32_t az_min_arcsec;		/* left limit      */
 	int32_t az_max_arcsec;		/* right limit     */
@@ -67,7 +51,7 @@ struct capabilities {
 
 
 	/* filter bandwidth limits
-	 * and maxium filter bandwidth divider:
+	 * and maximum filter bandwidth divider:
 	 *	bw_max_hz/bw_max_div = bw_min_hz
 	 *
 	 * the filter bandwith divider may be given as linear integer limit or
@@ -96,7 +80,19 @@ struct capabilities {
 	uint32_t bw_max_bin_div_rad2;	/* max bin per BW divider (2^n) */
 
 	uint32_t n_stack_max;		/* max spec averaging */
-};
+
+	/* local horizon profile defined in pairs of
+	 * azimuth and elevation.
+	 * NOTE: coordinate units are in degrees. If absolutely, required, this
+	 * could be changed to arcminutes or arcseconds, as the data type is
+	 * certainly wide enought, but I don't see the the necessity at this
+	 * time.
+	 */
+
+	uint32_t n_hor;			/* number of az/el coordinate pairs */
+	struct local_horizon hor[];		/* azimuth/elevation coordinate pairs */
+
+}__attribute__((packed));
 
 
 #endif /* _INCLUDE_PAYLOAD_PR_CAPABILITIES_H_ */

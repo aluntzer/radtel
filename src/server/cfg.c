@@ -137,8 +137,15 @@ double server_cfg_get_station_lon(void)
  * @returns the size of the az/el arrays pointed to by hor_az and hor_el
  */
 
-gsize server_cfg_get_hor_limits(int **hor_az, int **hor_el)
+gsize server_cfg_get_hor_limits(gint32 **hor_az, gint32 **hor_el)
 {
+
+	(*hor_az) = g_memdup(server_cfg->hor_az,
+			     server_cfg->n_hor * sizeof(gint32));
+
+	(*hor_el) = g_memdup(server_cfg->hor_el,
+			     server_cfg->n_hor * sizeof(gint32));
+
 	return server_cfg->n_hor;
 }
 
@@ -154,9 +161,9 @@ int server_cfg_load(void)
 
 	GKeyFile *kf;
 	GKeyFileFlags flags;
-	
+
 	GError *error = NULL;
-	
+
 
 
 
@@ -165,7 +172,7 @@ int server_cfg_load(void)
 	flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
 
 
-	ret = g_key_file_load_from_file(kf, "config/server.cfg", 
+	ret = g_key_file_load_from_file(kf, "config/server.cfg",
 					flags, &error);
 
 	if (!ret) {

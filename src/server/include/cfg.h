@@ -21,13 +21,13 @@
 
 struct server_settings {
 	guint16  port;		/* network port */
-	gchar  **plugins;	/* plugin paths */
-	gchar   *station;	/* station name */
-	double   lat;		/* station latitude */
-	double   lon;		/* station longitude */
-	int     *hor_az;	/* horizon profile azimuth values */
-	int     *hor_el;	/* horizon profile elevaltion values */
-	gsize    n_hor;		/* number of profile values */
+	gchar   **plugins;	/* plugin paths */
+	gchar    *station;	/* station name */
+	gdouble   lat;		/* station latitude */
+	gdouble   lon;		/* station longitude */
+	gint32   *hor_az;	/* horizon profile azimuth values */
+	gint32   *hor_el;	/* horizon profile elevaltion values */
+	gsize     n_hor;		/* number of profile values */
 };
 
 

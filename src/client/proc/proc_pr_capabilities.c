@@ -23,19 +23,23 @@
 
 void proc_pr_capabilities(struct packet *pkt)
 {
+	gsize pkt_data_size;
 	const struct capabilities *c;
 
-	
+
 	g_debug("Server sent capabilities");
 
-	if (pkt->data_size != sizeof(struct capabilities)) {
+	c = (const struct capabilities *) pkt->data;
+
+	pkt_data_size = sizeof(struct capabilities)
+			+ c->n_hor * sizeof(struct local_horizon);
+
+	if (pkt->data_size != pkt_data_size) {
 		g_message("\tcapabilities payload size mismatch %d != %d",
-			  sizeof(struct capabilities), pkt->data_size);
+			  pkt_data_size, pkt->data_size);
 		return;
 	}
 
-	c = (const struct capabilities *) pkt->data;
-	
 
 	sig_pr_capabilities(c);
 }
