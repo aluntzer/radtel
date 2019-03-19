@@ -35,6 +35,10 @@ struct _SysStatusConfig {
 	GtkLabel  *lbl_glat;
 	GtkLabel  *lbl_glon;
 
+	GtkWidget *btn_show;
+	GtkWidget *btn_hide;
+
+	GtkWidget *grid;
 
 
 	GtkWidget  *spin_acq;

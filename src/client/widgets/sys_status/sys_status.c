@@ -145,20 +145,83 @@ static void sys_status_handle_pr_capabilities(gpointer instance,
 }
 
 
+static void sys_status_hide_widgets(GtkWidget *w, gpointer data)
+{
+	SysStatus *p;
+	static int once; /** XXX demo */
+
+
+	p = SYS_STATUS(data);
+
+
+	gtk_widget_set_no_show_all(p->cfg->grid, TRUE);
+	gtk_widget_hide(p->cfg->grid);
+
+	gtk_widget_set_no_show_all(p->cfg->btn_hide, TRUE);
+	gtk_widget_hide(p->cfg->btn_hide);
+
+	gtk_widget_set_no_show_all(p->cfg->btn_show, FALSE);
+	gtk_widget_show(p->cfg->btn_show);
+
+
+	if (!once) {
+		gtk_label_set_text(p->cfg->info_bar_lbl, "Hidden!");
+		gtk_info_bar_set_revealed(GTK_INFO_BAR(p->cfg->info_bar), TRUE);
+		once = 1;
+	}
+}
+
+
+static void sys_status_show_widgets(GtkWidget *w, gpointer data)
+{
+	SysStatus *p;
+	static int once; /** XXX demo */
+
+
+	p = SYS_STATUS(data);
+
+
+	gtk_widget_set_no_show_all(p->cfg->grid, FALSE);
+	gtk_widget_show(p->cfg->grid);
+
+	gtk_widget_set_no_show_all(p->cfg->btn_hide, FALSE);
+	gtk_widget_show(p->cfg->btn_hide);
+
+	gtk_widget_set_no_show_all(p->cfg->btn_show, TRUE);
+	gtk_widget_hide(p->cfg->btn_show);
+
+
+	if (!once) {
+		gtk_label_set_text(p->cfg->info_bar_lbl, "Visible!");
+		gtk_info_bar_set_revealed(GTK_INFO_BAR(p->cfg->info_bar), TRUE);
+		once = 1;
+	}
+}
+
+
+
 
 static void gui_create_sys_status_controls(SysStatus *p)
 {
 	GtkWidget *w;
+	GtkWidget *box;
 	GtkWidget *grid;
 
 
+
+	box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+	gtk_box_pack_start(GTK_BOX(p), box, FALSE, FALSE, 6);
+
 	grid = gtk_grid_new();
+	p->cfg->grid = grid;
 
 	gtk_grid_set_row_spacing(GTK_GRID(grid), 6);
 	gtk_grid_set_column_spacing(GTK_GRID(grid), 12);
-	g_object_set(grid, "margin", 18, NULL);
+	g_object_set(grid, "margin", 6, NULL);
 
-	gtk_box_pack_start(GTK_BOX(p), grid, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(box), grid, FALSE, TRUE, 0);
+	gtk_widget_set_halign(grid, GTK_ALIGN_CENTER);
+	gtk_widget_set_hexpand(grid, TRUE);
 
 
 	w = sys_status_pos_new(p);
@@ -216,8 +279,40 @@ static void gui_create_sys_status_controls(SysStatus *p)
 		gtk_grid_attach(GTK_GRID(grid), grid2, 2, 0, 1, 1);
 	}
 
+
 	w = sys_status_info_bar_new(p);
-	gtk_box_pack_start(GTK_BOX(p), w, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(p), w, FALSE, TRUE, 0);
+	gtk_widget_set_vexpand(w, FALSE);
+	gtk_widget_set_hexpand(w, TRUE);
+
+	gtk_widget_set_halign(w, GTK_ALIGN_FILL);
+	gtk_widget_set_valign(w, GTK_ALIGN_END);
+
+
+
+
+	w = gtk_button_new_from_icon_name("pan-down-symbolic",
+					    GTK_ICON_SIZE_BUTTON);
+	gtk_box_pack_start(GTK_BOX(box), w, FALSE, TRUE, 6);
+	gtk_widget_set_halign(w, GTK_ALIGN_END);
+	gtk_widget_set_valign(w, GTK_ALIGN_END);
+	gtk_widget_set_hexpand(w, TRUE);
+	g_signal_connect(G_OBJECT(w), "clicked",
+			 G_CALLBACK(sys_status_hide_widgets),
+			 (gpointer) p);
+	p->cfg->btn_hide = w;
+
+	w = gtk_button_new_from_icon_name("pan-up-symbolic",
+					    GTK_ICON_SIZE_BUTTON);
+	gtk_box_pack_start(GTK_BOX(box), w, FALSE, TRUE, 6);
+	gtk_widget_set_halign(w, GTK_ALIGN_END);
+	gtk_widget_set_valign(w, GTK_ALIGN_END);
+	gtk_widget_set_hexpand(w, TRUE);
+	g_signal_connect(G_OBJECT(w), "clicked",
+			 G_CALLBACK(sys_status_show_widgets),
+			 (gpointer) p);
+	gtk_widget_set_no_show_all(GTK_WIDGET(w), TRUE);
+	p->cfg->btn_show = w;
 }
 
 
