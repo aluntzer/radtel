@@ -109,9 +109,10 @@ static gboolean telescope_destroy(GtkWidget *w, void *data)
 
 	p = TELESCOPE(w);
 
-	g_source_remove(p->cfg->id_to);
-	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_pos);
+	if (p->cfg->tracking)
+		g_source_remove(p->cfg->id_to);
 
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_tgt);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_cap);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_pos);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_trk);
@@ -175,13 +176,13 @@ static void telescope_init(Telescope *p)
 				  (gpointer) p);
 
 
-	p->cfg->id_pos = g_signal_connect(sig_get_instance(), "tracking",
+	p->cfg->id_trk = g_signal_connect(sig_get_instance(), "tracking",
 				  (GCallback) telescope_tracker_ctrl,
 				  (gpointer) p);
 
 	p->cfg->id_mov = g_signal_connect(sig_get_instance(), "pr-status-move",
-				 G_CALLBACK(telscope_handle_pr_status_move),
-				 (void *) p);
+				  G_CALLBACK(telscope_handle_pr_status_move),
+				  (void *) p);
 
 	g_signal_connect(p, "destroy", G_CALLBACK(telescope_destroy), NULL);
 }
