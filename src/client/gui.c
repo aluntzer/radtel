@@ -386,16 +386,16 @@ static void gui_create_window_with_widget(GtkWidget *p, GtkWidget **win,
 			 G_CALLBACK(gui_create_window_with_widget), NULL);
 
 
-	box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 18);
+	box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
 	gtk_container_add(GTK_CONTAINER((*win)), box);
 
 	gtk_widget_set_halign(GTK_WIDGET(sswdnd), GTK_ALIGN_CENTER);
 	gtk_box_pack_start(GTK_BOX(box), sswdnd, FALSE, FALSE, 0);
 
-	gtk_box_pack_start(GTK_BOX(box), GTK_WIDGET(stack), TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(box), GTK_WIDGET(stack), TRUE, TRUE, 6);
 
 	w = sys_status_new();
-	gtk_widget_set_halign(GTK_WIDGET(w), GTK_ALIGN_CENTER);
+	gtk_widget_set_halign(GTK_WIDGET(w), GTK_ALIGN_FILL);
 	gtk_box_pack_start(GTK_BOX(box), w, FALSE, FALSE, 0);
 #if 0
 	w = gui_create_status_view();
@@ -431,8 +431,13 @@ static GtkWidget *gui_create_stack_switcher(void)
 	sswdnd_add_named(sswdnd, w, "Observation");
 
 
+	w = gtk_scrolled_window_new(NULL, NULL);
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(w),
+				       GTK_POLICY_AUTOMATIC,
+				       GTK_POLICY_AUTOMATIC);
+	gtk_container_add(GTK_CONTAINER(w), spectrum_new());
+	sswdnd_add_named(sswdnd, w, "Spectrum");
 
-	sswdnd_add_named(sswdnd, spectrum_new(), "Spectrum");
 
 	w = gtk_scrolled_window_new(NULL, NULL);
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(w),
@@ -440,6 +445,7 @@ static GtkWidget *gui_create_stack_switcher(void)
 				       GTK_POLICY_AUTOMATIC);
 	gtk_container_add(GTK_CONTAINER(w), telescope_new());
 	sswdnd_add_named(sswdnd, w, "Telescope");
+
 
 	w = gtk_scrolled_window_new(NULL, NULL);
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(w),
