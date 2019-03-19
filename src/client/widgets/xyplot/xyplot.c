@@ -1909,7 +1909,9 @@ double xyplot_nicenum(const double num, const gboolean round)
 	f = num / pow(10, exp);
 
 	if (round) {
-		if (f < 1.5)
+		if (f < 1.0)
+			nf = 0.5;
+		else if (f < 1.5)
 			nf = 1.0;
 		else if (f < 3.0)
 			nf = 2.0;
@@ -1922,10 +1924,10 @@ double xyplot_nicenum(const double num, const gboolean round)
 			nf = 1.0;
 		else if (f < 2.0)
 			nf = 2.0;
-		else if (f<5.0)
-			nf=5.0;
+		else if (f < 5.0)
+			nf = 5.0;
 		else
-			nf=10.0;
+			nf = 10.0;
 	}
 
 	return nf * pow(10, exp);
@@ -1936,7 +1938,7 @@ static void xyplot_auto_axis(XYPlot *p, XYPlotAxis *ax,
 			     gdouble min, gdouble max, gdouble len)
 {
 
-	ax->len  = xyplot_nicenum(len, FALSE);
+	ax->len  = xyplot_nicenum(len, TRUE);
 	ax->step = xyplot_nicenum(ax->len / (ax->ticks_maj - 1.0), TRUE);
 
 	ax->min = floor(min / ax->step) * ax->step;
