@@ -562,7 +562,8 @@ struct coord_equatorial moon_ra_dec(double lat, double lon)
  * @note for now, use this one
  */
 
-struct coord_equatorial moon_ra_dec(double lat, double lon)
+struct coord_equatorial moon_ra_dec(double lat, double lon,
+				    double hour_angle_shift)
 {
 	double d;
 	double Lm;
@@ -594,7 +595,7 @@ struct coord_equatorial moon_ra_dec(double lat, double lon)
 	hour_angle = local_sidereal_time(lon);
 
 	/* fractional day number since 1999 Jan 0, 0h TT (terrestrial time) */
-	d = daynumber() + (365.2425 + 0.5) * 2.0 + 0.015;
+	d = daynumber() + (365.2425 + 0.5) * 2.0 + 0.015 + hour_angle_shift / 24.0;
 
 	/* mean longitude of the Moon, measured in the the ecliptic to the mean
 	 * ascending node and then along the orbit
@@ -672,7 +673,7 @@ struct coord_equatorial moon_ra_dec(double lat, double lon)
  * @see  Astronomical Almanac page C3-C5 Sun, 2014
  */
 
-struct coord_equatorial sun_ra_dec(void)
+struct coord_equatorial sun_ra_dec(double hour_angle_shift)
 {
 	double d;
 	double g;
@@ -684,7 +685,7 @@ struct coord_equatorial sun_ra_dec(void)
 
 
 	/* days since Jan 0th, 0h UT */
-	d = daynumber();
+	d = daynumber() + hour_angle_shift / 24.0;
 
 	/* mean longitude of the sun, corrected for aberation */
 	L = 279.583 + 0.985647 * d;

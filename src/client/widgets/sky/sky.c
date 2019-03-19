@@ -194,10 +194,11 @@ static gboolean sky_update_coord_hor(gpointer data)
 
 		/* not exactly safe, but whatever */
 		if (!strncmp("Sun", obj->name, 3))
-			obj->eq = sun_ra_dec();
+			obj->eq = sun_ra_dec(p->cfg->time_off);
 
 		if (!strncmp("Moon", obj->name, 4))
-			obj->eq = moon_ra_dec(p->cfg->lat, p->cfg->lon);
+			obj->eq = moon_ra_dec(p->cfg->lat, p->cfg->lon,
+					      p->cfg->time_off);
 
 		obj->hor = equatorial_to_horizontal(obj->eq,
 						    p->cfg->lat, p->cfg->lon,
@@ -1288,9 +1289,11 @@ static PangoLayout *sky_create_layout(cairo_t *cr,
 static void sky_render_layout(cairo_t *cr, PangoLayout *layout,
 				  const int x, const int y)
 {
+	cairo_save(cr);
 	cairo_move_to(cr, x, y);
 	pango_cairo_show_layout(cr, layout);
 	g_object_unref(layout);
+	cairo_restore(cr);
 }
 
 
@@ -1416,7 +1419,7 @@ static PangoLayout *sky_time_info_layout(cairo_t *cr, double time_offset)
 	return sky_create_layout(cr, buf, strlen(buf));
 }
 
-
+#if 0
 /**
  * @brief create reset button text layout
  *
@@ -1469,9 +1472,7 @@ static void sky_reset_button_rectangle(cairo_t *cr,
 
 	cairo_restore(cr);
 }
-
-
-
+#endif
 
 
 /**
@@ -1511,13 +1512,22 @@ static void sky_draw_time_rst(cairo_t *cr, Sky *p)
 	gint w;
 	gint w_off;
 	gint text_height;
+	gint x0, y0;
+	gint wh, ww;
+	gint h;
+
 
 	PangoLayout *layout;
+
+	GtkWidget *b;
+	GtkWidget *off;
+
 
 
 	if (p->cfg->time_off == 0.0)
 		return;
 
+#if 0
 	layout = sky_time_info_layout(cr, p->cfg->time_off);
 
 	pango_layout_get_pixel_size(layout, &w, &text_height);
@@ -1533,11 +1543,9 @@ static void sky_draw_time_rst(cairo_t *cr, Sky *p)
 	layout = sky_reset_button_layout(cr);
 
 	pango_layout_get_pixel_size(layout, &w, &text_height);
-
 	sky_render_layout(cr, layout,
 			  (p->cfg->width  - w_off * 1.1) - w, /* ugh... */
 			  (p->cfg->height - text_height));
-
 
 	sky_reset_button_rectangle(cr,
 				   p->cfg->width  - w_off * 1.1 - w * 1.1,
@@ -1551,6 +1559,49 @@ static void sky_draw_time_rst(cairo_t *cr, Sky *p)
 
 	p->cfg->rst.y0 = (int) (p->cfg->height - text_height);
 	p->cfg->rst.y1 = (int) (p->cfg->rst.y0 + text_height);
+
+#else
+	/* render offscreen button to cairo context */
+	off = gtk_offscreen_window_new();
+	b = gtk_button_new_with_label("Reset");
+	gtk_container_add(GTK_CONTAINER(off), b);
+	gtk_widget_show_all(off);
+
+	wh = gtk_widget_get_allocated_height(b);
+	ww = gtk_widget_get_allocated_width(b);
+
+
+	layout = sky_time_info_layout(cr, p->cfg->time_off);
+
+	pango_layout_get_pixel_size(layout, &w, &text_height);
+
+	w_off = w * 1.1;
+
+	h = (text_height + wh);
+
+	/* keep same left align as above */
+	sky_render_layout(cr, layout,
+			  (p->cfg->width  - w_off),
+			  (p->cfg->height - h / 2));
+
+
+	x0 = p->cfg->width - w_off + w - ww ;
+	y0 = p->cfg->height - h - wh / 2;
+
+	cairo_save(cr);
+	cairo_translate(cr, x0, y0);
+
+	gtk_widget_draw(b, cr);
+	cairo_restore(cr);
+
+	p->cfg->rst.x0 = x0;
+	p->cfg->rst.x1 = x0 + ww;
+
+	p->cfg->rst.y0 = y0;
+	p->cfg->rst.y1 = y0 + wh;
+
+	gtk_widget_destroy(off);
+#endif
 }
 
 
@@ -2131,8 +2182,6 @@ static void sky_init(Sky *p)
 			       | GDK_POINTER_MOTION_HINT_MASK
 			       | GDK_ENTER_NOTIFY_MASK
 			       | GDK_LEAVE_NOTIFY_MASK);
-
-
 }
 
 

@@ -58,8 +58,9 @@ double local_sidereal_time(double lon);
 
 double julian_date(struct tm date);
 
-struct coord_equatorial sun_ra_dec(void);
-struct coord_equatorial moon_ra_dec(double lat, double lon);
+struct coord_equatorial sun_ra_dec(double hour_angle_shift);
+struct coord_equatorial moon_ra_dec(double lat, double lon,
+				    double hour_angle_shift);
 
 struct coord_horizontal equatorial_to_horizontal(struct coord_equatorial eq,
 						 double lat, double lon,
