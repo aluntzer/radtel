@@ -2147,11 +2147,6 @@ static void sky_init(Sky *p)
 	g_signal_connect(G_OBJECT(&p->parent), "destroy",
 			 G_CALLBACK(sky_destroy), (gpointer) p);
 
-#if 0
-
-	g_signal_connect (G_OBJECT(&p->parent), "button-press-event",
-			  G_CALLBACK (sky_button_press_cb), NULL);
-#endif
 
 	p->cfg->id_cap = g_signal_connect(sig, "pr-capabilities",
 			  G_CALLBACK(sky_handle_pr_capabilities),
