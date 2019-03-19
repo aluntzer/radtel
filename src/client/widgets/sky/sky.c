@@ -206,8 +206,14 @@ static gboolean sky_update_coord_hor(gpointer data)
 		l = l->next;
 	}
 
-	if (p->cfg->sel)
-		sky_update_tracked_pos(p);
+	if (p->cfg->sel) {
+		if (p->cfg->time_off == 0.0)
+			sky_update_tracked_pos(p);
+		else
+			g_warning("TODO SET NOTIFICATION HERE: TRACKING POSITION "
+				  "NOT UPDATED, YOU MAY LOOSE OBJECT IF NOT "
+				  "MOVING AT SIDEREAL VELOCITY");
+	}
 
 
 	sky_plot(GTK_WIDGET(p));
@@ -1894,7 +1900,11 @@ static gboolean sky_button_press_cb(GtkWidget *widget, GdkEventButton *event,
 				return TRUE;
 
 			if (p->cfg->sel) {
-				sky_update_tracked_pos(p);
+				if (p->cfg->time_off == 0.0)
+					sky_update_tracked_pos(p);
+				else
+					g_warning("NOTIFY: REFUSING TO TRACK "
+						  "TIME SHIFTED MODE");
 				return TRUE;
 			}
 
