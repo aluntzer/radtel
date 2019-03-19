@@ -1149,7 +1149,7 @@ static void xyplot_draw_ticks_y(XYPlot *p, cairo_t *cr,
 	/* horizontal grid lines */
 	idx = p->y_ax.min;
 	inc = p->y_ax.step;
-	stp = p->y_ax.max + 0.5 * inc;
+	stp = p->y_ax.max;
 	min = p->y_ax.min;
 	scl = p->scale_y;
 
