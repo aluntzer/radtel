@@ -737,6 +737,7 @@ static void on_assistant_apply(GtkWidget *as, ObsAssist *p)
 
 	gtk_widget_set_hexpand(p->cfg->cross.plt_az, TRUE);
 	gtk_widget_set_vexpand(p->cfg->cross.plt_az, TRUE);
+	gtk_widget_set_size_request(p->cfg->cross.plt_az, -1, 300);
 	gtk_grid_attach(grid, p->cfg->cross.plt_az, 0, 0, 2, 1);
 
 	p->cfg->cross.plt_el = xyplot_new();
@@ -745,6 +746,7 @@ static void on_assistant_apply(GtkWidget *as, ObsAssist *p)
 
 	gtk_widget_set_hexpand(p->cfg->cross.plt_el, TRUE);
 	gtk_widget_set_vexpand(p->cfg->cross.plt_el, TRUE);
+	gtk_widget_set_size_request(p->cfg->cross.plt_el, -1, 300);
 	gtk_grid_attach(grid, p->cfg->cross.plt_el, 2, 0, 2, 1);
 
 

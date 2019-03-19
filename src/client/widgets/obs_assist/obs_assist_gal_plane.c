@@ -362,6 +362,7 @@ static void on_assistant_apply(GtkWidget *as, ObsAssist *p)
 	gtk_widget_set_hexpand(p->cfg->gal_plane.plt, TRUE);
 	gtk_widget_set_vexpand(p->cfg->gal_plane.plt, TRUE);
 	gtk_grid_attach(grid, p->cfg->gal_plane.plt, 0, 0, 2, 1);
+	gtk_widget_set_size_request(p->cfg->gal_plane.plt, -1, 300);
 
 
 	w = gtk_label_new("Scan");
