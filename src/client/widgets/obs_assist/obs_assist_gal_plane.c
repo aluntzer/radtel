@@ -277,7 +277,7 @@ static gboolean gal_plane_obs_pos(ObsAssist *p)
 	gal_plane_update_pbar_glon(p);
 
 	/* upper bound reached?  */
-	glon_lim = p->cfg->gal_plane.glon_cur + p->cfg->gal_plane.glon_stp;
+	glon_lim = p->cfg->gal_plane.glon_cur;
 	if (p->cfg->gal_plane.glon_hi < glon_lim)
 		return FALSE;
 
@@ -324,7 +324,8 @@ static gboolean gal_plane_obs(void *data)
 	/* on repeat, set glon back to lower bound */
 	if (p->cfg->gal_plane.rpt_cur < p->cfg->gal_plane.n_rpt) {
 		p->cfg->gal_plane.rpt_cur++;
-		p->cfg->gal_plane.glon_cur = p->cfg->gal_plane.glon_lo;
+		p->cfg->gal_plane.glon_stp *= -1.0;
+		p->cfg->gal_plane.glon_cur += p->cfg->gal_plane.glon_stp;;
 		gal_plane_update_pbar_rpt(p);
 		return G_SOURCE_CONTINUE;
 	}

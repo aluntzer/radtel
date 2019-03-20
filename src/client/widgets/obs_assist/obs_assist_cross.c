@@ -697,10 +697,10 @@ static gboolean cross_obs(void *data)
 	xyplot_select_all_data(p->cfg->cross.plt_el);
 
 	/* done */
-	g_array_free(p->cfg->cross.az.off, FALSE);
-	g_array_free(p->cfg->cross.az.amp, FALSE);
-	g_array_free(p->cfg->cross.el.off, FALSE);
-	g_array_free(p->cfg->cross.el.amp, FALSE);
+	g_array_free(p->cfg->cross.az.off, TRUE);
+	g_array_free(p->cfg->cross.az.amp, TRUE);
+	g_array_free(p->cfg->cross.el.off, TRUE);
+	g_array_free(p->cfg->cross.el.amp, TRUE);
 
 
 	return G_SOURCE_REMOVE;

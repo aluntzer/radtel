@@ -145,6 +145,45 @@ struct _ObsAssistConfig {
 	} gal_plane;
 
 
+	struct {
+
+		GArray *az;
+		GArray *el;
+		GArray *amp;
+
+		gdouble az_lo;
+		gdouble az_hi;
+		gdouble az_stp;
+
+		gdouble el_lo;
+		gdouble el_hi;
+		gdouble el_stp;
+
+		gdouble az_cur;
+		gdouble el_cur;
+
+		gint n_avg;
+
+		gboolean wait;
+
+		GtkSpinButton *sb_az_deg;
+		GtkSpinButton *sb_el_deg;
+
+		GtkSpinButton *sb_az_hi;
+		GtkSpinButton *sb_az_lo;
+
+		GtkSpinButton *sb_el_hi;
+		GtkSpinButton *sb_el_lo;
+
+		GtkSpinButton *sb_avg;
+
+		GtkWidget *pbar_az;
+		GtkWidget *pbar_el;
+
+		GtkWidget *plt;
+
+	} azel;
+
 };
 
 
