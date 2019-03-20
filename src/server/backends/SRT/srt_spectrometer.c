@@ -25,6 +25,8 @@
 #include <stdlib.h>
 
 #include <glib.h>
+#include <glib/gstdio.h>
+
 #include <gmodule.h>
 #include <string.h>
 
@@ -90,6 +92,12 @@ static struct {
 
 	double temp_cal_factor;		/* calibration for temp conversion */
 
+	struct {			/* spectral response calibration */
+		gdouble *frq;
+		gdouble *amp;
+		gsize n;
+	} cal;
+
 } srt = {
 	 .freq_min_hz      = SRT_DIGITAL_FREQ_MIN_HZ,
 	 .freq_max_hz      = SRT_DIGITAL_FREQ_MAX_HZ,
@@ -114,6 +122,7 @@ struct acq_strategy {
 	guint offset;		/* first bin to extract */
 	guint nbins;		/* number of bins to extract */
 	double *fq;		/* bin frequencies */
+	double *cal;		/* spectral response calibration */
 	gsize  n_elem;		/* total number of spectral bins */
 };
 
@@ -258,6 +267,50 @@ static int srt_spec_load_config(void)
 	g_key_file_free(kf);
 
 	return 0;
+}
+
+
+/**
+ * @brief load spectral response calibration
+ *
+ * @note format is one per line: <frequency[Mhz]> <amplitude []>
+ */
+
+static void srt_spec_load_calibration(void)
+{
+	gdouble frq;
+	gdouble amp;
+
+	GArray *gfrq;
+	GArray *gamp;
+
+	FILE *f;
+
+
+	gfrq = g_array_new(FALSE, FALSE, sizeof(gdouble));
+	gamp = g_array_new(FALSE, FALSE, sizeof(gdouble));
+
+
+	f = g_fopen("config/backends/calibration/spectral_response.dat", "r");
+	if (!f) {
+		g_warning(MSG "spectral response calibration not found");
+		return;
+	}
+
+	while (fscanf(f,"%lf %lf", &frq, &amp) == 2) {
+		frq *= 1e6; /* to Hz */
+		g_array_append_val(gfrq, frq);
+		g_array_append_val(gamp, amp);
+	}
+
+	srt.cal.frq = (gdouble *) gfrq->data;
+	srt.cal.amp = (gdouble *) gamp->data;
+	srt.cal.n   = gfrq->len;
+
+	g_array_free(gfrq, FALSE);
+	g_array_free(gamp, FALSE);
+
+	fclose(f);
 }
 
 
@@ -837,6 +890,92 @@ static void srt_calculate_bin_frequencies(struct spec_acq_cfg  *acq,
 
 
 /**
+ * @brief find the best match in the calibration data for a given frequency
+ *
+ * @param frq a frequency (in Hz)
+ *
+ * @returns the calbration; always 1.0 if no match was found
+ */
+
+static gdouble srt_find_calibration(gdouble frq)
+{
+	gdouble cal = -1.0;
+
+	gsize idx0;
+
+	static gsize idx = 1;
+
+
+	idx0 = idx;
+
+	for (; idx < srt.cal.n - 1; idx++) {
+		if (srt.cal.frq[idx - 1] < frq) {
+			if (srt.cal.frq[idx + 1] > frq) {
+				cal = srt.cal.amp[idx];
+				break;
+			}
+		}
+	}
+
+	/* try again for remaining section */
+	if ((cal == -1.0)) {
+		for (idx = 1; idx < idx0 - 1; idx++) {
+			if (srt.cal.frq[idx - 1] < frq) {
+				if (srt.cal.frq[idx + 1] > frq) {
+					cal = srt.cal.amp[idx];
+					break;
+				}
+			}
+		}
+	}
+
+	/* still noting, set unity */
+	if (cal == -1.0)
+		cal = 1.0;
+
+
+	/* next call might be close by, decrement one */
+	if (idx > 1)
+		idx--;
+
+
+	return cal;
+}
+
+
+
+/**
+ * @brief determine the bin calibration value for the given frequencies
+ *
+ * @param acq the acquisition configuration
+ * @param acs the array of observation steps
+ * @param n the number of steps
+ */
+
+static void srt_determine_bin_calibration(struct spec_acq_cfg  *acq,
+					  struct acq_strategy **acs, gsize n)
+{
+	gsize i, j, k;
+
+	struct acq_strategy *p = (*acs);
+
+
+	/* do nothing if there is no calibration data loaded */
+	if (!srt.cal.n) {
+		p[i].cal = NULL;
+		return;
+	}
+
+	for (i = 0; i < n; i++) {
+		p[i].cal = (gdouble*) g_malloc(p[i].n_elem * sizeof(gdouble));
+
+		for (j = 0; j < p[i].n_elem; j++)
+			p[i].cal[j] = srt_find_calibration(p[i].fq[j]);
+	}
+}
+
+
+/**
  * @brief determine the selections of bins to construct the requested spectrum
  *
  * @param acq the acquisition configuration
@@ -942,6 +1081,8 @@ static gsize srt_comp_obs_strategy(struct spec_acq_cfg  *acq,
 
 	srt_calculate_bin_frequencies(acq, acs, n);
 
+	srt_determine_bin_calibration(acq, acs, n);
+
 	srt_determine_bin_selection(acq, acs, n);
 
 	return n;
@@ -957,8 +1098,10 @@ static void srt_comp_obs_strategy_dealloc(struct acq_strategy **acs, gsize n)
 	gsize i;
 
 
-	for (i = 0; i < n; i++)
+	for (i = 0; i < n; i++) {
 		g_free((*acs)[i].fq);
+		g_free((*acs)[i].cal);
+	}
 
 
 	g_free((*acs));
@@ -973,7 +1116,7 @@ static void srt_comp_obs_strategy_dealloc(struct acq_strategy **acs, gsize n)
  * @todo polynomial preamp/inputfilter curve calibration
  */
 
-static void srt_apply_calibration(struct spec_data *s)
+static void srt_apply_temp_calibration(struct spec_data *s)
 {
 	gsize i;
 
@@ -1001,6 +1144,7 @@ static uint32_t srt_spec_acquire(struct observation *obs)
 
 	struct status st;
 
+	gdouble cal;
 
 
 	const struct acq_strategy *acs = obs->acs;
@@ -1082,12 +1226,19 @@ static uint32_t srt_spec_acquire(struct observation *obs)
 	p = s->spec;
 	for (i = 0; i < n; i++) {
 		for (j = 0; j < acs[i].nbins; j++) {
-			(*p++) = (uint32_t) raw[i][j + srt.bin_cut_lo + acs[i].offset];
+			/* XXX YUCK! I do this here for now, but the spectrum
+			 * preparation really needs some refactoring...
+			 */
+			(*p) = (uint32_t)  raw[i][j + srt.bin_cut_lo + acs[i].offset];
+			if (acs[i].cal) 
+				(*p) = (uint32_t) (acs[i].cal[j] * (gdouble) (*p));
+			p++;
+
 			s->n++;
 		}
 	}
 
-	srt_apply_calibration(s);
+	srt_apply_temp_calibration(s);
 
 	/* handover for transmission */
 	ack_spec_data(PKT_TRANS_ID_UNDEF, s);
@@ -1460,6 +1611,8 @@ const gchar *g_module_check_init(void)
 
 	if (srt_spec_load_config())
 		g_warning(MSG "Error loading module configuration, this plugin may not function properly.");
+
+	srt_spec_load_calibration();
 
 	return NULL;
 }
