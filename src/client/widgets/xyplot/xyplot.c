@@ -2355,6 +2355,12 @@ static gboolean xyplot_motion_notify_event_cb(GtkWidget *widget,
 
 		xyplot_rubberband_minmax_order(p);
 
+		if (p->rub.x0 < p->plot_x)
+			goto cleanup;
+		if (p->rub.y0 < p->plot_y)
+			goto cleanup;
+
+
 		cairo_save(cr);
 
 		if (event->state & GDK_BUTTON1_MASK)
