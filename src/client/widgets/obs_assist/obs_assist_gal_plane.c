@@ -278,7 +278,8 @@ static gboolean gal_plane_obs_pos(ObsAssist *p)
 
 	/* upper bound reached?  */
 	glon_lim = p->cfg->gal_plane.glon_cur;
-	if (p->cfg->gal_plane.glon_hi < glon_lim)
+	if ((p->cfg->gal_plane.glon_hi < glon_lim) ||
+	    (p->cfg->gal_plane.glon_lo > glon_lim))
 		return FALSE;
 
 	/* actual pointing is done in horizon system */
