@@ -1404,25 +1404,44 @@ static PangoLayout *sky_coord_info_layout(cairo_t *cr, Sky *p,
 
 static PangoLayout *sky_time_info_layout(cairo_t *cr, double time_offset)
 {
-	double h, m;
+	double h, m, s;
 
 	char buf[256];
 
+	time_t t;
+	struct tm now;
+
+	PangoLayout *l;
+
 
 	h = trunc(time_offset);
-	m = (time_offset - h) * 60.0;
+	m = trunc((time_offset - h) * 60.0);
+	s = ((time_offset - h) * 60.0 - m) * 60.0;
+
+
+	t = time(NULL);
+	now = (*localtime(&t));
+	now.tm_hour += (int) h;
+	now.tm_min  += (int) m;
+	now.tm_sec  += (int) trunc(s);
+
+	mktime(&now);	/* normalize */
 
 	snprintf(buf, ARRAY_SIZE(buf),
 		 "<span foreground='#7AAA7E'"
 		 "	background='#000000'"
 		 "	font_desc='Sans Bold 12'>"
 		 "<tt>"
-		 "TIME %+03.0fh %+06.2fm"
+		 "SHIFT      %+5.0fh %+03.0fm %+06.2fs\n"
+		 "TIME  %s"
 		 "</tt>"
-		 "</span>",
-		 h, m);
+		 "</span>",  h, m, s, asctime(&now));
 
-	return sky_create_layout(cr, buf, strlen(buf));
+	l = sky_create_layout(cr, buf, strlen(buf));
+#if 0
+	pango_layout_set_alignment(layout, PANGO_ALIGN_RIGHT);
+#endif
+	return l;
 }
 
 #if 0
@@ -1592,7 +1611,7 @@ static void sky_draw_time_rst(cairo_t *cr, Sky *p)
 
 
 	x0 = p->cfg->width - w_off + w - ww ;
-	y0 = p->cfg->height - h - wh / 2;
+	y0 = p->cfg->height - h;
 
 	cairo_save(cr);
 	cairo_translate(cr, x0, y0);
