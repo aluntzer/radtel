@@ -26,6 +26,7 @@ struct spectrum;
 GtkWidget *obs_assist_cross_scan_new(ObsAssist *p);
 GtkWidget *obs_assist_gal_plane_scan_new(ObsAssist *p);
 GtkWidget *obs_assist_azel_scan_new(ObsAssist *p);
+GtkWidget *obs_assist_spectral_axis_scan_new(ObsAssist *p);
 
 GtkWidget *obs_assist_limits_exceeded_warning(const gchar *direction,
 					      const gchar *axis,

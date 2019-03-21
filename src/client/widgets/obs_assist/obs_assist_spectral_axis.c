@@ -1,5 +1,5 @@
 /**
- * @file    widgets/obs_assist/obs_assist_gal_plane.c
+ * @file    widgets/obs_assist/obs_assist_spectral_axis.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -12,7 +12,7 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * @brief a scan along the galactic plane
+ * @brief a create a spectral scan along one telescope axis
  *
  */
 
@@ -32,25 +32,27 @@
 
 
 /**
- * @brief enable/disable waiting for lower bound coordinate rise
+ * @brief select telescope axis
  */
 
-void obs_assist_on_gal_plane_wait(GtkWidget *w, ObsAssist *p)
+void obs_assist_on_spectral_axis_select(GtkWidget *w, ObsAssist *p)
 {
 	GtkToggleButton *b;
 
 
 	b = GTK_TOGGLE_BUTTON(w);
 
-	p->cfg->gal_plane.wait = gtk_toggle_button_get_active(b);
+	p->cfg->spectral_axis.ax = gtk_toggle_button_get_active(b);
+/* XXX */
+	p->cfg->spectral_axis.ax = TRUE;
 }
 
 
 /**
- * @brief update the glon progress bar
+ * @brief update the ax progress bar
  */
 
-static void gal_plane_update_pbar_glon(ObsAssist *p)
+static void spectral_axis_update_pbar_ax(ObsAssist *p)
 {
 	gdouble frac;
 
@@ -59,15 +61,15 @@ static void gal_plane_update_pbar_glon(ObsAssist *p)
 	GtkProgressBar *pb;
 
 
-	pb = GTK_PROGRESS_BAR(p->cfg->gal_plane.pbar_glon);
+	pb = GTK_PROGRESS_BAR(p->cfg->spectral_axis.pbar_ax);
 
-	frac = (p->cfg->gal_plane.glon_cur - p->cfg->gal_plane.glon_lo) /
-	       (p->cfg->gal_plane.glon_hi - p->cfg->gal_plane.glon_lo);
+	frac = (p->cfg->spectral_axis.ax_cur - p->cfg->spectral_axis.ax_lo) /
+	       (p->cfg->spectral_axis.ax_hi - p->cfg->spectral_axis.ax_lo);
 
-	str = g_strdup_printf("GLON: %5.2f° of [%5.2f°, %5.2f°]",
-			      p->cfg->gal_plane.glon_cur,
-			      p->cfg->gal_plane.glon_lo,
-			      p->cfg->gal_plane.glon_hi);
+	str = g_strdup_printf("ax: %5.2f° of [%5.2f°, %5.2f°]",
+			      p->cfg->spectral_axis.ax_cur,
+			      p->cfg->spectral_axis.ax_lo,
+			      p->cfg->spectral_axis.ax_hi);
 
 	gtk_progress_bar_set_fraction(pb, frac);
 	gtk_progress_bar_set_show_text(pb, TRUE);
@@ -81,7 +83,7 @@ static void gal_plane_update_pbar_glon(ObsAssist *p)
  * @brief update the repeat progress bar
  */
 
-static void gal_plane_update_pbar_rpt(ObsAssist *p)
+static void spectral_axis_update_pbar_rpt(ObsAssist *p)
 {
 	gdouble frac;
 
@@ -90,14 +92,14 @@ static void gal_plane_update_pbar_rpt(ObsAssist *p)
 	GtkProgressBar *pb;
 
 
-	pb = GTK_PROGRESS_BAR(p->cfg->gal_plane.pbar_rpt);
+	pb = GTK_PROGRESS_BAR(p->cfg->spectral_axis.pbar_rpt);
 
-	frac = (gdouble) p->cfg->gal_plane.rpt_cur /
-	       (gdouble) p->cfg->gal_plane.n_rpt;
+	frac = (gdouble) p->cfg->spectral_axis.rpt_cur /
+	       (gdouble) p->cfg->spectral_axis.n_rpt;
 
 	str = g_strdup_printf("Run: %d of %d",
-			      p->cfg->gal_plane.rpt_cur,
-			      p->cfg->gal_plane.n_rpt);
+			      p->cfg->spectral_axis.rpt_cur,
+			      p->cfg->spectral_axis.n_rpt);
 
 	gtk_progress_bar_set_fraction(pb, frac);
 	gtk_progress_bar_set_show_text(pb, TRUE);
@@ -108,41 +110,33 @@ static void gal_plane_update_pbar_rpt(ObsAssist *p)
 
 
 /**
- * @brief update the velocity-longitude grap
+ * @brief update the frequency-degree graph
  */
 
-static void gal_plane_draw_graph(ObsAssist *p, gdouble glon, struct spectrum *s)
+static void spectral_axis_draw_graph(ObsAssist *p, gdouble ax, struct spectrum *s)
 {
 	gsize i;
 
-	gdouble *lon;
+	gdouble *axdeg;
 
 	gdouble min = DBL_MAX;
 
-	struct coord_galactic gal;
 
-
-	gal.lat = 0;
-	gal.lon = glon;
-
-	lon = (gdouble *) g_malloc(s->n * sizeof(gdouble));
+	axdeg = (gdouble *) g_malloc(s->n * sizeof(gdouble));
 
 	for (i = 0; i < s->n; i++) {
 		if (s->y[i] < min)
 			min = s->y[i];
 	}
 
-	for (i = 0; i < s->n; i++)  {
-		s->y[i] -= min;
-		s->x[i] = - (vlsr(galactic_to_equatorial(gal), 0.0)
-			     + doppler_vel(s->x[i], 1420.406));
-		lon[i] = glon;
-	}
+	for (i = 0; i < s->n; i++)
+		axdeg[i] = ax;
 
-	xyplot_add_graph(p->cfg->gal_plane.plt, lon, s->x, s->y, s->n,
-			 g_strdup_printf("GLON %g", lon));
 
-	xyplot_redraw(p->cfg->gal_plane.plt);
+	xyplot_add_graph(p->cfg->spectral_axis.plt, axdeg, s->x, s->y, s->n,
+			 g_strdup_printf("ax %g", ax));
+
+	xyplot_redraw(p->cfg->spectral_axis.plt);
 }
 
 
@@ -156,7 +150,7 @@ static void gal_plane_draw_graph(ObsAssist *p, gdouble glon, struct spectrum *s)
  * @note we use 2x the axis resolution for tolerance to avoid sampling issues
  */
 
-static gboolean gal_plane_in_position(ObsAssist *p, gdouble az, gdouble el)
+static gboolean spectral_axis_in_position(ObsAssist *p, gdouble az, gdouble el)
 {
 	gdouble d_az;
 	gdouble d_el;
@@ -194,7 +188,7 @@ static gboolean gal_plane_in_position(ObsAssist *p, gdouble az, gdouble el)
  * @brief returns TRUE if measurement was taken
  */
 
-static gboolean gal_plane_measure(ObsAssist *p)
+static gboolean spectral_axis_measure(ObsAssist *p)
 {
 	gsize i;
 
@@ -240,7 +234,7 @@ static gboolean gal_plane_measure(ObsAssist *p)
 	samples++;
 
 	/* stack */
-	if (samples < p->cfg->gal_plane.n_avg) {
+	if (samples < p->cfg->spectral_axis.n_avg) {
 		for (i = 0; i < sp->n; i++)
 			sp->y[i] += p->cfg->spec.y[i];
 
@@ -256,7 +250,7 @@ static gboolean gal_plane_measure(ObsAssist *p)
 			sp->y[i] /= samples;
 	}
 
-	gal_plane_draw_graph(p, p->cfg->gal_plane.glon_cur, sp);
+	spectral_axis_draw_graph(p, p->cfg->spectral_axis.ax_cur, sp);
 
 	g_free(sp);
 	sp = NULL; /* plot takes care of data deallocation */
@@ -269,42 +263,36 @@ static gboolean gal_plane_measure(ObsAssist *p)
 
 
 /**
- * @brief move into position on plane
+ * @brief move into position on axis
  *
  * @returns TRUE if observation is ongoing, FALSE if complete
  */
 
-static gboolean gal_plane_obs_pos(ObsAssist *p)
+static gboolean spectral_axis_obs_pos(ObsAssist *p)
 {
-	gdouble glon_lim;
-
-	struct coord_galactic gal;
-	struct coord_horizontal hor;
+	gdouble ax_lim;
 
 
-	gal_plane_update_pbar_glon(p);
+	spectral_axis_update_pbar_ax(p);
 
 	/* upper bound reached?  */
-	glon_lim = p->cfg->gal_plane.glon_cur;
-	if ((p->cfg->gal_plane.glon_hi < glon_lim) ||
-	    (p->cfg->gal_plane.glon_lo > glon_lim))
+	ax_lim = p->cfg->spectral_axis.ax_cur;
+	if ((p->cfg->spectral_axis.ax_hi < ax_lim) ||
+	    (p->cfg->spectral_axis.ax_lo > ax_lim))
 		return FALSE;
 
-	/* actual pointing is done in horizon system */
-	gal.lat = 0.0;
-	gal.lon = p->cfg->gal_plane.glon_cur;
-	hor = galactic_to_horizontal(gal, p->cfg->lat, p->cfg->lon, 0.0);
 
-	if (!gal_plane_in_position(p, hor.az, hor.el))
+	/* XXX currently Azimuth only! */
+	if (!spectral_axis_in_position(p, p->cfg->spectral_axis.ax_cur, p->cfg->el))
 		return TRUE;
 
-	if (!gal_plane_measure(p))
+	if (!spectral_axis_measure(p))
 		return TRUE;
 
 	obs_assist_clear_spec(p);
 
-	/* update longitude */
-	p->cfg->gal_plane.glon_cur += p->cfg->gal_plane.glon_stp;
+	/* update axis */
+	p->cfg->spectral_axis.ax_cur += p->cfg->spectral_axis.ax_stp;
 
 	return TRUE;
 }
@@ -314,7 +302,7 @@ static gboolean gal_plane_obs_pos(ObsAssist *p)
  * @brief scan along plane
  */
 
-static gboolean gal_plane_obs(void *data)
+static gboolean spectral_axis_obs(void *data)
 {
 	ObsAssist *p;
 
@@ -326,16 +314,16 @@ static gboolean gal_plane_obs(void *data)
 		return G_SOURCE_REMOVE;
 	}
 
-	if (gal_plane_obs_pos(p))
+	if (spectral_axis_obs_pos(p))
 		return G_SOURCE_CONTINUE;
 
 
-	/* on repeat, set glon back to lower bound */
-	if (p->cfg->gal_plane.rpt_cur < p->cfg->gal_plane.n_rpt) {
-		p->cfg->gal_plane.rpt_cur++;
-		p->cfg->gal_plane.glon_stp *= -1.0;
-		p->cfg->gal_plane.glon_cur += p->cfg->gal_plane.glon_stp;;
-		gal_plane_update_pbar_rpt(p);
+	/* on repeat, set ax back to lower bound */
+	if (p->cfg->spectral_axis.rpt_cur < p->cfg->spectral_axis.n_rpt) {
+		p->cfg->spectral_axis.rpt_cur++;
+		p->cfg->spectral_axis.ax_stp *= -1.0;
+		p->cfg->spectral_axis.ax_cur += p->cfg->spectral_axis.ax_stp;;
+		spectral_axis_update_pbar_rpt(p);
 		return G_SOURCE_CONTINUE;
 	}
 
@@ -348,7 +336,7 @@ static gboolean gal_plane_obs(void *data)
 
 
 /**
- * @brief start the gal_plane observation
+ * @brief start the spectral_axis observation
  */
 
 static void on_assistant_apply(GtkWidget *as, ObsAssist *p)
@@ -365,27 +353,28 @@ static void on_assistant_apply(GtkWidget *as, ObsAssist *p)
 
 	grid = GTK_GRID(new_default_grid());
 
-	p->cfg->gal_plane.plt = xyplot_new();
-	xyplot_set_xlabel(p->cfg->gal_plane.plt, "Galactic Longitude [deg]");
-	xyplot_set_ylabel(p->cfg->gal_plane.plt, "VLSR [km/s]");
+	p->cfg->spectral_axis.plt = xyplot_new();
+	/* XXX fixed to AZ*/
+	xyplot_set_xlabel(p->cfg->spectral_axis.plt, "Azimuth [deg]");
+	xyplot_set_ylabel(p->cfg->spectral_axis.plt, "Frequency [MHz]");
 
-	gtk_widget_set_hexpand(p->cfg->gal_plane.plt, TRUE);
-	gtk_widget_set_vexpand(p->cfg->gal_plane.plt, TRUE);
-	gtk_grid_attach(grid, p->cfg->gal_plane.plt, 0, 0, 2, 1);
-	gtk_widget_set_size_request(p->cfg->gal_plane.plt, -1, 300);
+	gtk_widget_set_hexpand(p->cfg->spectral_axis.plt, TRUE);
+	gtk_widget_set_vexpand(p->cfg->spectral_axis.plt, TRUE);
+	gtk_grid_attach(grid, p->cfg->spectral_axis.plt, 0, 0, 2, 1);
+	gtk_widget_set_size_request(p->cfg->spectral_axis.plt, -1, 300);
 
 
 	w = gtk_label_new("Scan");
 	gtk_grid_attach(grid, w, 0, 1, 1, 1);
-	p->cfg->gal_plane.pbar_glon = gtk_progress_bar_new();
-	gtk_widget_set_hexpand(p->cfg->gal_plane.pbar_glon, TRUE);
-	gtk_grid_attach(grid, p->cfg->gal_plane.pbar_glon, 1, 1, 1, 1);
+	p->cfg->spectral_axis.pbar_ax = gtk_progress_bar_new();
+	gtk_widget_set_hexpand(p->cfg->spectral_axis.pbar_ax, TRUE);
+	gtk_grid_attach(grid, p->cfg->spectral_axis.pbar_ax, 1, 1, 1, 1);
 
 	w = gtk_label_new("Repeat");
 	gtk_grid_attach(grid, w, 0, 2, 1, 1);
-	p->cfg->gal_plane.pbar_rpt = gtk_progress_bar_new();
-	gtk_widget_set_hexpand(p->cfg->gal_plane.pbar_rpt, TRUE);
-	gtk_grid_attach(grid, p->cfg->gal_plane.pbar_rpt, 1, 2, 1, 1);
+	p->cfg->spectral_axis.pbar_rpt = gtk_progress_bar_new();
+	gtk_widget_set_hexpand(p->cfg->spectral_axis.pbar_rpt, TRUE);
+	gtk_grid_attach(grid, p->cfg->spectral_axis.pbar_rpt, 1, 2, 1, 1);
 
 
 	w = gtk_button_new_with_label("Quit");
@@ -399,12 +388,12 @@ static void on_assistant_apply(GtkWidget *as, ObsAssist *p)
 	gtk_widget_show_all(GTK_WIDGET(grid));
 
 	/* set initial */
-	gal_plane_update_pbar_rpt(p);
+	spectral_axis_update_pbar_rpt(p);
 
 	/* the actual work is done asynchronously, .5 seconds calls
 	 * per should be fine
 	 */
-	g_timeout_add(500, gal_plane_obs, p);
+	g_timeout_add(500, spectral_axis_obs, p);
 }
 
 
@@ -412,7 +401,7 @@ static void on_assistant_apply(GtkWidget *as, ObsAssist *p)
  * @brief set up the galactic plane observation
  */
 
-static void obs_assist_on_prepare_gal_plane(GtkWidget *as, GtkWidget *pg,
+static void obs_assist_on_prepare_spectral_axis(GtkWidget *as, GtkWidget *pg,
 					    ObsAssist *p)
 {
 	gint cp;
@@ -434,35 +423,37 @@ static void obs_assist_on_prepare_gal_plane(GtkWidget *as, GtkWidget *pg,
 	if (type != GTK_ASSISTANT_PAGE_CONFIRM)
 		return;
 
+	/* XXX */
+	p->cfg->spectral_axis.ax = TRUE;
 
 	/* set configuration */
-	sb = p->cfg->gal_plane.sb_deg;
-	p->cfg->gal_plane.glon_stp = gtk_spin_button_get_value(sb);
+	sb = p->cfg->spectral_axis.sb_deg;
+	p->cfg->spectral_axis.ax_stp = gtk_spin_button_get_value(sb);
 
-	sb = p->cfg->gal_plane.sb_lo;
-	p->cfg->gal_plane.glon_lo = gtk_spin_button_get_value(sb);
+	sb = p->cfg->spectral_axis.sb_lo;
+	p->cfg->spectral_axis.ax_lo = gtk_spin_button_get_value(sb);
 
-	sb = p->cfg->gal_plane.sb_hi;
-	p->cfg->gal_plane.glon_hi = gtk_spin_button_get_value(sb);
+	sb = p->cfg->spectral_axis.sb_hi;
+	p->cfg->spectral_axis.ax_hi = gtk_spin_button_get_value(sb);
 
-	sb = p->cfg->gal_plane.sb_avg;
-	p->cfg->gal_plane.n_avg = gtk_spin_button_get_value_as_int(sb);
+	sb = p->cfg->spectral_axis.sb_avg;
+	p->cfg->spectral_axis.n_avg = gtk_spin_button_get_value_as_int(sb);
 
-	sb = p->cfg->gal_plane.sb_rpt;
-	p->cfg->gal_plane.n_rpt = gtk_spin_button_get_value_as_int(sb);
+	sb = p->cfg->spectral_axis.sb_rpt;
+	p->cfg->spectral_axis.n_rpt = gtk_spin_button_get_value_as_int(sb);
 
 
 	/* swap around */
-	if (p->cfg->gal_plane.glon_lo > p->cfg->gal_plane.glon_hi) {
-		tmp = p->cfg->gal_plane.glon_hi;
-		p->cfg->gal_plane.glon_hi = p->cfg->gal_plane.glon_lo;
-		p->cfg->gal_plane.glon_lo = tmp;
+	if (p->cfg->spectral_axis.ax_lo > p->cfg->spectral_axis.ax_hi) {
+		tmp = p->cfg->spectral_axis.ax_hi;
+		p->cfg->spectral_axis.ax_hi = p->cfg->spectral_axis.ax_lo;
+		p->cfg->spectral_axis.ax_lo = tmp;
 	}
 
 
 	/* initial scan position is at lower bound */
-	p->cfg->gal_plane.glon_cur = p->cfg->gal_plane.glon_lo;
-	p->cfg->gal_plane.rpt_cur  = 1;
+	p->cfg->spectral_axis.ax_cur = p->cfg->spectral_axis.ax_lo;
+	p->cfg->spectral_axis.rpt_cur  = 1;
 
 
 	cp  = gtk_assistant_get_current_page(GTK_ASSISTANT(as));
@@ -478,16 +469,16 @@ static void obs_assist_on_prepare_gal_plane(GtkWidget *as, GtkWidget *pg,
 	      "This is your configuration:\n\n"
 	      "<tt>"
 	      "Nominal step size:         <b>%5.2f°</b>\n"
-	      "GLON lower bound:          <b>%5.2f°</b>\n"
-	      "GLON upper bound:          <b>%5.2f°</b>\n"
+	      "Axis lower bound:          <b>%5.2f°</b>\n"
+	      "Axis upper bound:          <b>%5.2f°</b>\n"
 	      "Samples per position:      <b>%d</b>\n"
 	      "Scan repeat:               <b>%d</b>\n"
-	      "Initial wait:              <b>%s</b>\n"
+	      "Scan Axis:                 <b>%s</b>\n"
 	      "</tt>",
-	      p->cfg->gal_plane.glon_stp,
-	      p->cfg->gal_plane.glon_lo, p->cfg->gal_plane.glon_hi,
-	      p->cfg->gal_plane.n_avg, p->cfg->gal_plane.n_rpt,
-	      p->cfg->gal_plane.wait ? "ENABLED" : "DISABLED");
+	      p->cfg->spectral_axis.ax_stp,
+	      p->cfg->spectral_axis.ax_lo, p->cfg->spectral_axis.ax_hi,
+	      p->cfg->spectral_axis.n_avg, p->cfg->spectral_axis.n_rpt,
+	      p->cfg->spectral_axis.ax ? "AZIMUTH" : "ELEVATION");
 
         gtk_label_set_markup(GTK_LABEL(w), lbl);
 	g_free(lbl);
@@ -505,7 +496,7 @@ static void obs_assist_on_prepare_gal_plane(GtkWidget *as, GtkWidget *pg,
  * @brief create info page
  */
 
-static void obs_assist_gal_plane_create_page_1(GtkAssistant *as)
+static void obs_assist_spectral_axis_create_page_1(GtkAssistant *as)
 {
 	GtkWidget *w;
 	GtkWidget *box;
@@ -519,25 +510,12 @@ static void obs_assist_gal_plane_create_page_1(GtkAssistant *as)
 	w  = gtk_label_new(NULL);
 	gtk_label_set_line_wrap(GTK_LABEL(w), TRUE);
         lbl = g_strdup_printf(
-		"This observation mode will perform a scan along the galactic "
-		"plane of the Milky way between the specified galactic "
-		"longitudes.\n"
-		"The resulting graph will show a velocity-longitude diagram "
+		"This observation mode will perform a scan along a telescope "
+		"axis. \n"
+		"The resulting graph will show a frequency-angle diagram "
 		"with the spectral signal amplitudes encoded in colour.\n\n"
-	       	"<b>Note:</b> The doppler velocity will be calculated from the "
-		"reference rest frequency configured in the spectrometer "
-		"settings. All velocities will be corrected for the Velocity "
-		"of the Local Standard of Rest (VLSR) according to the line of "
-		"sight.\n\n"
-		"<b>Note:</b> While it is allowed to modify the spectrometer "
-		"settings during the observation, changing the reference rest "
-	        "frequency is not advised.\n\n"
-		"<b>Note:</b> Unless configured otherwise, the observation "
-		"procedure will skip any points on the galactic plane that are "
-		"below the local horizon. If the procedure is configured to "
-		"wait until the lower bound coordinate becomes visible, make "
-		"sure to select a range which will actually be observable from "
-		"the telescope's location, otherwise it will wait forever.");
+	       	"<b>Note:</b> PRELIMINARY! SCANS IN AZIMUTH ONLY!\n\n");
+
         gtk_label_set_markup(GTK_LABEL(w), lbl);
 	g_free(lbl);
 
@@ -556,7 +534,7 @@ static void obs_assist_gal_plane_create_page_1(GtkAssistant *as)
  * @brief create info page
  */
 
-static void obs_assist_gal_plane_create_page_2(GtkAssistant *as, ObsAssist *p)
+static void obs_assist_spectral_axis_create_page_2(GtkAssistant *as, ObsAssist *p)
 {
 	GtkWidget *w;
 	GtkGrid *grid;
@@ -586,11 +564,11 @@ static void obs_assist_gal_plane_create_page_2(GtkAssistant *as, ObsAssist *p)
 	gtk_spin_button_set_snap_to_ticks(sb, TRUE);
 	gtk_widget_set_valign(GTK_WIDGET(sb), GTK_ALIGN_CENTER);
 	gtk_grid_attach(grid, GTK_WIDGET(sb), 1, 0, 1, 1);
-	p->cfg->gal_plane.sb_deg = sb;
+	p->cfg->spectral_axis.sb_deg = sb;
 
 
-	/** GLON lower bound **/
-	w = gui_create_desclabel("Galactic Longitude Start",
+	/** ax lower bound **/
+	w = gui_create_desclabel("Axis Start",
 				 "Specify the lower bound of the observation.");
 	gtk_grid_attach(grid, w, 0, 1, 1, 1);
 
@@ -601,11 +579,11 @@ static void obs_assist_gal_plane_create_page_2(GtkAssistant *as, ObsAssist *p)
 	gtk_spin_button_set_snap_to_ticks(sb, TRUE);
 	gtk_widget_set_valign(GTK_WIDGET(sb), GTK_ALIGN_CENTER);
 	gtk_grid_attach(grid, GTK_WIDGET(sb), 1, 1, 1, 1);
-	p->cfg->gal_plane.sb_lo = sb;
+	p->cfg->spectral_axis.sb_lo = sb;
 
 
-	/** GLON upper bound **/
-	w = gui_create_desclabel("Galactic Longitude Stop",
+	/** ax upper bound **/
+	w = gui_create_desclabel("Axis Stop",
 				 "Specify the upper bound of the observation.");
 	gtk_grid_attach(grid, w, 0, 2, 1, 1);
 
@@ -615,7 +593,7 @@ static void obs_assist_gal_plane_create_page_2(GtkAssistant *as, ObsAssist *p)
 	gtk_spin_button_set_snap_to_ticks(sb, TRUE);
 	gtk_widget_set_valign(GTK_WIDGET(sb), GTK_ALIGN_CENTER);
 	gtk_grid_attach(grid, GTK_WIDGET(sb), 1, 2, 1, 1);
-	p->cfg->gal_plane.sb_hi = GTK_SPIN_BUTTON(sb);
+	p->cfg->spectral_axis.sb_hi = GTK_SPIN_BUTTON(sb);
 
 	/** Averages **/
 	w = gui_create_desclabel("Samples per position",
@@ -629,7 +607,7 @@ static void obs_assist_gal_plane_create_page_2(GtkAssistant *as, ObsAssist *p)
 	gtk_spin_button_set_snap_to_ticks(sb, TRUE);
 	gtk_widget_set_valign(GTK_WIDGET(sb), GTK_ALIGN_CENTER);
 	gtk_grid_attach(grid, GTK_WIDGET(sb), 1, 3, 1, 1);
-	p->cfg->gal_plane.sb_avg = GTK_SPIN_BUTTON(sb);
+	p->cfg->spectral_axis.sb_avg = GTK_SPIN_BUTTON(sb);
 
 
 	/** Repeat **/
@@ -644,20 +622,18 @@ static void obs_assist_gal_plane_create_page_2(GtkAssistant *as, ObsAssist *p)
 	gtk_spin_button_set_snap_to_ticks(sb, TRUE);
 	gtk_widget_set_valign(GTK_WIDGET(sb), GTK_ALIGN_CENTER);
 	gtk_grid_attach(grid, GTK_WIDGET(sb), 1, 4, 1, 1);
-	p->cfg->gal_plane.sb_rpt = GTK_SPIN_BUTTON(sb);
+	p->cfg->spectral_axis.sb_rpt = GTK_SPIN_BUTTON(sb);
 
 
-
-	w = gui_create_desclabel("<b> NOT IMPLEMENTED </b> Wait for lower bound coordinate rise.",
-				 "If enabled, the procedure will wait until "
-				 "the lower bound coordinate will rise above "
-				 "the local horizon.");
+	w = gui_create_desclabel("<b> NOT IMPLEMENTED </b>",
+				 "Select Axis");
 	gtk_grid_attach(grid, w, 0, 5, 1, 1);
 
-	w = gtk_check_button_new();
+	w = gtk_check_button_new_with_label("Azimuth");
 	g_signal_connect(G_OBJECT(w), "toggled",
-				 G_CALLBACK(obs_assist_on_gal_plane_wait), p);
+				 G_CALLBACK(obs_assist_on_spectral_axis_select), p);
 	gtk_grid_attach(grid, w, 1, 5, 1, 1);
+
 
 
 
@@ -677,7 +653,7 @@ static void obs_assist_gal_plane_create_page_2(GtkAssistant *as, ObsAssist *p)
  * @brief create summary page
  */
 
-static void obs_assist_gal_plane_create_page_3(GtkAssistant *as)
+static void obs_assist_spectral_axis_create_page_3(GtkAssistant *as)
 {
 	GtkWidget *box;
 
@@ -697,7 +673,7 @@ static void obs_assist_gal_plane_create_page_3(GtkAssistant *as)
  * @brief populate the assistant
  */
 
-static void obs_assist_gal_plane_setup_cb(GtkWidget *w, ObsAssist *p)
+static void obs_assist_spectral_axis_setup_cb(GtkWidget *w, ObsAssist *p)
 {
 	GtkWidget *as;
 
@@ -706,14 +682,14 @@ static void obs_assist_gal_plane_setup_cb(GtkWidget *w, ObsAssist *p)
 	g_return_if_fail(as);
 
 	p->cfg->abort = FALSE;
-	bzero(&p->cfg->gal_plane, sizeof(p->cfg->gal_plane));
+	bzero(&p->cfg->spectral_axis, sizeof(p->cfg->spectral_axis));
 
 	/* info page */
-	obs_assist_gal_plane_create_page_1(GTK_ASSISTANT(as));
+	obs_assist_spectral_axis_create_page_1(GTK_ASSISTANT(as));
 	/* settings page */
-	obs_assist_gal_plane_create_page_2(GTK_ASSISTANT(as), p);
+	obs_assist_spectral_axis_create_page_2(GTK_ASSISTANT(as), p);
 	/** summary page **/
-	obs_assist_gal_plane_create_page_3(GTK_ASSISTANT(as));
+	obs_assist_spectral_axis_create_page_3(GTK_ASSISTANT(as));
 
 
 	g_signal_connect(G_OBJECT(as), "cancel",
@@ -721,7 +697,7 @@ static void obs_assist_gal_plane_setup_cb(GtkWidget *w, ObsAssist *p)
 	g_signal_connect(G_OBJECT(as), "close",
 			 G_CALLBACK(obs_assist_close_cancel), as);
 	g_signal_connect(G_OBJECT(as), "prepare",
- 			 G_CALLBACK(obs_assist_on_prepare_gal_plane), p);
+ 			 G_CALLBACK(obs_assist_on_prepare_spectral_axis), p);
 	g_signal_connect(G_OBJECT(as), "apply",
 			  G_CALLBACK(on_assistant_apply), p);
 
@@ -731,10 +707,10 @@ static void obs_assist_gal_plane_setup_cb(GtkWidget *w, ObsAssist *p)
 
 
 /**
- * @brief create gal_plane scan selection
+ * @brief create spectral_axis scan selection
  */
 
-GtkWidget *obs_assist_gal_plane_scan_new(ObsAssist *p)
+GtkWidget *obs_assist_spectral_axis_scan_new(ObsAssist *p)
 {
 	GtkWidget *w;
 	GtkGrid *grid;
@@ -742,20 +718,20 @@ GtkWidget *obs_assist_gal_plane_scan_new(ObsAssist *p)
 
 	grid = GTK_GRID(new_default_grid());
 
-	w = gui_create_desclabel("Galactic Plane Scan",
-				 "Perform a scan along the "
-				 "galactic plane.");
+	w = gui_create_desclabel("Axis Scan",
+				 "Perform a spectral scan along "
+				 "a telescope axis.");
 
 	gtk_grid_attach(GTK_GRID(grid), w, 0, 0, 1, 1);
 
 	w = gtk_button_new_with_label("Start");
-	gtk_widget_set_tooltip_text(w, "Start Galactic Plane Scan.");
+	gtk_widget_set_tooltip_text(w, "Start Axis Scan.");
 
 	gtk_widget_set_hexpand(w, TRUE);
 	gtk_widget_set_halign(w, GTK_ALIGN_END);
 	gtk_grid_attach(grid, w, 1, 0, 1, 1);
 	g_signal_connect(G_OBJECT(w), "clicked",
-			 G_CALLBACK(obs_assist_gal_plane_setup_cb), p);
+			 G_CALLBACK(obs_assist_spectral_axis_setup_cb), p);
 
 
 	return GTK_WIDGET(grid);

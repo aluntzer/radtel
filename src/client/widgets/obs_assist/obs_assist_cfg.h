@@ -184,6 +184,34 @@ struct _ObsAssistConfig {
 
 	} azel;
 
+
+	struct {
+		gdouble ax_lo;
+		gdouble ax_hi;
+		gdouble ax_stp;
+
+		gdouble ax_cur;
+		gint rpt_cur;
+
+		gint n_avg;
+		gint n_rpt;
+
+		gboolean ax;
+
+		GtkSpinButton *sb_deg;
+		GtkSpinButton *sb_lo;
+		GtkSpinButton *sb_hi;
+		GtkSpinButton *sb_avg;
+		GtkSpinButton *sb_rpt;
+
+		GtkWidget *pbar_ax;
+		GtkWidget *pbar_rpt;
+
+		GtkWidget *plt;
+
+	} spectral_axis;
+
+
 };
 
 
