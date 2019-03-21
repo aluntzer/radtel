@@ -95,7 +95,7 @@ static gint net_send_internal(struct con_data *c, const char *pkt, gsize nbytes)
 		return -1;
 	}
 
-	ret = g_output_stream_write(ostream, pkt, nbytes, NULL, &error);
+	ret = g_output_stream_write_all(ostream, pkt, nbytes, NULL, NULL, &error);
 
 	if (ret < 0) {
 		if (error) {
@@ -125,7 +125,7 @@ static gint net_send_internal(struct con_data *c, const char *pkt, gsize nbytes)
  * XXX after fixing up all bugs, this function has really nasty jump logic and
  *     needs rework asap
  */
-#include <stdio.h>
+
 static void net_buffer_ready(GObject *source_object, GAsyncResult *res,
 			     gpointer user_data)
 {
@@ -167,16 +167,6 @@ pending:
 		g_message("Input stream smaller than packet size.");
 		goto exit;
 	}
-
-	gsize i;
-
-	for (i = 0; i < nbytes; i++)
-		printf("%x ", buf[i]);
-	printf("\n");
-	for (i = 0; i < nbytes; i++)
-		printf("%c", buf[i]);
-	printf("\n");
-
 
 
 	/* check if the packet is complete/valid */
@@ -353,7 +343,7 @@ gint net_send(const char *pkt, gsize nbytes)
 
 
 
-	g_message("Broadcasting packet of %d bytes", nbytes);
+	g_debug("Broadcasting packet of %d bytes", nbytes);
 
 	g_mutex_lock(&lock);
 
