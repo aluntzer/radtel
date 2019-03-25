@@ -254,7 +254,7 @@ static gboolean azel_obs_pos(ObsAssist *p)
 	lim = p->cfg->azel.az_cur;
 	if ((p->cfg->azel.az_hi < lim) || (p->cfg->azel.az_lo > lim)) {
 		p->cfg->azel.az_stp *= -1.0;
-		p->cfg->azel.az_cur += p->cfg->azel.az_stp;
+		p->cfg->azel.az_cur += p->cfg->azel.az_stp / cos(RAD(p->cfg->cross.el_cur));
 		p->cfg->azel.el_cur += p->cfg->azel.el_stp;
 	}
 
@@ -271,7 +271,7 @@ static gboolean azel_obs_pos(ObsAssist *p)
 	azel_draw_graph(p);
 
 	/* update azimuth */
-	p->cfg->azel.az_cur += p->cfg->azel.az_stp;
+	p->cfg->azel.az_cur += p->cfg->azel.az_stp / cos(RAD(p->cfg->cross.el_cur));;
 
 	return TRUE;
 }
@@ -503,9 +503,8 @@ static void obs_assist_azel_create_page_1(GtkAssistant *as)
 		"Elevation\n"
 		"The resulting graph will show a Azimuth-Elevation diagram "
 		"with the spectral signal amplitudes encoded in colour.\n\n"
-		"<b>NOTE:</b> Azimuth angular distances will NOT be corrected "
-		"by the cosine of the elevation, this scan is executed in raw "
-		"coordinates.");
+		"<b>NOTE:</b> Azimuth angular distance steps will be corrected "
+		"by the cosine of the elevation.");
         gtk_label_set_markup(GTK_LABEL(w), lbl);
 	g_free(lbl);
 
