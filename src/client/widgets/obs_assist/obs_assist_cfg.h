@@ -194,7 +194,6 @@ struct _ObsAssistConfig {
 		gint rpt_cur;
 
 		gint n_avg;
-		gint n_rpt;
 
 		gboolean ax;
 
@@ -202,10 +201,8 @@ struct _ObsAssistConfig {
 		GtkSpinButton *sb_lo;
 		GtkSpinButton *sb_hi;
 		GtkSpinButton *sb_avg;
-		GtkSpinButton *sb_rpt;
 
 		GtkWidget *pbar_ax;
-		GtkWidget *pbar_rpt;
 
 		GtkWidget *plt;
 

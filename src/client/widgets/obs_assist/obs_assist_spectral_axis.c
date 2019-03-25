@@ -80,36 +80,6 @@ static void spectral_axis_update_pbar_ax(ObsAssist *p)
 
 
 /**
- * @brief update the repeat progress bar
- */
-
-static void spectral_axis_update_pbar_rpt(ObsAssist *p)
-{
-	gdouble frac;
-
-	gchar *str;
-
-	GtkProgressBar *pb;
-
-
-	pb = GTK_PROGRESS_BAR(p->cfg->spectral_axis.pbar_rpt);
-
-	frac = (gdouble) p->cfg->spectral_axis.rpt_cur /
-	       (gdouble) p->cfg->spectral_axis.n_rpt;
-
-	str = g_strdup_printf("Run: %d of %d",
-			      p->cfg->spectral_axis.rpt_cur,
-			      p->cfg->spectral_axis.n_rpt);
-
-	gtk_progress_bar_set_fraction(pb, frac);
-	gtk_progress_bar_set_show_text(pb, TRUE);
-	gtk_progress_bar_set_text(pb, str);
-
-	g_free(str);
-}
-
-
-/**
  * @brief update the frequency-degree graph
  */
 
@@ -318,15 +288,6 @@ static gboolean spectral_axis_obs(void *data)
 		return G_SOURCE_CONTINUE;
 
 
-	/* on repeat, set ax back to lower bound */
-	if (p->cfg->spectral_axis.rpt_cur < p->cfg->spectral_axis.n_rpt) {
-		p->cfg->spectral_axis.rpt_cur++;
-		p->cfg->spectral_axis.ax_stp *= -1.0;
-		p->cfg->spectral_axis.ax_cur += p->cfg->spectral_axis.ax_stp;;
-		spectral_axis_update_pbar_rpt(p);
-		return G_SOURCE_CONTINUE;
-	}
-
 	/* on final, we stay at the current position */
 
 	/* done */
@@ -370,25 +331,16 @@ static void on_assistant_apply(GtkWidget *as, ObsAssist *p)
 	gtk_widget_set_hexpand(p->cfg->spectral_axis.pbar_ax, TRUE);
 	gtk_grid_attach(grid, p->cfg->spectral_axis.pbar_ax, 1, 1, 1, 1);
 
-	w = gtk_label_new("Repeat");
-	gtk_grid_attach(grid, w, 0, 2, 1, 1);
-	p->cfg->spectral_axis.pbar_rpt = gtk_progress_bar_new();
-	gtk_widget_set_hexpand(p->cfg->spectral_axis.pbar_rpt, TRUE);
-	gtk_grid_attach(grid, p->cfg->spectral_axis.pbar_rpt, 1, 2, 1, 1);
-
 
 	w = gtk_button_new_with_label("Quit");
 	gtk_widget_set_tooltip_text(w, "Quit observation");
-	gtk_grid_attach(grid, w, 0, 3, 1, 1);
+	gtk_grid_attach(grid, w, 0, 2, 1, 1);
 	g_signal_connect(G_OBJECT(w), "clicked",
 			 G_CALLBACK(obs_assist_abort), p);
 
 
 	gtk_box_pack_start(GTK_BOX(p), GTK_WIDGET(grid), TRUE, TRUE, 0);
 	gtk_widget_show_all(GTK_WIDGET(grid));
-
-	/* set initial */
-	spectral_axis_update_pbar_rpt(p);
 
 	/* the actual work is done asynchronously, .5 seconds calls
 	 * per should be fine
@@ -439,9 +391,6 @@ static void obs_assist_on_prepare_spectral_axis(GtkWidget *as, GtkWidget *pg,
 	sb = p->cfg->spectral_axis.sb_avg;
 	p->cfg->spectral_axis.n_avg = gtk_spin_button_get_value_as_int(sb);
 
-	sb = p->cfg->spectral_axis.sb_rpt;
-	p->cfg->spectral_axis.n_rpt = gtk_spin_button_get_value_as_int(sb);
-
 
 	/* swap around */
 	if (p->cfg->spectral_axis.ax_lo > p->cfg->spectral_axis.ax_hi) {
@@ -453,7 +402,6 @@ static void obs_assist_on_prepare_spectral_axis(GtkWidget *as, GtkWidget *pg,
 
 	/* initial scan position is at lower bound */
 	p->cfg->spectral_axis.ax_cur = p->cfg->spectral_axis.ax_lo;
-	p->cfg->spectral_axis.rpt_cur  = 1;
 
 
 	cp  = gtk_assistant_get_current_page(GTK_ASSISTANT(as));
@@ -472,12 +420,11 @@ static void obs_assist_on_prepare_spectral_axis(GtkWidget *as, GtkWidget *pg,
 	      "Axis lower bound:          <b>%5.2f°</b>\n"
 	      "Axis upper bound:          <b>%5.2f°</b>\n"
 	      "Samples per position:      <b>%d</b>\n"
-	      "Scan repeat:               <b>%d</b>\n"
 	      "Scan Axis:                 <b>%s</b>\n"
 	      "</tt>",
 	      p->cfg->spectral_axis.ax_stp,
 	      p->cfg->spectral_axis.ax_lo, p->cfg->spectral_axis.ax_hi,
-	      p->cfg->spectral_axis.n_avg, p->cfg->spectral_axis.n_rpt,
+	      p->cfg->spectral_axis.n_avg,
 	      p->cfg->spectral_axis.ax ? "AZIMUTH" : "ELEVATION");
 
         gtk_label_set_markup(GTK_LABEL(w), lbl);
@@ -574,7 +521,7 @@ static void obs_assist_spectral_axis_create_page_2(GtkAssistant *as, ObsAssist *
 
 	/* set some arbitrary limits */
 	sb = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(0., 360., 0.1));
-	gtk_spin_button_set_value(sb, 50.);
+	gtk_spin_button_set_value(sb, 180.);
 	gtk_spin_button_set_numeric(sb, TRUE);
 	gtk_spin_button_set_snap_to_ticks(sb, TRUE);
 	gtk_widget_set_valign(GTK_WIDGET(sb), GTK_ALIGN_CENTER);
@@ -588,7 +535,7 @@ static void obs_assist_spectral_axis_create_page_2(GtkAssistant *as, ObsAssist *
 	gtk_grid_attach(grid, w, 0, 2, 1, 1);
 
 	sb = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(0., 360., 0.1));
-	gtk_spin_button_set_value(sb, 250.);
+	gtk_spin_button_set_value(sb, 190.);
 	gtk_spin_button_set_numeric(sb, TRUE);
 	gtk_spin_button_set_snap_to_ticks(sb, TRUE);
 	gtk_widget_set_valign(GTK_WIDGET(sb), GTK_ALIGN_CENTER);
@@ -608,21 +555,6 @@ static void obs_assist_spectral_axis_create_page_2(GtkAssistant *as, ObsAssist *
 	gtk_widget_set_valign(GTK_WIDGET(sb), GTK_ALIGN_CENTER);
 	gtk_grid_attach(grid, GTK_WIDGET(sb), 1, 3, 1, 1);
 	p->cfg->spectral_axis.sb_avg = GTK_SPIN_BUTTON(sb);
-
-
-	/** Repeat **/
-	w = gui_create_desclabel("Scan Repeats",
-				 "Specify the number of times to repeat the "
-				 "observation run.");
-	gtk_grid_attach(grid, w, 0, 4, 1, 1);
-
-	sb = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(1, 20, 1));
-	gtk_spin_button_set_value(sb, 1);
-	gtk_spin_button_set_numeric(sb, TRUE);
-	gtk_spin_button_set_snap_to_ticks(sb, TRUE);
-	gtk_widget_set_valign(GTK_WIDGET(sb), GTK_ALIGN_CENTER);
-	gtk_grid_attach(grid, GTK_WIDGET(sb), 1, 4, 1, 1);
-	p->cfg->spectral_axis.sb_rpt = GTK_SPIN_BUTTON(sb);
 
 
 	w = gui_create_desclabel("<b> NOT IMPLEMENTED </b>",

@@ -37,7 +37,8 @@
 
 static void azel_update_pbar_az(ObsAssist *p)
 {
-	gdouble frac;
+	gdouble d;
+	gdouble frac = 1.0;
 
 	gchar *str;
 
@@ -46,8 +47,10 @@ static void azel_update_pbar_az(ObsAssist *p)
 
 	pb = GTK_PROGRESS_BAR(p->cfg->azel.pbar_az);
 
-	frac = (p->cfg->azel.az_cur - p->cfg->azel.az_lo) /
-	       (p->cfg->azel.az_hi  - p->cfg->azel.az_lo);
+	d = p->cfg->azel.az_hi  - p->cfg->azel.az_lo;
+
+	if (d != 0.0)
+		frac = (p->cfg->azel.az_cur - p->cfg->azel.az_lo) / d;
 
 	str = g_strdup_printf("AZ: %5.2f° of [%5.2f°, %5.2f°]",
 			      p->cfg->azel.az_cur,
@@ -69,17 +72,22 @@ static void azel_update_pbar_az(ObsAssist *p)
 
 static void azel_update_pbar_el(ObsAssist *p)
 {
-	gdouble frac;
+	gdouble d;
+	gdouble frac = 1.0;
 
 	gchar *str;
 
 	GtkProgressBar *pb;
 
 
+
 	pb = GTK_PROGRESS_BAR(p->cfg->azel.pbar_el);
 
-	frac = (p->cfg->azel.el_cur - p->cfg->azel.el_lo) /
-	       (p->cfg->azel.el_hi  - p->cfg->azel.el_lo);
+	d = p->cfg->azel.el_hi  - p->cfg->azel.el_lo;
+
+	if (d != 0.0)
+		frac = (p->cfg->azel.el_cur - p->cfg->azel.el_lo) / d;
+
 
 	str = g_strdup_printf("EL: %5.2f° of [%5.2f°, %5.2f°]",
 			      p->cfg->azel.el_cur,
