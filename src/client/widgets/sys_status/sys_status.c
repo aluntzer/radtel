@@ -114,7 +114,6 @@ static void sys_status_handle_pr_status_move(gpointer instance,
 
 	p = SYS_STATUS(data);
 
-	g_message("MOV! %d", s->eta_msec);
 
 	if (s->busy)
 		gtk_spinner_start(GTK_SPINNER(p->cfg->spin_move));

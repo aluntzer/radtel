@@ -1541,7 +1541,6 @@ static void xyplot_draw_map(XYPlot *p, cairo_t *cr, struct graph *g)
 	cairo_save(cr);
 
 	xyplot_transform_origin(p, cr);
-	g_message("dx dy %f %f %f %f", dx, dy, wx, wy);
 
 	for (i = 0; i < g->data_len; i++) {
 		grey = (c[i] - p->cmin) * sc;
