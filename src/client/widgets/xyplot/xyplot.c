@@ -2636,6 +2636,9 @@ static gboolean xyplot_configure_event_cb(GtkWidget *widget,
 	if (p->render)
 	    cairo_surface_destroy(p->render);
 
+	if (p->plot)
+	    cairo_surface_destroy(p->plot);
+
 
 	width  = gtk_widget_get_allocated_width(widget);
 	height = gtk_widget_get_allocated_height(widget);

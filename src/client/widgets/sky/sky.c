@@ -2067,6 +2067,9 @@ static gboolean sky_configure_event_cb(GtkWidget *w,
 	if (p->cfg->render)
 	    cairo_surface_destroy(p->cfg->render);
 
+	if (p->cfg->plot)
+	    cairo_surface_destroy(p->cfg->plot);
+
 
 	width  = gtk_widget_get_allocated_width(w);
 	height = gtk_widget_get_allocated_height(w);
