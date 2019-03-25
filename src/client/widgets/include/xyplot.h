@@ -36,6 +36,8 @@ struct _XYPlotAxis {
 	gdouble min;	/* plot range in x-axis */
 	gdouble max;
 	gdouble	len;
+	gdouble tick_min;
+	gdouble tick_max;
 	gdouble step;
 	gdouble ticks_maj;
 	gdouble prec;
@@ -63,6 +65,7 @@ struct _XYPlot {
 	gdouble cmin;	/* data range in c-axis */
 	gdouble cmax;
 	gdouble clen;
+
 
 	XYPlotAxis x_ax;
 	XYPlotAxis y_ax;

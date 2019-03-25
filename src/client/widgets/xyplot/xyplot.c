@@ -69,6 +69,8 @@ struct graph {
 	gdouble cmin;
 	gdouble cmax;
 
+	gdouble dx;		/* minimum delta */
+	gdouble dy;
 
 	gchar *label;
 
@@ -1092,10 +1094,10 @@ static void xyplot_draw_ticks_x(XYPlot *p, cairo_t *cr,
 
 	xyplot_transform_origin(p, cr);
 
-	idx = p->x_ax.min;
+	idx = p->x_ax.tick_min;
 	inc = p->x_ax.step;
-	stp = p->x_ax.max + 0.5 * inc;
-	min = p->x_ax.min;
+	stp = p->x_ax.max;
+	min = p->x_ax.tick_min;
 	scl = p->scale_x;
 
 	for ( ; idx < stp; idx += inc) {
@@ -1147,10 +1149,10 @@ static void xyplot_draw_ticks_y(XYPlot *p, cairo_t *cr,
 	xyplot_transform_origin(p, cr);
 
 	/* horizontal grid lines */
-	idx = p->y_ax.min;
+	idx = p->y_ax.tick_min;
 	inc = p->y_ax.step;
 	stp = p->y_ax.max;
-	min = p->y_ax.min;
+	min = p->y_ax.tick_min;
 	scl = p->scale_y;
 
 	for ( ; idx < stp; idx += inc) {
@@ -1197,12 +1199,15 @@ static void xyplot_draw_tickslabels_x(XYPlot *p, cairo_t *cr,
 	cairo_text_extents(cr, "0", &te);
 
 	/* horizontal ticks */
-	idx = p->x_ax.min;
+	idx = p->x_ax.tick_min;
 	inc = p->x_ax.step;
 	stp = p->x_ax.max;
-	min = p->x_ax.min;
+	min = p->x_ax.tick_min;
 	scl = p->scale_x;
 	off = 1.5 * te.height;
+
+	if (min < p->x_ax.min)
+		min -= inc;
 
 	for ( ; idx < stp; idx += inc) {
 		snprintf(buf, ARRAY_SIZE(buf), "%.6g", idx);
@@ -1246,10 +1251,10 @@ static void xyplot_draw_tickslabels_y(XYPlot *p, cairo_t *cr,
 	cairo_text_extents(cr, "0", &te);
 
 	/* vertical ticks */
-	idx = p->y_ax.min;
+	idx = p->y_ax.tick_min;
 	inc = p->y_ax.step;
 	stp = p->y_ax.max;
-	min = p->y_ax.min;
+	min = p->y_ax.tick_min;
 	scl = p->scale_y;
 
 	for ( ; idx < stp; idx += inc) {
@@ -1301,10 +1306,10 @@ static void xyplot_draw_grid_y(XYPlot *p, cairo_t *cr,
 	cairo_set_dash(cr, dashes, ARRAY_SIZE(dashes), 0.0);
 
 	/* vertical grid lines */
-	idx = p->x_ax.min;
+	idx = p->x_ax.tick_min;
 	inc = p->x_ax.step;
 	stp = p->x_ax.max;
-	min = p->x_ax.min;
+	min = p->x_ax.tick_min;
 	scl = p->scale_x;
 	end = p->plot_h;
 
@@ -1357,10 +1362,10 @@ static void xyplot_draw_grid_x(XYPlot *p, cairo_t *cr,
 	cairo_set_dash(cr, dashes, ARRAY_SIZE(dashes), 0.0);
 
 	/* horizontal grid lines */
-	idx = p->y_ax.min;
+	idx = p->y_ax.tick_min;
 	inc = p->y_ax.step;
 	stp = p->y_ax.max;
-	min = p->y_ax.min;
+	min = p->y_ax.tick_min;
 	scl = p->scale_y;
 	end = p->plot_w;
 
@@ -1940,29 +1945,19 @@ double xyplot_nicenum(const double num, const gboolean round)
 
 
 static void xyplot_auto_axis(XYPlot *p, XYPlotAxis *ax,
-			     gdouble min, gdouble max, gdouble len,
-			     gboolean niceminmax)
+			     gdouble min, gdouble max, gdouble len)
 {
 
-	ax->len  = xyplot_nicenum(len, TRUE);
-	ax->step = xyplot_nicenum(ax->len / (ax->ticks_maj - 1.0), TRUE);
 
-	if (niceminmax) {
 
-		ax->min = floor(min / ax->step) * ax->step;
-		ax->max =  ceil(max / ax->step) * ax->step;
+	ax->min = min - len * 0.1;
+	ax->max = max + len * 0.1;
 
-		/* make sure there always is some space left and right */
-		if (ax->min == min)
-			ax->min -= ax->step;
+	ax->step = xyplot_nicenum(xyplot_nicenum(len, TRUE) /
+				  (ax->ticks_maj - 1.0), TRUE);
 
-		if (ax->max == max)
-			ax->max += ax->step;
-
-	} else {
-		ax->min = min - len * 0.1;
-		ax->max = max + len * 0.1;
-	}
+	ax->tick_min = floor(ax->min / ax->step) * ax->step;
+	ax->tick_max =  ceil(ax->max / ax->step) * ax->step;
 
 	ax->len  = ax->max - ax->min;
 	ax->prec = MAX(-floor(log10(ax->step)), 0);
@@ -1976,8 +1971,8 @@ static void xyplot_auto_axis(XYPlot *p, XYPlotAxis *ax,
 
 static void xyplot_auto_axes(XYPlot *p)
 {
-	xyplot_auto_axis(p, &p->x_ax, p->xmin, p->xmax, p->xlen, FALSE);
-	xyplot_auto_axis(p, &p->y_ax, p->ymin, p->ymax, p->ylen, FALSE);
+	xyplot_auto_axis(p, &p->x_ax, p->xmin, p->xmax, p->xlen);
+	xyplot_auto_axis(p, &p->y_ax, p->ymin, p->ymax, p->ylen);
 }
 
 
@@ -1988,8 +1983,7 @@ static void xyplot_auto_axes(XYPlot *p)
 
 static void xyplot_auto_range(XYPlot *p)
 {
-	gdouble dx, dy;
-	gdouble ddx, ddy;
+	gdouble tmp;
 
 	GList *elem;
 
@@ -2027,32 +2021,6 @@ static void xyplot_auto_range(XYPlot *p)
 		if (g->ymax > p->ymax)
 			p->ymax = g->ymax;
 
-
-
-		ddx = (g->xmax - g->xmin) / (gdouble) g->data_len;
-		ddy = (g->ymax - g->ymin) / (gdouble) g->data_len;
-
-		if (ddx != 0.0) {
-			if (ddx < p->dx)
-				p->dx = ddx;
-		} else {
-			dx = fabs(g->xmin - p->xmin);
-			if (dx != 0.0)
-				if (dx < p->dx)
-					p->dx = dx;
-		}
-
-		if (ddy != 0.0) {
-			if (ddy < p->dy)
-				p->dy = ddy;
-		} else {
-			dy = fabs(g->ymin - p->ymin);
-			if (dy != 0.0)
-				if (dy < p->dy)
-					p->dy = dy;
-		}
-
-
 		/* 3rd axis is optional */
 		if (!g->data_c)
 			continue;
@@ -2062,6 +2030,12 @@ static void xyplot_auto_range(XYPlot *p)
 
 		if (g->cmax > p->cmax)
 			p->cmax = g->cmax;
+
+		if (p->dx > g->dx)
+			p->dx = g->dx;
+
+		if (p->dy > g->dy)
+			p->dy = g->dy;
 	}
 
 	p->xlen = p->xmax - p->xmin;
@@ -2082,14 +2056,65 @@ static void xyplot_auto_range(XYPlot *p)
 		p->ylen  = 1.0;
 	}
 
+
+	/* XXX cleanup **/
+
+	if (p->dx == DBL_MAX) {
+		/* since dx is undefined, none of the samples
+		 * have more than a single value for a particular axis, so
+		 * grab the first and find a delta
+		 */
+		tmp = 0.0;
+		for (elem = p->graphs; elem; elem = elem->next) {
+
+			g = (struct graph *) elem->data;
+
+			/* need 3rd axis sets only */
+			if (!g->data_c)
+				continue;
+
+			tmp = fabs(tmp - g->xmin);
+			if (tmp > 0.0)
+				if (tmp < p->dx)
+					p->dx = tmp;
+
+			tmp = g->xmin;
+		}
+	}
+
+
+	if (p->dy == DBL_MAX) {
+		/* since dy is undefined, none of the samples
+		 * have more than a single value for a particular axis, so
+		 * grab the first and find a delta
+		 */
+		tmp = 0.0;
+		for (elem = p->graphs; elem; elem = elem->next) {
+
+			g = (struct graph *) elem->data;
+
+			/* need 3rd axis sets only */
+			if (!g->data_c)
+				continue;
+
+			tmp = fabs(tmp - g->ymin);
+			if (tmp > 0.0)
+				if (tmp < p->dy)
+					p->dy = tmp;
+
+			tmp = g->ymin;
+		}
+	}
+
+
 	if (p->dx == DBL_MAX || p->dy == DBL_MAX) {
-		if (p->dy != DBL_MAX) {
+		if (p->dy < DBL_MAX) {
 			p->dx = p->dy;
-		} else if (p->dx != DBL_MAX) {
-			p->dy  =p->dx;
+		} else if (p->dx < DBL_MAX) {
+			p->dy = p->dx;
 		} else {
 			p->dx  = p->xlen * 0.5;
-			p->dx  = p->ylen * 0.5;
+			p->dy  = p->ylen * 0.5;
 		}
 	}
 }
@@ -2114,6 +2139,8 @@ static void xyplot_data_range(struct graph *g)
 	g->ymax = -DBL_MAX;
 	g->cmax = -DBL_MAX;
 
+	g->dx = DBL_MAX;
+	g->dy = DBL_MAX;
 
 	for (i = 0; i < g->data_len; i++) {
 
@@ -2125,7 +2152,13 @@ static void xyplot_data_range(struct graph *g)
 		if (tmp > g->xmax)
 			g->xmax = tmp;
 
+		tmp = fabs(tmp - g->xmin);
+		if (tmp > 0.0)
+			if (tmp < g->dx)
+				g->dx = tmp;
 	}
+
+
 
 	for (i = 0; i < g->data_len; i++) {
 
@@ -2136,6 +2169,11 @@ static void xyplot_data_range(struct graph *g)
 
 		if (tmp > g->ymax)
 			g->ymax = tmp;
+
+		tmp = fabs(tmp - g->ymin);
+		if (tmp > 0.0)
+			if (tmp < g->dy)
+				g->dy = tmp;
 	}
 
 	/* third axis is optional */
