@@ -53,10 +53,12 @@ struct _XYPlot {
 	gdouble xmin;	/* data range in x-axis */
 	gdouble xmax;
 	gdouble xlen;
+	gdouble dx;	/* delta step x (for map pixels) */
 
 	gdouble ymin;	/* data range in y-axis */
 	gdouble ymax;
 	gdouble ylen;
+	gdouble dy;	/* delta step y */
 
 	gdouble cmin;	/* data range in c-axis */
 	gdouble cmax;

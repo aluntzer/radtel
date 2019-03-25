@@ -1102,7 +1102,7 @@ static void xyplot_draw_ticks_x(XYPlot *p, cairo_t *cr,
 		cairo_move_to(cr, (idx - min) * scl, 0.0);
 		cairo_rel_line_to(cr, 0.0, 10.);
 
-		if (idx < stp) {
+		if ((idx + 0.5 * inc) < stp) {
 			cairo_move_to(cr, (idx + 0.5 * inc - min) * scl, 0.0);
 			cairo_rel_line_to(cr, 0.0, 5.);
 		}
@@ -1157,7 +1157,7 @@ static void xyplot_draw_ticks_y(XYPlot *p, cairo_t *cr,
 		cairo_move_to(cr, 0.0, (idx - min) * scl);
 		cairo_rel_line_to(cr, 10.0, 0.0);
 
-		if (idx < stp) {
+		if ((idx + 0.5 * inc) < stp) {
 			cairo_move_to(cr, 0.0, (idx + 0.5 * inc - min) * scl);
 			cairo_rel_line_to(cr, 5.0, 0.0);
 		}
@@ -1199,7 +1199,7 @@ static void xyplot_draw_tickslabels_x(XYPlot *p, cairo_t *cr,
 	/* horizontal ticks */
 	idx = p->x_ax.min;
 	inc = p->x_ax.step;
-	stp = p->x_ax.max + 0.5 * inc;
+	stp = p->x_ax.max;
 	min = p->x_ax.min;
 	scl = p->scale_x;
 	off = 1.5 * te.height;
@@ -1248,7 +1248,7 @@ static void xyplot_draw_tickslabels_y(XYPlot *p, cairo_t *cr,
 	/* vertical ticks */
 	idx = p->y_ax.min;
 	inc = p->y_ax.step;
-	stp = p->y_ax.max + 0.5 * inc;
+	stp = p->y_ax.max;
 	min = p->y_ax.min;
 	scl = p->scale_y;
 
@@ -1303,7 +1303,7 @@ static void xyplot_draw_grid_y(XYPlot *p, cairo_t *cr,
 	/* vertical grid lines */
 	idx = p->x_ax.min;
 	inc = p->x_ax.step;
-	stp = p->x_ax.max + 0.5 * inc;
+	stp = p->x_ax.max;
 	min = p->x_ax.min;
 	scl = p->scale_x;
 	end = p->plot_h;
@@ -1359,7 +1359,7 @@ static void xyplot_draw_grid_x(XYPlot *p, cairo_t *cr,
 	/* horizontal grid lines */
 	idx = p->y_ax.min;
 	inc = p->y_ax.step;
-	stp = p->y_ax.max + 0.5 * inc;
+	stp = p->y_ax.max;
 	min = p->y_ax.min;
 	scl = p->scale_y;
 	end = p->plot_w;
@@ -1518,6 +1518,8 @@ static void xyplot_draw_map(XYPlot *p, cairo_t *cr, struct graph *g)
 
 	gdouble sx, sy, sc;
 
+	gdouble dx, dy, wx, wy;
+
 	gdouble *x, *y, *c;
 
 	gdouble r, cg, b, grey;
@@ -1527,6 +1529,11 @@ static void xyplot_draw_map(XYPlot *p, cairo_t *cr, struct graph *g)
 	sy = p->scale_y;
 	sc = 1.0 / (p->cmax - p->cmin);
 
+	dx = sx * 0.5 * p->dx;
+	dy = sy * 0.5 * p->dy;
+	wx = sx * p->dx;
+	wy = sy * p->dy;
+
 	x  = g->data_x;
 	y  = g->data_y;
 	c  = g->data_c;
@@ -1534,7 +1541,7 @@ static void xyplot_draw_map(XYPlot *p, cairo_t *cr, struct graph *g)
 	cairo_save(cr);
 
 	xyplot_transform_origin(p, cr);
-
+	g_message("dx dy %f %f %f %f", dx, dy, wx, wy);
 
 	for (i = 0; i < g->data_len; i++) {
 		grey = (c[i] - p->cmin) * sc;
@@ -1544,16 +1551,15 @@ static void xyplot_draw_map(XYPlot *p, cairo_t *cr, struct graph *g)
 		b = get_color_value_from_formula(15, grey);
 
 		cairo_set_source_rgba(cr, r, cg, b, 0.8);
-		cairo_rectangle(cr, (x[i] - p->x_ax.min) * sx - 4.0,
-				    (y[i] - p->y_ax.min) * sy - 4.0,
-				    8.0, 8.0);
+		cairo_rectangle(cr, (x[i] - p->x_ax.min) * sx - dx,
+				    (y[i] - p->y_ax.min) * sy - dy,
+				    wx, wy);
 		cairo_fill(cr);
 		cairo_stroke(cr);
 	}
 
 	cairo_restore(cr);
 }
-
 
 
 
@@ -1935,21 +1941,29 @@ double xyplot_nicenum(const double num, const gboolean round)
 
 
 static void xyplot_auto_axis(XYPlot *p, XYPlotAxis *ax,
-			     gdouble min, gdouble max, gdouble len)
+			     gdouble min, gdouble max, gdouble len,
+			     gboolean niceminmax)
 {
 
 	ax->len  = xyplot_nicenum(len, TRUE);
 	ax->step = xyplot_nicenum(ax->len / (ax->ticks_maj - 1.0), TRUE);
 
-	ax->min = floor(min / ax->step) * ax->step;
-	ax->max =  ceil(max / ax->step) * ax->step;
+	if (niceminmax) {
 
-	/* make sure there always is some space left and right */
-	if (ax->min == min)
-		ax->min -= ax->step;
+		ax->min = floor(min / ax->step) * ax->step;
+		ax->max =  ceil(max / ax->step) * ax->step;
 
-	if (ax->max == max)
-		ax->max += ax->step;
+		/* make sure there always is some space left and right */
+		if (ax->min == min)
+			ax->min -= ax->step;
+
+		if (ax->max == max)
+			ax->max += ax->step;
+
+	} else {
+		ax->min = min - len * 0.1;
+		ax->max = max + len * 0.1;
+	}
 
 	ax->len  = ax->max - ax->min;
 	ax->prec = MAX(-floor(log10(ax->step)), 0);
@@ -1963,8 +1977,8 @@ static void xyplot_auto_axis(XYPlot *p, XYPlotAxis *ax,
 
 static void xyplot_auto_axes(XYPlot *p)
 {
-	xyplot_auto_axis(p, &p->x_ax, p->xmin, p->xmax, p->xlen);
-	xyplot_auto_axis(p, &p->y_ax, p->ymin, p->ymax, p->ylen);
+	xyplot_auto_axis(p, &p->x_ax, p->xmin, p->xmax, p->xlen, FALSE);
+	xyplot_auto_axis(p, &p->y_ax, p->ymin, p->ymax, p->ylen, FALSE);
 }
 
 
@@ -1975,8 +1989,10 @@ static void xyplot_auto_axes(XYPlot *p)
 
 static void xyplot_auto_range(XYPlot *p)
 {
-	GList *elem;
+	gdouble dx, dy;
+	gdouble ddx, ddy;
 
+	GList *elem;
 
 	struct graph *g;
 
@@ -1991,6 +2007,9 @@ static void xyplot_auto_range(XYPlot *p)
 	p->xmax = -DBL_MAX;
 	p->ymax = -DBL_MAX;
 	p->cmax = -DBL_MAX;
+
+	p->dx = DBL_MAX;
+	p->dy = DBL_MAX;
 
 
 	for (elem = p->graphs; elem; elem = elem->next) {
@@ -2010,6 +2029,31 @@ static void xyplot_auto_range(XYPlot *p)
 			p->ymax = g->ymax;
 
 
+
+		ddx = (g->xmax - g->xmin) / (gdouble) g->data_len;
+		ddy = (g->ymax - g->ymin) / (gdouble) g->data_len;
+
+		if (ddx != 0.0) {
+			if (ddx < p->dx)
+				p->dx = ddx;
+		} else {
+			dx = fabs(g->xmin - p->xmin);
+			if (dx != 0.0)
+				if (dx < p->dx)
+					p->dx = dx;
+		}
+
+		if (ddy != 0.0) {
+			if (ddy < p->dy)
+				p->dy = ddy;
+		} else {
+			dy = fabs(g->ymin - p->ymin);
+			if (dy != 0.0)
+				if (dy < p->dy)
+					p->dy = dy;
+		}
+
+
 		/* 3rd axis is optional */
 		if (!g->data_c)
 			continue;
@@ -2024,6 +2068,31 @@ static void xyplot_auto_range(XYPlot *p)
 	p->xlen = p->xmax - p->xmin;
 	p->ylen = p->ymax - p->ymin;
 	p->clen = p->cmax - p->cmin;
+
+
+	/* set an arbitrary values for a singular data range */
+	if (p->xlen == 0.0) {
+		p->xmax += 0.5;
+		p->xmin -= 0.5;
+		p->xlen  = 1.0;
+	}
+
+	if (p->ylen == 0.0) {
+		p->ymax += 0.5;
+		p->ymin -= 0.5;
+		p->ylen  = 1.0;
+	}
+
+	if (p->dx == DBL_MAX || p->dy == DBL_MAX) {
+		if (p->dy != DBL_MAX) {
+			p->dx = p->dy;
+		} else if (p->dx != DBL_MAX) {
+			p->dy  =p->dx;
+		} else {
+			p->dx  = p->xlen * 0.5;
+			p->dx  = p->ylen * 0.5;
+		}
+	}
 }
 
 
