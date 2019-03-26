@@ -544,9 +544,9 @@ static void spectrum_append_avg(Spectrum *p, struct spectrum *sp)
  * @brief handle capabilities data
  */
 
-static gboolean spectrum_handle_pr_spec_data(gpointer instance,
-					     const struct spec_data *s,
-					     gpointer data)
+static void spectrum_handle_pr_spec_data(gpointer instance,
+					 const struct spec_data *s,
+					 gpointer data)
 {
 
 	uint64_t i;
@@ -561,6 +561,9 @@ static gboolean spectrum_handle_pr_spec_data(gpointer instance,
 
 	p = SPECTRUM(data);
 
+
+	if (!s->n)
+		return;
 
 	frq = g_malloc(s->n * sizeof(gdouble));
 	amp = g_malloc(s->n * sizeof(gdouble));
@@ -584,8 +587,6 @@ static gboolean spectrum_handle_pr_spec_data(gpointer instance,
 	sp->n = s->n;
 
 	spectrum_append_data(p, sp);
-
-	return TRUE;
 }
 
 
