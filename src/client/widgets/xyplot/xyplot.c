@@ -257,7 +257,7 @@ static void xyplot_export_pdf(GtkWidget *w, XYPlot *p)
 		return;
 	}
 
-	dia = gtk_file_chooser_dialog_new("Export XY Data",
+	dia = gtk_file_chooser_dialog_new("Export PDF",
 					  GTK_WINDOW(win),
 					  GTK_FILE_CHOOSER_ACTION_SAVE,
 					  "_Cancel",
@@ -314,10 +314,25 @@ static void xyplot_export_graph_xy_asc(const gchar *fname, struct graph *g)
 		return;
 	}
 
-	fprintf(f, "#\t%s\t%s\n", g->parent->xlabel, g->parent->ylabel);
+	if (!g->data_c) {
+		fprintf(f, "#\t%s\t%s\n", g->parent->xlabel, g->parent->ylabel);
 
-	for (i = 0; i < g->data_len; i++)
-		fprintf(f, "\t%f\t%f\n", g->data_x[i], g->data_y[i]);
+		for (i = 0; i < g->data_len; i++)
+			fprintf(f, "\t%f\t%f\n", g->data_x[i], g->data_y[i]);
+	} else {
+
+		fprintf(f, "#\t%s\t%s\tz-axis\n",
+			g->parent->xlabel,
+			g->parent->ylabel);
+
+		for (i = 0; i < g->data_len; i++) {
+			fprintf(f, "\t%f\t%f\t%f\n",
+				g->data_x[i],
+				g->data_y[i],
+				g->data_c[i]);
+		}
+
+	}
 
 
 	fclose(f);
@@ -2063,8 +2078,8 @@ static void xyplot_auto_range(XYPlot *p)
 		/* since dx is undefined, none of the samples
 		 * have more than a single value for a particular axis, so
 		 * grab the first and find a delta
+		 * XXX find average delta, not minimum!
 		 */
-		tmp = 0.0;
 		for (elem = p->graphs; elem; elem = elem->next) {
 
 			g = (struct graph *) elem->data;
@@ -2073,22 +2088,16 @@ static void xyplot_auto_range(XYPlot *p)
 			if (!g->data_c)
 				continue;
 
-			tmp = fabs(tmp - g->xmin);
+			tmp = g->xmin - p->xmin;
 			if (tmp > 0.0)
 				if (tmp < p->dx)
 					p->dx = tmp;
-
-			tmp = g->xmin;
 		}
 	}
 
 
 	if (p->dy == DBL_MAX) {
-		/* since dy is undefined, none of the samples
-		 * have more than a single value for a particular axis, so
-		 * grab the first and find a delta
-		 */
-		tmp = 0.0;
+
 		for (elem = p->graphs; elem; elem = elem->next) {
 
 			g = (struct graph *) elem->data;
@@ -2097,15 +2106,12 @@ static void xyplot_auto_range(XYPlot *p)
 			if (!g->data_c)
 				continue;
 
-			tmp = fabs(tmp - g->ymin);
+			tmp = g->ymin - p->ymin;
 			if (tmp > 0.0)
 				if (tmp < p->dy)
 					p->dy = tmp;
-
-			tmp = g->ymin;
 		}
 	}
-
 
 	if (p->dx == DBL_MAX || p->dy == DBL_MAX) {
 		if (p->dy < DBL_MAX) {
@@ -2129,6 +2135,7 @@ static void xyplot_data_range(struct graph *g)
 	size_t i;
 
 	gdouble tmp;
+	gsize cnt;
 
 
 	g->xmin = DBL_MAX;
@@ -2142,6 +2149,8 @@ static void xyplot_data_range(struct graph *g)
 	g->dx = DBL_MAX;
 	g->dy = DBL_MAX;
 
+
+	cnt = 0;
 	for (i = 0; i < g->data_len; i++) {
 
 		tmp = g->data_x[i];
@@ -2149,17 +2158,24 @@ static void xyplot_data_range(struct graph *g)
 		if (tmp < g->xmin)
 			g->xmin = tmp;
 
-		if (tmp > g->xmax)
+		if (tmp > g->xmax) {
+			cnt++;
 			g->xmax = tmp;
-
-		tmp = fabs(tmp - g->xmin);
-		if (tmp > 0.0)
-			if (tmp < g->dx)
-				g->dx = tmp;
+		}
+	}
+	/* guess delta from number of distinct x values that caused the
+	 * maximum to mov
+	 * XXX this assumes ordering low->high
+	 */
+	if (cnt > 2) {
+		if (cnt & 0x1)
+			g->dx = (g->xmax - g->xmin) / (gdouble) (cnt - 1);
+		else
+			g->dx = (g->xmax - g->xmin) / (gdouble) (cnt - 2);
 	}
 
 
-
+	cnt = 0;
 	for (i = 0; i < g->data_len; i++) {
 
 		tmp = g->data_y[i];
@@ -2167,14 +2183,13 @@ static void xyplot_data_range(struct graph *g)
 		if (tmp < g->ymin)
 			g->ymin = tmp;
 
-		if (tmp > g->ymax)
+		if (tmp > g->ymax) {
+			cnt++;
 			g->ymax = tmp;
-
-		tmp = fabs(tmp - g->ymin);
-		if (tmp > 0.0)
-			if (tmp < g->dy)
-				g->dy = tmp;
+		}
 	}
+	if (cnt > 2)
+		g->dy = (g->ymax - g->ymin) / (gdouble) (cnt - 1);
 
 	/* third axis is optional */
 	if (!g->data_c)
