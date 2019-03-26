@@ -287,7 +287,7 @@ gint net_send(const char *pkt, size_t nbytes)
 	GOutputStream *ostream;
 
 
-	g_message("Sending packet of %d bytes", nbytes);
+	g_debug("Sending packet of %d bytes", nbytes);
 
 	stream = G_IO_STREAM(server_con.con);
 

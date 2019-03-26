@@ -22,6 +22,6 @@
 
 void proc_pr_spec_acq_disable(void)
 {
-	g_message("Server sent SPEC_ACQ_DISABLE");
+	g_debug("Server sent SPEC_ACQ_DISABLE");
 	sig_pr_spec_acq_disable();
 }

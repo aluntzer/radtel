@@ -22,5 +22,5 @@
 
 void proc_pr_fail(struct packet *pkt)
 {
-	g_message("Server sent last command failed: NOT IMPLEMENTED");
+	g_debug("Server sent last command failed: NOT IMPLEMENTED");
 }
