@@ -86,5 +86,6 @@ double vlsr(struct coord_equatorial eq, double d);
 double doppler_freq_relative(double vel, double freq_ref);
 double doppler_freq(double vel, double freq_ref);
 double doppler_vel(double freq, double freq_ref);
+double doppler_vel_relative(double freq, double freq_ref);
 
 #endif

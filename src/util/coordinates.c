@@ -826,3 +826,17 @@ double doppler_vel(double freq, double freq_ref)
 	return (freq / freq_ref - 1.0) * 299790.0;
 }
 
+
+/**
+ * @brief convert a relative frequency to a Doppler velocity
+ *
+ * @param freq the frequency (should be same power of 10 as reference)
+ * @param freq_ref a reference frequency
+ *
+ * @return the Doppler velocity, same power of 10 as frequency input
+ */
+
+double doppler_vel_relative(double freq, double freq_ref)
+{
+	return (freq / freq_ref) * 299790.0;
+}
