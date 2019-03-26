@@ -469,7 +469,7 @@ GtkWidget *telescope_track_sky_new(Telescope *p)
 				 "Keep the telescope pointed towards the "
 				 "currently configured on-sky coordinates.");
 
-	gtk_grid_attach(GTK_GRID(grid), w, 0, 0, 1, 1);
+	gtk_grid_attach(GTK_GRID(grid), w, 0, 0, 1, 2);
 
 	w = gtk_switch_new();
 	gtk_widget_set_tooltip_text(w, "Enable/Disable Tracking\n");
