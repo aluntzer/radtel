@@ -1094,10 +1094,10 @@ static void xyplot_draw_ticks_x(XYPlot *p, cairo_t *cr,
 
 	xyplot_transform_origin(p, cr);
 
-	idx = p->x_ax.tick_min;
+	idx = p->x_ax.tick_min + p->x_ax.step;
 	inc = p->x_ax.step;
 	stp = p->x_ax.max;
-	min = p->x_ax.tick_min;
+	min = p->x_ax.min;
 	scl = p->scale_x;
 
 	for ( ; idx < stp; idx += inc) {
@@ -1149,10 +1149,10 @@ static void xyplot_draw_ticks_y(XYPlot *p, cairo_t *cr,
 	xyplot_transform_origin(p, cr);
 
 	/* horizontal grid lines */
-	idx = p->y_ax.tick_min;
+	idx = p->y_ax.tick_min + p->y_ax.step;
 	inc = p->y_ax.step;
 	stp = p->y_ax.max;
-	min = p->y_ax.tick_min;
+	min = p->y_ax.min;
 	scl = p->scale_y;
 
 	for ( ; idx < stp; idx += inc) {
@@ -1199,10 +1199,10 @@ static void xyplot_draw_tickslabels_x(XYPlot *p, cairo_t *cr,
 	cairo_text_extents(cr, "0", &te);
 
 	/* horizontal ticks */
-	idx = p->x_ax.tick_min;
+	idx = p->x_ax.tick_min + p->x_ax.step;
 	inc = p->x_ax.step;
 	stp = p->x_ax.max;
-	min = p->x_ax.tick_min;
+	min = p->x_ax.min;
 	scl = p->scale_x;
 	off = 1.5 * te.height;
 
@@ -1251,10 +1251,10 @@ static void xyplot_draw_tickslabels_y(XYPlot *p, cairo_t *cr,
 	cairo_text_extents(cr, "0", &te);
 
 	/* vertical ticks */
-	idx = p->y_ax.tick_min;
+	idx = p->y_ax.tick_min + p->y_ax.step;
 	inc = p->y_ax.step;
 	stp = p->y_ax.max;
-	min = p->y_ax.tick_min;
+	min = p->y_ax.min;
 	scl = p->scale_y;
 
 	for ( ; idx < stp; idx += inc) {
@@ -1306,10 +1306,10 @@ static void xyplot_draw_grid_y(XYPlot *p, cairo_t *cr,
 	cairo_set_dash(cr, dashes, ARRAY_SIZE(dashes), 0.0);
 
 	/* vertical grid lines */
-	idx = p->x_ax.tick_min;
+	idx = p->x_ax.tick_min + p->x_ax.step;
 	inc = p->x_ax.step;
 	stp = p->x_ax.max;
-	min = p->x_ax.tick_min;
+	min = p->x_ax.min;
 	scl = p->scale_x;
 	end = p->plot_h;
 
@@ -1362,10 +1362,10 @@ static void xyplot_draw_grid_x(XYPlot *p, cairo_t *cr,
 	cairo_set_dash(cr, dashes, ARRAY_SIZE(dashes), 0.0);
 
 	/* horizontal grid lines */
-	idx = p->y_ax.tick_min;
+	idx = p->y_ax.tick_min + p->y_ax.step;
 	inc = p->y_ax.step;
 	stp = p->y_ax.max;
-	min = p->y_ax.tick_min;
+	min = p->y_ax.min;
 	scl = p->scale_y;
 	end = p->plot_w;
 
