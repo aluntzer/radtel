@@ -32,7 +32,7 @@ static gint radio_vel_value_changed(GtkSpinButton *sb, Radio *p);
 static gint radio_center_vel_value_changed(GtkSpinButton *sb, Radio *p);
 
 
-static void radio_input_block_signals(Radio *p)
+void radio_input_block_signals(Radio *p)
 {
 	g_signal_handler_block(p->cfg->sb_frq_lo, p->cfg->id_fl);
 	g_signal_handler_block(p->cfg->sb_frq_hi, p->cfg->id_fh);
@@ -47,7 +47,7 @@ static void radio_input_block_signals(Radio *p)
 
 
 
-static void radio_input_unblock_signals(Radio *p)
+void radio_input_unblock_signals(Radio *p)
 {
 	g_signal_handler_unblock(p->cfg->sb_frq_lo, p->cfg->id_fl);
 	g_signal_handler_unblock(p->cfg->sb_frq_hi, p->cfg->id_fh);
@@ -161,6 +161,8 @@ static gint radio_vel_value_changed(GtkSpinButton *sb, Radio *p)
 	gdouble f0, f1, fcent, fspan;
 	gdouble v0, v1, vcent, vspan;
 
+
+	p->cfg->tracking = G_SOURCE_REMOVE;
 
 	v0 = gtk_spin_button_get_value(p->cfg->sb_vel_lo);
 	v1 = gtk_spin_button_get_value(p->cfg->sb_vel_hi);
@@ -277,6 +279,8 @@ static gint radio_freq_value_changed(GtkSpinButton *sb, Radio *p)
 	gdouble f0, f1, fcent, fspan;
 	gdouble v0, v1, vcent, vspan;
 
+
+	p->cfg->tracking = G_SOURCE_REMOVE;
 
 	f0 = gtk_spin_button_get_value(p->cfg->sb_frq_lo);
 	f1 = gtk_spin_button_get_value(p->cfg->sb_frq_hi);

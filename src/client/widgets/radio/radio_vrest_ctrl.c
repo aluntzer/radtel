@@ -118,6 +118,8 @@ static gboolean radio_spec_doppler_track_timeout_cb(gpointer data)
 	gdouble step;
 
 	static gdouble fclast;
+	static int bw_div_last;
+	static int bin_div_last;
 
 	struct coord_horizontal hor;
 	struct coord_equatorial	equ;
@@ -130,6 +132,7 @@ static gboolean radio_spec_doppler_track_timeout_cb(gpointer data)
 
 
 	if (!p->cfg->tracking) {
+		fclast = 0.0;
 		gtk_switch_set_state(GTK_SWITCH(p->cfg->sw_dpl), FALSE);
 		return p->cfg->tracking;
 	}
@@ -150,12 +153,15 @@ static gboolean radio_spec_doppler_track_timeout_cb(gpointer data)
 	gtk_spin_button_get_increments(p->cfg->sb_frq_ce, &step, NULL);
 
 
-	if (fabs(fclast - fc) < step)
+	if ((fabs(fclast - fc) < step) &&
+	     (bin_div_last == p->cfg->bin_div) &&
+	     (bw_div_last == p->cfg->bw_div))
 		return p->cfg->tracking;
 
 	/* otherwise adjust */
 	fclast = fc;
-
+	bin_div_last = p->cfg->bin_div;
+	bw_div_last =  p->cfg->bw_div;
 
 	f0 = (uint64_t) ((fc - bw2) * 1e6);
 	f1 = (uint64_t) ((fc + bw2) * 1e6);
@@ -190,7 +196,6 @@ static gboolean radio_spec_doppler_track_toggle_cb(GtkWidget *w, gboolean state,
 		p->cfg->tracking = G_SOURCE_CONTINUE;
 		p->cfg->id_to = g_timeout_add_seconds(1, sf, p);
 	} else {
-		g_source_remove(p->cfg->id_to);
 		p->cfg->tracking = G_SOURCE_REMOVE;
 	}
 

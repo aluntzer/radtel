@@ -102,10 +102,12 @@ static void radio_update_freq_vel_sp(Radio *p, GtkSpinButton *b,
 
 void radio_update_vel_range(Radio *p)
 {
+	radio_input_block_signals(p);
 	radio_update_freq_vel_sp(p, p->cfg->sb_vel_lo, FALSE, TRUE);
 	radio_update_freq_vel_sp(p, p->cfg->sb_vel_hi, FALSE, TRUE);
 	radio_update_freq_vel_sp(p, p->cfg->sb_vel_ce, FALSE, TRUE);
 	radio_update_freq_vel_sp(p, p->cfg->sb_vel_bw, TRUE, TRUE);
+	radio_input_unblock_signals(p);
 }
 
 /**
@@ -114,10 +116,12 @@ void radio_update_vel_range(Radio *p)
 
 void radio_update_freq_range(Radio *p)
 {
+	radio_input_block_signals(p);
 	radio_update_freq_vel_sp(p, p->cfg->sb_frq_lo, FALSE, FALSE);
 	radio_update_freq_vel_sp(p, p->cfg->sb_frq_hi, FALSE, FALSE);
 	radio_update_freq_vel_sp(p, p->cfg->sb_frq_ce, FALSE, FALSE);
 	radio_update_freq_vel_sp(p, p->cfg->sb_frq_bw, TRUE, FALSE);
+	radio_input_unblock_signals(p);
 
 	radio_update_vel_range(p);
 }
