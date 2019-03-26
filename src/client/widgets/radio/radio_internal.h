@@ -20,12 +20,14 @@
 #include <radio.h>
 
 GtkWidget *radio_acq_freq_range_ctrl_new(Radio *p);
+GtkWidget *radio_acq_input_mode_ctrl_new(Radio *p);
 GtkWidget *radio_spec_acq_ctrl_new(Radio *p);
 GtkWidget *radio_spec_avg_ctrl_new(Radio *p);
 GtkWidget *radio_acq_res_ctrl_new(Radio *p);
 GtkWidget *radio_spec_cfg_ctrl_get_new(Radio *p);
 GtkWidget *radio_spec_cfg_ctrl_set_new(Radio *p);
 GtkWidget *radio_spec_acq_num_ctrl_new(Radio *p);
+GtkWidget *radio_spec_doppler_ctrl_new(Radio *p);
 GtkWidget *radio_vrest_ctrl_new(void);
 
 void radio_update_avg_lbl(Radio *p);

@@ -21,7 +21,7 @@
 #include <default_grid.h>
 #include <desclabel.h>
 
-
+#include <coordinates.h>
 #include <signals.h>
 
 
@@ -100,5 +100,138 @@ GtkWidget *radio_vrest_ctrl_new(void)
 	gtk_combo_box_set_active(GTK_COMBO_BOX(cb), 0);
 
 	return grid;
+}
+
+
+/**
+ * @brief signal handler (doppler tracker) for the timeout callback
+ *
+ */
+
+static gboolean radio_spec_doppler_track_timeout_cb(gpointer data)
+{
+	uint64_t f0, f1;
+
+	gdouble vcent, vspan;
+	gdouble fc, bw2;
+
+	gdouble step;
+
+	static gdouble fclast;
+
+	struct coord_horizontal hor;
+	struct coord_equatorial	equ;
+
+	Radio *p;
+
+
+
+	p = (Radio *) data;
+
+
+	if (!p->cfg->tracking) {
+		gtk_switch_set_state(GTK_SWITCH(p->cfg->sw_dpl), FALSE);
+		return p->cfg->tracking;
+	}
+
+	hor.az = p->cfg->az;
+	hor.el = p->cfg->el;
+	equ = horizontal_to_equatorial(hor, p->cfg->lat, p->cfg->lon, 0.0);
+
+	vcent = gtk_spin_button_get_value(p->cfg->sb_vel_ce);
+	vspan = gtk_spin_button_get_value(p->cfg->sb_vel_bw);
+
+	vcent = vcent + vlsr(equ, 0.0);
+
+	fc  = doppler_freq(vcent, p->cfg->freq_ref_mhz);
+	bw2 = fabs(doppler_freq_relative(vspan, p->cfg->freq_ref_mhz) * 0.5);
+
+
+	gtk_spin_button_get_increments(p->cfg->sb_frq_ce, &step, NULL);
+
+
+	if (fabs(fclast - fc) < step)
+		return p->cfg->tracking;
+
+	/* otherwise adjust */
+	fclast = fc;
+
+
+	f0 = (uint64_t) ((fc - bw2) * 1e6);
+	f1 = (uint64_t) ((fc + bw2) * 1e6);
+
+	cmd_spec_acq_cfg(PKT_TRANS_ID_UNDEF,
+			 f0, f1, p->cfg->bw_div, p->cfg->bin_div,
+			 gtk_spin_button_get_value_as_int(p->cfg->sb_avg),
+			 0);
+
+	return p->cfg->tracking;
+}
+
+/**
+ * @brief signal handler for toggle switch
+ */
+
+static gboolean radio_spec_doppler_track_toggle_cb(GtkWidget *w, gboolean state,
+						   gpointer data)
+{
+	Radio *p;
+
+	const GSourceFunc sf = radio_spec_doppler_track_timeout_cb;
+
+
+	p = (Radio *) data;
+
+	if (gtk_switch_get_active(GTK_SWITCH(w))) {
+
+		if (p->cfg->tracking)	/* already at it */
+			return TRUE;
+
+		p->cfg->tracking = G_SOURCE_CONTINUE;
+		p->cfg->id_to = g_timeout_add_seconds(1, sf, p);
+	} else {
+		g_source_remove(p->cfg->id_to);
+		p->cfg->tracking = G_SOURCE_REMOVE;
+	}
+
+
+	return FALSE;
+}
+
+
+/**
+ * @brief create spectrum acquisition controls
+ */
+
+GtkWidget *radio_spec_doppler_ctrl_new(Radio *p)
+{
+	GtkGrid *grid;
+	GtkWidget *w;
+
+
+	grid = GTK_GRID(new_default_grid());
+
+	w = gui_create_desclabel("Doppler Tracking",
+				 "Auto-adjust frequency given the reference "
+				 "frequency to compensate for radial "
+				 "velocity\n"
+				 "Note: the reference is the VLSR");
+
+	gtk_grid_attach(GTK_GRID(grid), w, 0, 0, 1, 4);
+
+	w = gtk_switch_new();
+	gtk_widget_set_tooltip_text(w, "Enable/Disable doppler tracking\n");
+	gtk_widget_set_hexpand(w, TRUE);
+	gtk_widget_set_vexpand(w, FALSE);
+	gtk_widget_set_halign(w, GTK_ALIGN_END);
+
+	gtk_grid_attach(grid, w, 2, 0, 1, 1);
+	g_signal_connect(G_OBJECT(w), "state-set",
+			 G_CALLBACK(radio_spec_doppler_track_toggle_cb), p);
+
+	p->cfg->sw_dpl = GTK_SWITCH(w);
+
+
+	return GTK_WIDGET(grid);
 }
 

@@ -151,7 +151,7 @@ GtkWidget *radio_spec_acq_ctrl_new(Radio *p)
 	w = gui_create_desclabel("Spectral Acquisition",
 				 "Enable or disable acquisition of spectral "
 				 "data by the server.");
-	gtk_grid_attach(GTK_GRID(grid), w, 0, 0, 1, 1);
+	gtk_grid_attach(GTK_GRID(grid), w, 0, 0, 1, 2);
 
 #if 0
 	w = gtk_button_new_with_label("Single");

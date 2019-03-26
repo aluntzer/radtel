@@ -46,6 +46,9 @@ static void radio_handle_pr_capabilities(gpointer instance,
 
 	p->cfg->c = (*c);
 
+	p->cfg->lat = p->cfg->c.lat_arcsec / 3600.0;
+	p->cfg->lon = p->cfg->c.lon_arcsec / 3600.0;
+
 	radio_update_bw_divider(p);
 	radio_update_bin_divider(p);
 	radio_update_freq_range(p);
@@ -121,6 +124,16 @@ static void radio_handle_pr_status_acq(gpointer instance,
 }
 
 
+/**
+ * @brief callback to update target position for doppler tracking
+ */
+
+static void radio_getpos_azel_cb(gpointer instance, struct getpos *pos,
+				 Radio *p)
+{
+	p->cfg->az = (gdouble) pos->az_arcsec / 3600.0;
+	p->cfg->el = (gdouble) pos->el_arcsec / 3600.0;
+}
 
 
 
@@ -134,6 +147,12 @@ static void gui_create_radio_controls(Radio *p)
 	gtk_box_pack_start(GTK_BOX(p), w, FALSE, FALSE, 0);
 
 	w = radio_vrest_ctrl_new();
+	gtk_box_pack_start(GTK_BOX(p), w, FALSE, FALSE, 0);
+
+	w = radio_spec_doppler_ctrl_new(p);
+	gtk_box_pack_start(GTK_BOX(p), w, FALSE, FALSE, 0);
+
+	w = radio_acq_input_mode_ctrl_new(p);
 	gtk_box_pack_start(GTK_BOX(p), w, FALSE, FALSE, 0);
 
 	w = radio_acq_freq_range_ctrl_new(p);
@@ -165,11 +184,15 @@ static gboolean radio_destroy(GtkWidget *w, void *data)
 
 	p = RADIO(w);
 
+	if (p->cfg->tracking)
+		g_source_remove(p->cfg->id_to);
+
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_cap);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_cfg);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_acq);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_ena);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_dis);
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_pos);
 
 	return TRUE;
 }
@@ -203,6 +226,8 @@ static void radio_init(Radio *p)
 
 	p->cfg = radio_get_instance_private(p);
 
+	/** XXX **/
+	p->cfg->freq_ref_mhz = 1420.406;
 
 	gtk_orientable_set_orientation(GTK_ORIENTABLE(p),
 				       GTK_ORIENTATION_VERTICAL);
@@ -230,6 +255,10 @@ static void radio_init(Radio *p)
 	p->cfg->id_dis = g_signal_connect(sig_get_instance(),
 			 "pr-spec-acq-disable",
 			 G_CALLBACK(radio_spec_acq_cmd_spec_acq_disable),
+			 (gpointer) p);
+
+	p->cfg->id_pos = g_signal_connect(sig_get_instance(), "pr-getpos-azel",
+			 G_CALLBACK(radio_getpos_azel_cb),
 			 (gpointer) p);
 
 	g_signal_connect(p, "destroy", G_CALLBACK(radio_destroy), NULL);

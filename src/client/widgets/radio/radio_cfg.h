@@ -24,10 +24,37 @@ struct _RadioConfig {
 	gdouble prec;
 	struct capabilities c;
 
+	gdouble az;
+	gdouble el;
+
+	gdouble lat;
+	gdouble lon;
+
+	gdouble freq_ref_mhz;
+
+	gboolean mode_freq;
+	gboolean mode_lohi;
+
 	GtkSpinButton *sb_frq_lo;
 	GtkSpinButton *sb_frq_hi;
-	GtkSpinButton *sb_frq_center;
+	GtkSpinButton *sb_frq_ce;
 	GtkSpinButton *sb_frq_bw;
+
+	GtkSpinButton *sb_vel_lo;
+	GtkSpinButton *sb_vel_hi;
+	GtkSpinButton *sb_vel_ce;
+	GtkSpinButton *sb_vel_bw;
+
+
+	GtkToggleButton *rb_frq;
+	GtkToggleButton *rb_vel;
+	GtkToggleButton *rb_lohi;
+	GtkToggleButton *rb_cbw;
+
+
+
+
+
 	GtkLabel *sb_frq_lo_center_lbl;
 	GtkLabel *sb_frq_hi_bw_lbl;
 
@@ -47,16 +74,33 @@ struct _RadioConfig {
 
 	GtkSwitch *sw_acq;
 
+	GtkSwitch *sw_dpl;
+
 
 	int bw_div;		/* bandwidth divider */
 	int bin_div;		/* per-bandwidth bin divider */
 
+	gboolean tracking;
+
+	guint id_to;
 
 	guint id_cap;
 	guint id_acq;
 	guint id_cfg;
 	guint id_ena;
 	guint id_dis;
+	guint id_pos;
+
+
+	guint id_vh;
+	guint id_vl;
+	guint id_vc;
+	guint id_vs;
+	guint id_fh;
+	guint id_fl;
+	guint id_fc;
+	guint id_fs;
+
 };
 
 

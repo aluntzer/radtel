@@ -18,19 +18,19 @@
 
 #include <radio.h>
 #include <radio_cfg.h>
-
+#include <coordinates.h>
 
 
 /**
  *  @brief update frequency range spin button given the new configuration data
  */
 
-static void radio_update_freq_range_spin_button(Radio *p, GtkSpinButton *b,
-						gboolean is_bw)
+static void radio_update_freq_vel_sp(Radio *p, GtkSpinButton *b,
+				     gboolean is_bw, gboolean is_vel)
 {
-	gdouble fmin;
-	gdouble fmax;
-	gdouble finc;
+	gdouble min;
+	gdouble max;
+	gdouble inc;
 
 	gdouble val;
 
@@ -39,49 +39,55 @@ static void radio_update_freq_range_spin_button(Radio *p, GtkSpinButton *b,
 	if (!p->cfg->c.freq_max_hz)
 		return;
 
-	fmin = (gdouble) p->cfg->c.freq_min_hz * 1e-6; /* to MHz */
-	fmax = (gdouble) p->cfg->c.freq_max_hz * 1e-6; /* to MHz */
+	min = (gdouble) p->cfg->c.freq_min_hz * 1e-6; /* to MHz */
+	max = (gdouble) p->cfg->c.freq_max_hz * 1e-6; /* to MHz */
 
-	finc = (gdouble) p->cfg->c.bw_max_hz / (gdouble) p->cfg->c.bw_max_bins;
+	inc = (gdouble) p->cfg->c.bw_max_hz / (gdouble) p->cfg->c.bw_max_bins;
 
 	/* we use linear bandwidth dividers if available */
 	if (p->cfg->c.bw_max_div_lin)
-	       	finc = finc / (gdouble) (p->cfg->bw_div + 1);
+	       	inc = inc / (gdouble) (p->cfg->bw_div + 1);
 	else
-	       	finc = finc / (gdouble) (1 << p->cfg->bw_div);
+	       	inc = inc / (gdouble) (1 << p->cfg->bw_div);
 
 
 	/* we use linear per-bandwidth bin dividers if available */
 	if (p->cfg->c.bw_max_bin_div_lin)
-		finc = finc / (gdouble) (p->cfg->bin_div + 1);
+		inc = inc / (gdouble) (p->cfg->bin_div + 1);
 	else
-		finc = finc / (gdouble) (1 << p->cfg->bin_div);
+		inc = inc / (gdouble) (1 << p->cfg->bin_div);
 
-	finc *= 1e-6;	/* to Mhz */
+	inc *= 1e-6;	/* to Mhz */
 
 
 	val = gtk_spin_button_get_value(b);
 
 
-	if (is_bw) {
-		/* modify range and range check for bandwidth button */
-		gtk_spin_button_set_range(b, 0.0, fmax - fmin);
-		fmin = 0.0;
-		fmax = fmax - fmin;
-	} else {
-		gtk_spin_button_set_range(b, fmin, fmax);
+	if (is_vel) {
+		min = doppler_vel(min, p->cfg->freq_ref_mhz);
+		max = doppler_vel(max, p->cfg->freq_ref_mhz);
+		inc = doppler_vel_relative(inc, p->cfg->freq_ref_mhz);
 	}
 
-	gtk_spin_button_set_increments(b, finc, finc * 10.0);
+	if (is_bw) {
+		/* modify range and range check for bandwidth button */
+		gtk_spin_button_set_range(b, 0.0, max - min);
+		min = 0.0;
+		max = max - min;
+	} else {
+		gtk_spin_button_set_range(b, min, max);
+	}
 
-	/* force update, snaps value to ticks if finc changed */
+	gtk_spin_button_set_increments(b, inc, inc * 10.0);
+
+	/* force update, snaps value to ticks if inc changed */
 	gtk_spin_button_update(b);
 
 	/* properly clamp value to range, Gtk just sets this to range_min */
-	if (val < fmin)
-		val = fmin;
-	else if (val > fmax)
-		val = fmax;
+	if (val < min)
+		val = min;
+	else if (val > max)
+		val = max;
 	else
 		return;
 
@@ -90,15 +96,30 @@ static void radio_update_freq_range_spin_button(Radio *p, GtkSpinButton *b,
 
 
 /**
- * @brief update the lower/upper frequency range spin buttons
+ * @brief update the velocity range spin buttons
+ * @note this is also called when the rest frequency reference is updated
+ */
+
+void radio_update_vel_range(Radio *p)
+{
+	radio_update_freq_vel_sp(p, p->cfg->sb_vel_lo, FALSE, TRUE);
+	radio_update_freq_vel_sp(p, p->cfg->sb_vel_hi, FALSE, TRUE);
+	radio_update_freq_vel_sp(p, p->cfg->sb_vel_ce, FALSE, TRUE);
+	radio_update_freq_vel_sp(p, p->cfg->sb_vel_bw, TRUE, TRUE);
+}
+
+/**
+ * @brief update the frequency range spin buttons
  */
 
 void radio_update_freq_range(Radio *p)
 {
-	radio_update_freq_range_spin_button(p, p->cfg->sb_frq_lo, FALSE);
-	radio_update_freq_range_spin_button(p, p->cfg->sb_frq_hi, FALSE);
-	radio_update_freq_range_spin_button(p, p->cfg->sb_frq_center, FALSE);
-	radio_update_freq_range_spin_button(p, p->cfg->sb_frq_bw, TRUE);
+	radio_update_freq_vel_sp(p, p->cfg->sb_frq_lo, FALSE, FALSE);
+	radio_update_freq_vel_sp(p, p->cfg->sb_frq_hi, FALSE, FALSE);
+	radio_update_freq_vel_sp(p, p->cfg->sb_frq_ce, FALSE, FALSE);
+	radio_update_freq_vel_sp(p, p->cfg->sb_frq_bw, TRUE, FALSE);
+
+	radio_update_vel_range(p);
 }
 
 
