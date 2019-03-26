@@ -235,7 +235,15 @@ static gboolean azel_obs_pos(ObsAssist *p)
 {
 	gdouble lim;
 
+	const gdouble az_tol = 2.0 * p->cfg->az_res;
 
+#if 1
+	/* TODO: add option */
+	gdouble cstep;
+
+	cstep = p->cfg->azel.az_hi - p->cfg->azel.az_lo;
+	cstep = cstep / trunc(cstep / (p->cfg->azel.az_stp / cos(RAD(p->cfg->azel.el_cur))));
+#endif
 	azel_update_pbar_az(p);
 	azel_update_pbar_el(p);
 
@@ -250,14 +258,20 @@ static gboolean azel_obs_pos(ObsAssist *p)
 		return FALSE;
 	}
 
-	/* reset az if upper az bound reached and update el*/
-	lim = p->cfg->azel.az_cur;
-	if ((p->cfg->azel.az_hi < lim) || (p->cfg->azel.az_lo > lim)) {
-		p->cfg->azel.az_stp *= -1.0;
-		p->cfg->azel.az_cur += p->cfg->azel.az_stp / cos(RAD(p->cfg->cross.el_cur));
-		p->cfg->azel.el_cur += p->cfg->azel.el_stp;
-	}
 
+	/* reset az if upper az bound reached and update el*/
+	if (p->cfg->azel.az_hi < (p->cfg->azel.az_cur - az_tol)) {
+		p->cfg->azel.az_cur = p->cfg->azel.az_hi;
+		p->cfg->azel.el_cur += p->cfg->azel.el_stp;
+		p->cfg->azel.az_stp *= -1.0;
+
+
+
+	} else if (p->cfg->azel.az_lo > (p->cfg->azel.az_cur + az_tol)) {
+		p->cfg->azel.az_cur = p->cfg->azel.az_lo;
+		p->cfg->azel.el_cur += p->cfg->azel.el_stp;
+		p->cfg->azel.az_stp *= -1.0;
+	}
 
 	/* actual pointing is done in horizon system */
 	if (!azel_in_position(p, p->cfg->azel.az_cur, p->cfg->azel.el_cur))
@@ -271,7 +285,11 @@ static gboolean azel_obs_pos(ObsAssist *p)
 	azel_draw_graph(p);
 
 	/* update azimuth */
-	p->cfg->azel.az_cur += p->cfg->azel.az_stp / cos(RAD(p->cfg->cross.el_cur));;
+#if 1
+	p->cfg->azel.az_cur += cstep;
+#else
+	p->cfg->azel.az_cur += p->cfg->azel.az_stp;
+#endif
 
 	return TRUE;
 }
@@ -436,6 +454,16 @@ static void obs_assist_on_prepare_azel(GtkWidget *as, GtkWidget *pg,
 	}
 
 
+	/* adjust for integer steps */
+
+	tmp = p->cfg->azel.az_hi - p->cfg->azel.az_lo;
+	p->cfg->azel.az_stp = tmp / trunc(tmp / p->cfg->azel.az_stp);
+
+	tmp = p->cfg->azel.el_hi - p->cfg->azel.el_lo;
+	p->cfg->azel.el_stp = tmp / trunc(tmp / p->cfg->azel.el_stp);
+
+
+
 	/* initial scan position is at lower bound */
 	p->cfg->azel.az_cur = p->cfg->azel.az_lo;
 	p->cfg->azel.el_cur = p->cfg->azel.el_lo;
@@ -459,7 +487,9 @@ static void obs_assist_on_prepare_azel(GtkWidget *as, GtkWidget *pg,
 	      "Elevation lower bound:     <b>%5.2f°</b>\n"
 	      "Elevation upper bound:     <b>%5.2f°</b>\n"
 	      "Elevation step size:       <b>%5.2f°</b>\n"
-	      "Samples per position:      <b>%d</b>\n"
+	      "Samples per position:      <b>%d</b>\n\n"
+	      "NOTE: step sizes may have been adjusted "
+	      "to fit specified ranges."
 	      "</tt>",
 	      p->cfg->azel.az_lo, p->cfg->azel.az_hi,
 	      p->cfg->azel.az_stp,
@@ -502,9 +532,12 @@ static void obs_assist_azel_create_page_1(GtkAssistant *as)
 		"an spherical rectangle spanned by points in Azimuth and "
 		"Elevation\n"
 		"The resulting graph will show a Azimuth-Elevation diagram "
-		"with the spectral signal amplitudes encoded in colour.\n\n"
+		"with the spectral signal amplitudes encoded in colour.\n\n");
+#if 0
+	/* XXX make optional */
 		"<b>NOTE:</b> Azimuth angular distance steps will be corrected "
 		"by the cosine of the elevation.");
+#endif
         gtk_label_set_markup(GTK_LABEL(w), lbl);
 	g_free(lbl);
 
@@ -542,7 +575,7 @@ static void obs_assist_azel_create_page_2(GtkAssistant *as, ObsAssist *p)
 	/* set an arbitrary limit of 10 degrees for*/
 	sb = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(p->cfg->az_res,
 							    10.,
-							    p->cfg->az_res));
+							    ceil(p->cfg->az_res * 10.) * 0.1));
 	gtk_spin_button_set_value(sb, 2.0);
 	gtk_spin_button_set_numeric(sb, TRUE);
 	gtk_spin_button_set_snap_to_ticks(sb, TRUE);
@@ -559,7 +592,7 @@ static void obs_assist_azel_create_page_2(GtkAssistant *as, ObsAssist *p)
 	/* set an arbitrary limit of 10 degrees for*/
 	sb = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(p->cfg->el_res,
 							    10.,
-							    p->cfg->el_res));
+							    ceil(p->cfg->el_res * 10.) * 0.1));
 	gtk_spin_button_set_value(sb, 2.0);
 	gtk_spin_button_set_numeric(sb, TRUE);
 	gtk_spin_button_set_snap_to_ticks(sb, TRUE);
@@ -574,9 +607,9 @@ static void obs_assist_azel_create_page_2(GtkAssistant *as, ObsAssist *p)
 				 "observation for the Azimuth axis.");
 	gtk_grid_attach(grid, w, 0, 2, 1, 1);
 
-	sb = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(p->cfg->az_min,
-							    p->cfg->az_max,
-							    p->cfg->az_res));
+	sb = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(ceil(p->cfg->az_min),
+							    floor(p->cfg->az_max),
+							    ceil(p->cfg->az_res * 10.) * 0.1));
 	gtk_spin_button_set_value(sb, 45.);
 	gtk_spin_button_set_numeric(sb, TRUE);
 	gtk_spin_button_set_snap_to_ticks(sb, TRUE);
@@ -591,9 +624,9 @@ static void obs_assist_azel_create_page_2(GtkAssistant *as, ObsAssist *p)
 				 "observation for the Azimuth axis.");
 	gtk_grid_attach(grid, w, 0, 3, 1, 1);
 
-	sb = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(p->cfg->az_min,
-							    p->cfg->az_max,
-							    p->cfg->az_res));
+	sb = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(ceil(p->cfg->az_min),
+							    floor(p->cfg->az_max),
+							    ceil(p->cfg->az_res * 10.) * 0.1));
 	gtk_spin_button_set_value(sb, 12.);
 	gtk_spin_button_set_numeric(sb, TRUE);
 	gtk_spin_button_set_snap_to_ticks(sb, TRUE);
@@ -609,9 +642,9 @@ static void obs_assist_azel_create_page_2(GtkAssistant *as, ObsAssist *p)
 				 "observation for the Elevation axis.");
 	gtk_grid_attach(grid, w, 0, 4, 1, 1);
 
-	sb = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(p->cfg->el_min,
-							    p->cfg->el_max,
-							    p->cfg->el_res));
+	sb = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(ceil(p->cfg->el_min),
+							    floor(p->cfg->el_max),
+							    ceil(p->cfg->el_res * 10.) * 0.1));
 	gtk_spin_button_set_value(sb, 30.);
 	gtk_spin_button_set_numeric(sb, TRUE);
 	gtk_spin_button_set_snap_to_ticks(sb, TRUE);
@@ -626,9 +659,9 @@ static void obs_assist_azel_create_page_2(GtkAssistant *as, ObsAssist *p)
 				 "observation for the Elevation axis.");
 	gtk_grid_attach(grid, w, 0, 5, 1, 1);
 
-	sb = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(p->cfg->el_min,
-							    p->cfg->el_max,
-							    p->cfg->el_res));
+	sb = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(ceil(p->cfg->el_min),
+							    floor(p->cfg->el_max),
+							    ceil(p->cfg->el_res * 10.) * 0.1));
 	gtk_spin_button_set_value(sb, 60.);
 	gtk_spin_button_set_numeric(sb, TRUE);
 	gtk_spin_button_set_snap_to_ticks(sb, TRUE);
