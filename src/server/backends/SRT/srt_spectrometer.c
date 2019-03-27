@@ -1122,7 +1122,7 @@ static void srt_apply_temp_calibration(struct spec_data *s)
 
 
 	for (i = 0; i < s->n; i++)
-		s->spec[i] = (uint32_t) ((double) s->spec[i] * 1000.0) / srt.temp_cal_factor;
+		s->spec[i] = (uint32_t) ((double) s->spec[i] * 1000.0) * srt.temp_cal_factor;
 
 }
 
@@ -1190,6 +1190,24 @@ static uint32_t srt_spec_acquire(struct observation *obs)
 
 	for (i = 0; i < n; i++) {
 
+#if 1
+		st.busy = 1;
+		switch (obs->acq.bw_div) {
+			case 0:
+				st.eta_msec = (typeof(st.eta_msec)) 2389.112;
+				break;
+			case 1:
+				st.eta_msec = (typeof(st.eta_msec)) 2908.880;
+				break;
+			case 2:
+				st.eta_msec = (typeof(st.eta_msec)) 3957.814;
+				break;
+		}
+
+		st.eta_msec *= (n - i);
+		ack_status_rec(PKT_TRANS_ID_UNDEF, &st);
+#endif
+
 		if (!g_mutex_trylock(&acq_abort)) {
 			g_message(MSG "acquisition loop abort indicated");
 			goto cleanup;
@@ -1230,8 +1248,10 @@ static uint32_t srt_spec_acquire(struct observation *obs)
 			 * preparation really needs some refactoring...
 			 */
 			(*p) = (uint32_t)  raw[i][j + srt.bin_cut_lo + acs[i].offset];
+#if 1
 			if (acs[i].cal) 
 				(*p) = (uint32_t) (acs[i].cal[j] * (gdouble) (*p));
+#endif
 			p++;
 
 			s->n++;
