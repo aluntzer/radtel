@@ -89,15 +89,9 @@ static void spectral_axis_draw_graph(ObsAssist *p, gdouble ax, struct spectrum *
 
 	gdouble *axdeg;
 
-	gdouble min = DBL_MAX;
-
 
 	axdeg = (gdouble *) g_malloc(s->n * sizeof(gdouble));
 
-	for (i = 0; i < s->n; i++) {
-		if (s->y[i] < min)
-			min = s->y[i];
-	}
 
 	for (i = 0; i < s->n; i++)
 		axdeg[i] = ax;

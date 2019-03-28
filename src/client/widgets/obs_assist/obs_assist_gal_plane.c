@@ -134,6 +134,7 @@ static void gal_plane_draw_graph(ObsAssist *p, gdouble glon, struct spectrum *s)
 
 	for (i = 0; i < s->n; i++)  {
 		s->y[i] -= min;
+		/* XXX velocity reference from wizard !*/
 		s->x[i] = - (vlsr(galactic_to_equatorial(gal), 0.0)
 			     + doppler_vel(s->x[i], 1420.406));
 		lon[i] = glon;
