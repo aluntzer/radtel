@@ -336,6 +336,37 @@ static void xyplot_import_graph_xy_asc(const gchar *fname, XYPlot *p)
 		n = 0;
 		while (t) {
 
+			if (t[0] == '\n') {
+
+				/* XXX refactor */
+				n = gx->len;
+
+				if (gc->len) {
+					if (n > gc->len) {
+						g_warning("Mixed XY and XYZ data. Will stupidly clamp "
+							  "number of input samples to %d with "
+							  "unpredictable results. Have fun.", gc->len);
+						n = gc->len;
+					}
+				}
+
+				xyplot_add_graph(GTK_WIDGET(p),
+						 (gdouble *) gx->data,
+						 (gdouble *) gy->data,
+						 (gdouble *) gc->data,
+						 n, g_strdup(fname));
+
+				xyplot_redraw(GTK_WIDGET(p));
+
+				g_array_free(gx, FALSE);
+				g_array_free(gy, FALSE);
+				g_array_free(gc, FALSE);
+
+				gx = g_array_new(FALSE, FALSE, sizeof(gdouble));
+				gy = g_array_new(FALSE, FALSE, sizeof(gdouble));
+				gc = g_array_new(FALSE, FALSE, sizeof(gdouble));
+			}
+
 			if (t[0] == '#')
 				break; /* comment, go to next line */
 
@@ -398,6 +429,10 @@ static void xyplot_export_graph_xy_asc(const gchar *fname, struct graph *g,
 		g_message("%s: error opening file %s", __func__, fname);
 		return;
 	}
+
+	/* append mode: add empty newline to indicate new dataset */
+	if (mode[0] == 'a')
+		fprintf(f, "\n");
 
 	if (!g->data_c) {
 		fprintf(f, "#\t%s\t%s\n", g->parent->xlabel, g->parent->ylabel);
