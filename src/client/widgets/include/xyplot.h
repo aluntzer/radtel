@@ -100,9 +100,14 @@ struct _XYPlot {
 		gdouble px1;
 		gdouble py0;
 		gdouble py1;
-
-		gboolean autorange;
 	} rub;
+
+	struct {
+		gdouble x0;	/* start of shift */
+		gdouble y0;
+	} shift;
+
+	gboolean autorange;
 
 
 

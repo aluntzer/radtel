@@ -300,14 +300,99 @@ static void xyplot_drop_graph_cb(GtkWidget *w, struct graph *g)
 	xyplot_drop_graph(GTK_WIDGET(g->parent), g);
 }
 
-static void xyplot_export_graph_xy_asc(const gchar *fname, struct graph *g)
+
+static void xyplot_import_graph_xy_asc(const gchar *fname, XYPlot *p)
+{
+	FILE *f;
+
+	gdouble a[3];
+
+	GArray *gx, *gy, *gc;
+
+	gint n;
+
+	gchar *t;
+	gchar line[1024];
+
+
+
+	f = g_fopen(fname, "r");
+
+	if (!f) {
+		g_warning("%s: error opening file %s", __func__, fname);
+		return;
+	}
+
+	gx = g_array_new(FALSE, FALSE, sizeof(gdouble));
+	gy = g_array_new(FALSE, FALSE, sizeof(gdouble));
+	gc = g_array_new(FALSE, FALSE, sizeof(gdouble));
+
+
+
+	while (fgets(line, 1024, f)) {
+
+		t = strtok(line, "\t ");
+
+		n = 0;
+		while (t) {
+
+			if (t[0] == '#')
+				break; /* comment, go to next line */
+
+			a[n++] = g_ascii_strtod(t, NULL);
+
+			if (n > 2)
+				break;
+
+			t = strtok(NULL, "\t ");
+		}
+
+		if (n == 3) {
+			g_array_append_val(gx, a[0]);
+			g_array_append_val(gy, a[1]);
+			g_array_append_val(gc, a[2]);
+		} else if (n == 2) {
+			g_array_append_val(gx, a[0]);
+			g_array_append_val(gy, a[1]);
+		}
+	}
+
+	fclose(f);
+
+
+	n = gx->len;
+
+	if (gc->len) {
+		if (n > gc->len) {
+			g_warning("Mixed XY and XYZ data. Will stupidly clamp "
+				  "number of input samples to %d with "
+				  "unpredictable results. Have fun.", gc->len);
+			n = gc->len;
+		}
+	}
+
+	xyplot_add_graph(GTK_WIDGET(p),
+			 (gdouble *) gx->data,
+			 (gdouble *) gy->data,
+			 (gdouble *) gc->data,
+			 n, g_strdup(fname));
+
+	xyplot_redraw(GTK_WIDGET(p));
+
+	g_array_free(gx, FALSE);
+	g_array_free(gy, FALSE);
+	g_array_free(gc, FALSE);
+}
+
+static void xyplot_export_graph_xy_asc(const gchar *fname, struct graph *g,
+				       const gchar *mode)
 {
 	FILE *f;
 
 	size_t i;
 
 
-	f = g_fopen(fname, "w");
+	f = g_fopen(fname, mode);
 
 	if (!f) {
 		g_message("%s: error opening file %s", __func__, fname);
@@ -364,7 +449,7 @@ static void xyplot_export_xy_graph_cb(GtkWidget *w, struct graph *g)
 	else
 		fname = g_strdup_printf("%s.dat", g->label);
 
-	dia = gtk_file_chooser_dialog_new("Export XY Data",
+	dia = gtk_file_chooser_dialog_new("Export Data",
 					  GTK_WINDOW(win),
 					  GTK_FILE_CHOOSER_ACTION_SAVE,
 					  "_Cancel",
@@ -389,7 +474,7 @@ static void xyplot_export_xy_graph_cb(GtkWidget *w, struct graph *g)
 		fname = gtk_file_chooser_get_filename(chooser);
 
 
-		xyplot_export_graph_xy_asc(fname, g);
+		xyplot_export_graph_xy_asc(fname, g, "w");
 
 		g_free(fname);
 	}
@@ -397,6 +482,116 @@ static void xyplot_export_xy_graph_cb(GtkWidget *w, struct graph *g)
 	gtk_widget_destroy(dia);
 
 	g_ref_count_dec(&g->ref);
+}
+
+
+static void xyplot_export_xy_plot_cb(GtkWidget *w, XYPlot *p)
+{
+	GtkWidget *dia;
+	GtkFileChooser *chooser;
+	gint res;
+
+	GtkWidget *win;
+
+	gchar *fname;
+
+	GList *elem;
+
+	struct graph *g;
+
+
+	win = gtk_widget_get_toplevel(GTK_WIDGET(w));
+
+	if (!GTK_IS_WINDOW(win)) {
+		g_warning("%s: toplevel widget is not a window", __func__);
+		return;
+	}
+
+
+	fname = g_strdup_printf("xyzdata.dat");
+
+	dia = gtk_file_chooser_dialog_new("Export XY Data",
+					  GTK_WINDOW(win),
+					  GTK_FILE_CHOOSER_ACTION_SAVE,
+					  "_Cancel",
+					  GTK_RESPONSE_CANCEL,
+					  "_Save",
+					  GTK_RESPONSE_ACCEPT,
+					  NULL);
+
+	chooser = GTK_FILE_CHOOSER(dia);
+
+	gtk_file_chooser_set_do_overwrite_confirmation(chooser, TRUE);
+
+	gtk_file_chooser_set_current_name(chooser, fname);
+
+
+	res = gtk_dialog_run(GTK_DIALOG(dia));
+
+	g_free(fname);
+
+	if (res == GTK_RESPONSE_ACCEPT) {
+
+		fname = gtk_file_chooser_get_filename(chooser);
+
+		/* clear file */
+		fclose(g_fopen(fname, "w"));
+
+		for (elem = p->graphs; elem; elem = elem->next) {
+			g = (struct graph *) elem->data;
+			xyplot_export_graph_xy_asc(fname, g, "a");
+		}
+
+		g_free(fname);
+	}
+
+	gtk_widget_destroy(dia);
+}
+
+
+
+static void xyplot_import_xy_graph_cb(GtkWidget *w, XYPlot *p)
+{
+	GtkWidget *dia;
+	GtkFileChooser *chooser;
+	gint res;
+
+	GtkWidget *win;
+
+	gchar *fname = NULL;
+
+
+	win = gtk_widget_get_toplevel(GTK_WIDGET(w));
+
+	if (!GTK_IS_WINDOW(win)) {
+		g_warning("%s: toplevel widget is not a window", __func__);
+		return;
+	}
+
+	dia = gtk_file_chooser_dialog_new("Import Data",
+					  GTK_WINDOW(win),
+					  GTK_FILE_CHOOSER_ACTION_OPEN,
+					  "_Cancel",
+					  GTK_RESPONSE_CANCEL,
+					  "_Open",
+					  GTK_RESPONSE_ACCEPT,
+					  NULL);
+
+	chooser = GTK_FILE_CHOOSER(dia);
+
+	res = gtk_dialog_run(GTK_DIALOG(dia));
+
+
+	if (res == GTK_RESPONSE_ACCEPT) {
+
+		fname = gtk_file_chooser_get_filename(chooser);
+
+		xyplot_import_graph_xy_asc(fname, p);
+
+		g_free(fname);
+	}
+
+	gtk_widget_destroy(dia);
 }
 
 
@@ -426,7 +621,7 @@ static void xyplot_rubberband_minmax_order(XYPlot *p)
 
 static void xyplot_autorange_cb(GtkWidget *w, XYPlot *p)
 {
-	p->rub.autorange = TRUE;
+	p->autorange = TRUE;
 
 	p->rub.px0 = 0.0;
 	p->rub.px1 = 0.0;
@@ -702,7 +897,7 @@ static GtkWidget *xyplot_create_graph_menu(struct graph *g)
 	g_signal_connect(w, "activate", G_CALLBACK(xyplot_drop_graph_cb), g);
 	gtk_menu_shell_append(GTK_MENU_SHELL(sub), w);
 
-	w = gtk_menu_item_new_with_label("Export XY Data");
+	w = gtk_menu_item_new_with_label("Export Data");
 	g_signal_connect(w, "activate",
 			 G_CALLBACK(xyplot_export_xy_graph_cb), g);
 	gtk_menu_shell_append(GTK_MENU_SHELL(sub), w);
@@ -810,10 +1005,24 @@ static void xyplot_build_popup_menu(XYPlot *p)
 	xyplot_popup_menu_add_graphs(p);
 	xyplot_popup_menu_add_plot_cfg(p);
 
+
+	menuitem = gtk_menu_item_new_with_label("Import Data");
+	g_signal_connect(menuitem, "activate",
+			 G_CALLBACK(xyplot_import_xy_graph_cb), p);
+	gtk_menu_shell_append(GTK_MENU_SHELL(p->menu), menuitem);
+
+	menuitem = gtk_menu_item_new_with_label("Export Data");
+	g_signal_connect(menuitem, "activate",
+			 G_CALLBACK(xyplot_export_xy_plot_cb), p);
+	gtk_menu_shell_append(GTK_MENU_SHELL(p->menu), menuitem);
+
+
 	menuitem = gtk_menu_item_new_with_label("Export as PDF");
 	g_signal_connect(menuitem, "activate",
 			 G_CALLBACK(xyplot_export_pdf), p);
 	gtk_menu_shell_append(GTK_MENU_SHELL(p->menu), menuitem);
+
+
 
 	gtk_widget_show_all(p->menu);
 }
@@ -1545,14 +1754,28 @@ static void xyplot_draw_map(XYPlot *p, cairo_t *cr, struct graph *g)
 	gdouble r, cg, b, grey;
 
 
+
 	sx = p->scale_x;
 	sy = p->scale_y;
 	sc = 1.0 / (p->cmax - p->cmin);
 
-	dx = sx * 0.5 * p->dx;
-	dy = sy * 0.5 * p->dy;
-	wx = sx * p->dx;
-	wy = sy * p->dy;
+	/* use global delta step if no local delta step */
+
+	dx = g->dx;
+	if (dx == DBL_MAX)
+		dx = p->dx;
+
+	dy = g->dy;
+	if (dy == DBL_MAX)
+		dy = p->dy;
+
+
+	wx = sx * dx;
+	wy = sy * dy;
+
+	dx = 0.5 * wx;
+	dy = 0.5 * wy;
+
 
 	x  = g->data_x;
 	y  = g->data_y;
@@ -1962,9 +2185,6 @@ double xyplot_nicenum(const double num, const gboolean round)
 static void xyplot_auto_axis(XYPlot *p, XYPlotAxis *ax,
 			     gdouble min, gdouble max, gdouble len)
 {
-
-
-
 	ax->min = min - len * 0.1;
 	ax->max = max + len * 0.1;
 
@@ -2005,7 +2225,7 @@ static void xyplot_auto_range(XYPlot *p)
 	struct graph *g;
 
 
-	if (!p->rub.autorange)
+	if (!p->autorange)
 		return;
 
 	p->xmin = DBL_MAX;
@@ -2078,7 +2298,7 @@ static void xyplot_auto_range(XYPlot *p)
 		/* since dx is undefined, none of the samples
 		 * have more than a single value for a particular axis, so
 		 * grab the first and find a delta
-		 * XXX find average delta, not minimum!
+		 * XXX find average delta, not minimum?
 		 */
 		for (elem = p->graphs; elem; elem = elem->next) {
 
@@ -2114,6 +2334,7 @@ static void xyplot_auto_range(XYPlot *p)
 	}
 
 	if (p->dx == DBL_MAX || p->dy == DBL_MAX) {
+
 		if (p->dy < DBL_MAX) {
 			p->dx = p->dy;
 		} else if (p->dx < DBL_MAX) {
@@ -2132,10 +2353,12 @@ static void xyplot_auto_range(XYPlot *p)
 
 static void xyplot_data_range(struct graph *g)
 {
-	size_t i;
+	gsize i;
+
+	gsize cnt;
 
 	gdouble tmp;
-	gsize cnt;
+
 
 
 	g->xmin = DBL_MAX;
@@ -2153,43 +2376,57 @@ static void xyplot_data_range(struct graph *g)
 	cnt = 0;
 	for (i = 0; i < g->data_len; i++) {
 
+		gboolean delta = FALSE;
+
 		tmp = g->data_x[i];
 
-		if (tmp < g->xmin)
+		if (tmp < g->xmin) {
+			delta = TRUE;
 			g->xmin = tmp;
+		}
 
 		if (tmp > g->xmax) {
-			cnt++;
+			delta = TRUE;
 			g->xmax = tmp;
 		}
+
+		if (delta)
+			cnt++;
 	}
+
 	/* guess delta from number of distinct x values that caused the
-	 * maximum to mov
-	 * XXX this assumes ordering low->high
+	 * maximum or minimum to move
 	 */
-	if (cnt > 2) {
-		if (cnt & 0x1)
-			g->dx = (g->xmax - g->xmin) / (gdouble) (cnt - 1);
-		else
-			g->dx = (g->xmax - g->xmin) / (gdouble) (cnt - 2);
-	}
+	if (cnt > 1)
+		g->dx = fabs(g->xmax - g->xmin) / (gdouble) (cnt - 1);
 
 
 	cnt = 0;
 	for (i = 0; i < g->data_len; i++) {
 
+		gboolean delta  = FALSE;;
+
 		tmp = g->data_y[i];
 
-		if (tmp < g->ymin)
+		if (tmp < g->ymin) {
+			delta = TRUE;
 			g->ymin = tmp;
+		}
 
 		if (tmp > g->ymax) {
-			cnt++;
+			delta = TRUE;
 			g->ymax = tmp;
 		}
+
+		if (delta)
+			cnt++;
+
 	}
-	if (cnt > 2)
-		g->dy = (g->ymax - g->ymin) / (gdouble) (cnt - 1);
+
+	if (cnt > 1)
+		g->dy = fabs(g->ymax - g->ymin) / (gdouble) (cnt - 1);
+
+
 
 	/* third axis is optional */
 	if (!g->data_c)
@@ -2265,12 +2502,8 @@ static void xyplot_plot_render(XYPlot *p, cairo_t *cr,
 			cairo_stroke(cr);
 			cairo_restore(cr);
 		}
+
 		xyplot_draw_graphs(p, cr);
-
-
-
-
-
 
 	} else {
 		xyplot_write_text_centered(cr, 0.5 * width, 0.5 * height,
@@ -2355,6 +2588,8 @@ static gboolean xyplot_pointer_crossing_cb(GtkWidget *widget,
 
 	switch (event->type) {
 	case GDK_ENTER_NOTIFY:
+		/* grab focus for keyboard input */
+		gtk_widget_grab_focus(widget);
 		cursor = gdk_cursor_new_from_name(display, "cell");
 		break;
 	case GDK_LEAVE_NOTIFY:
@@ -2386,6 +2621,7 @@ static gboolean xyplot_motion_notify_event_cb(GtkWidget *widget,
 
 	gdouble x, y;
 	gdouble px, py;
+	gdouble dx, dy;
 
 	XYPlot *p;
 	cairo_t *cr;
@@ -2415,19 +2651,6 @@ static gboolean xyplot_motion_notify_event_cb(GtkWidget *widget,
 	/* get plot pixel reference */
 	px = event->x - p->plot_x;
 	py = p->plot_y + p->plot_h - event->y;
-
-	if (px < 0.0)
-		goto cleanup;
-
-	if (px > p->plot_w)
-		goto cleanup;
-
-	if (py < 0.0)
-		goto cleanup;
-
-	if (py > p->plot_h)
-		goto cleanup;
-
 
 	/* get data range reference */
 	x = px / p->scale_x + p->x_ax.min;
@@ -2463,8 +2686,36 @@ static gboolean xyplot_motion_notify_event_cb(GtkWidget *widget,
 	else
 		y0 = event->y - off;
 
-	if (event->state & (GDK_BUTTON1_MASK | GDK_BUTTON2_MASK)) {
+	if ((event->state & GDK_SHIFT_MASK) &&
+	    (event->state & GDK_BUTTON1_MASK)) {
 
+		dx = (p->shift.x0 - event->x) / p->scale_x;
+		dy = (p->shift.y0 - event->y) / p->scale_y;
+
+		p->shift.x0 = event->x;
+		p->shift.y0 = event->y;
+
+		if ((dx != 0.0) || (dy != 0.0))
+			p->autorange = FALSE;
+
+		p->xmin += dx;
+		p->xmax += dx;
+		p->ymin -= dy;
+		p->ymax -= dy;
+
+		p->xlen = p->xmax - p->xmin;
+		p->ylen = p->ymax - p->ymin;
+
+		cairo_destroy (cr);
+		xyplot_auto_axes(p);
+
+		xyplot_plot(p);
+
+		return TRUE;
+	}
+
+
+	if (event->state & GDK_BUTTON1_MASK) {
 
 		/* get plot pixel reference */
 		p->rub.px0 = (p->rub.x0 - p->plot_x) / p->scale_x + p->x_ax.min;
@@ -2476,18 +2727,13 @@ static gboolean xyplot_motion_notify_event_cb(GtkWidget *widget,
 
 		xyplot_rubberband_minmax_order(p);
 
-		if (p->rub.x0 < p->plot_x)
-			goto cleanup;
-		if (p->rub.y0 < p->plot_y)
-			goto cleanup;
-
 
 		cairo_save(cr);
 
-		if (event->state & GDK_BUTTON1_MASK)
-			cairo_set_source_rgba(cr, 1.0, 1.0, 1.0, 1.0);
-		else
+		if (event->state & GDK_CONTROL_MASK)
 			cairo_set_source_rgba(cr, 1.0, 1.0, 0.0, 1.0);
+		else
+			cairo_set_source_rgba(cr, 1.0, 1.0, 1.0, 1.0);
 
 		cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
 
@@ -2497,7 +2743,7 @@ static gboolean xyplot_motion_notify_event_cb(GtkWidget *widget,
 				p->rub.x0, p->rub.y0,
 				event->x - p->rub.x0, event->y - p->rub.y0);
 
-		if (event->state & GDK_BUTTON2_MASK) {
+		if (event->state & GDK_CONTROL_MASK) {
 			p->sel.xmin = p->rub.px0;
 			p->sel.xmax = p->rub.px1;
 			p->sel.ymin = p->rub.py0;
@@ -2508,10 +2754,9 @@ static gboolean xyplot_motion_notify_event_cb(GtkWidget *widget,
 		cairo_restore(cr);
 	}
 
+
 	xyplot_render_layout(cr, layout, x0, y0);
 
-
-cleanup:
 	cairo_destroy (cr);
 
 	/* _draw_area() may leave artefacts if the pointer is moved to fast */
@@ -2541,42 +2786,64 @@ static gboolean xyplot_button_release_cb(GtkWidget *widget,
 	if (event->type != GDK_BUTTON_RELEASE)
 		return TRUE;
 
-	if (event->button == 1) {
+	if (event->button != 1)
+		return TRUE;
 
-		xlen = p->rub.px1 - p->rub.px0;
-		ylen = p->rub.py1 - p->rub.py0;
-
-		if (xlen == 0.0 || ylen == 0.0)
-			return TRUE;
-
-		p->xmin = p->rub.px0;
-		p->xmax = p->rub.px1;
-		p->ymin = p->rub.py0;
-		p->ymax = p->rub.py1;
-		p->xlen = xlen;
-		p->ylen = ylen;
-
-		p->rub.autorange = FALSE;
-
-		xyplot_auto_axes(p);
-
-		xyplot_plot(p);
-	}
+	if (event->state & GDK_SHIFT_MASK)
+		return TRUE;
 
 
-	if (event->button == 2) {
+	if (event->state & GDK_CONTROL_MASK) {
 
 		g_message("FIT ALL DATA X: %g to %g and Y: %g to %g",
 			  p->sel.xmin, p->sel.xmax, p->sel.ymin, p->sel.ymax);
 
 		p->sel.active = TRUE;
 		g_signal_emit_by_name(widget, "xyplot-fit-selection");
+
+		return TRUE;
 	}
+
+
+	xlen = p->rub.px1 - p->rub.px0;
+	ylen = p->rub.py1 - p->rub.py0;
+
+	if (xlen == 0.0 || ylen == 0.0)
+		return TRUE;
+
+	p->xmin = p->rub.px0;
+	p->xmax = p->rub.px1;
+	p->ymin = p->rub.py0;
+	p->ymax = p->rub.py1;
+	p->xlen = xlen;
+	p->ylen = ylen;
+
+	p->autorange = FALSE;
+
+	xyplot_auto_axes(p);
+
+	xyplot_plot(p);
+
 
 	return TRUE;
 }
 
+static gboolean xyplot_key_press_cb(GtkWidget *widget, GdkEventKey *event,
+				    gpointer data)
+{
+	XYPlot *p;
 
+
+	p = XYPLOT(widget);
+
+	if (event->keyval == GDK_KEY_a)
+		xyplot_autorange_cb(widget, p);
+
+	if (event->keyval == GDK_KEY_u)
+		xyplot_clear_selection_cb(widget, p);
+
+	return TRUE;
+}
 
 /**
  * @brief button press events
@@ -2587,33 +2854,20 @@ static gboolean xyplot_button_press_cb(GtkWidget *widget, GdkEventButton *event,
 {
 	XYPlot *p;
 
-	gdouble px;
-	gdouble py;
-
 
 	p = XYPLOT(widget);
 
 	if (event->type != GDK_BUTTON_PRESS)
 		goto exit;
 
-	if (event->button == 1 || event->button == 2) {
 
-		/* get plot pixel reference */
-		px = event->x - p->plot_x;
-		py = p->plot_y + p->plot_h - event->y;
+	/* get plot pixel reference for axis shift */
+	if (event->state & GDK_SHIFT_MASK) {
+		p->shift.x0 = event->x;
+		p->shift.y0 = event->y;
+	}
 
-		if (px < 0.0)
-			goto exit;
-
-		if (px > p->plot_w)
-			goto exit;
-
-		if (py < 0.0)
-			goto exit;
-
-		if (py > p->plot_h)
-			goto exit;
-
+	if (event->button == 1) {
 		p->rub.x0 = event->x;
 		p->rub.y0 = event->y;
 	}
@@ -2623,6 +2877,79 @@ static gboolean xyplot_button_press_cb(GtkWidget *widget, GdkEventButton *event,
 
 exit:
 	return TRUE;
+}
+
+
+
+/**
+ * @brief scroll events
+ */
+
+static gboolean xyplot_scroll_cb(GtkWidget *widget, GdkEvent *event,
+				 gpointer data)
+{
+	gdouble dx, dy;
+	double tmp;
+
+	XYPlot *p;
+
+
+	p = XYPLOT(widget);
+
+
+	if ((p->ylen == 0.0) && (p->xlen == 0.0))
+		return TRUE;
+
+	gdk_event_get_scroll_deltas(event, &dx, &dy);
+
+
+	/* use any scroll axis */
+	if (dx == 0.0)
+		dx = dy;
+	if (dy == 0.0)
+		dy = dx;
+
+
+	dx = dx * p->xlen * 0.05;
+	dy = dy * p->ylen * 0.05;
+
+
+	if (event->scroll.state & GDK_MOD1_MASK) {
+		p->xmin += dx;
+		p->xmax -= dx;
+	} else  if (event->scroll.state & GDK_SHIFT_MASK) {
+		p->ymin += dy;
+		p->ymax -= dy;
+	} else {
+		p->xmin += dx;
+		p->xmax -= dx;
+		p->ymin += dy;
+		p->ymax -= dy;
+	}
+
+	if (p->ymin > p->ymax) {
+		tmp = p->ymin;
+		p->ymin = p->ymax;
+		p->ymax = tmp;
+	}
+
+	if (p->xmin > p->xmax) {
+		tmp = p->xmin;
+		p->xmin = p->xmax;
+		p->xmax = tmp;
+	}
+
+	p->xlen = p->xmax - p->xmin;
+	p->ylen = p->ymax - p->ymin;
+
+	p->autorange = FALSE;
+
+	xyplot_auto_axes(p);
+
+	xyplot_plot(p);
+
+	return TRUE;
+
 }
 
 
@@ -2734,7 +3061,7 @@ static void xyplot_init(XYPlot *p)
 	p->ax_colour.blue  = AXES_B;
 	p->ax_colour.alpha = 1.0;
 
-	p->rub.autorange = TRUE;
+	p->autorange = TRUE;
 
 
 	/* connect the relevant signals of the DrawingArea */
@@ -2748,16 +3075,27 @@ static void xyplot_init(XYPlot *p)
 			 G_CALLBACK(xyplot_configure_event_cb), NULL);
 
 	g_signal_connect (G_OBJECT(&p->parent), "enter-notify-event",
-			  G_CALLBACK (xyplot_pointer_crossing_cb), NULL);
+			  G_CALLBACK(xyplot_pointer_crossing_cb), NULL);
 
 	g_signal_connect (G_OBJECT(&p->parent), "leave-notify-event",
-			  G_CALLBACK (xyplot_pointer_crossing_cb), NULL);
+			  G_CALLBACK(xyplot_pointer_crossing_cb), NULL);
 
 	g_signal_connect (G_OBJECT(&p->parent), "button-press-event",
-			  G_CALLBACK (xyplot_button_press_cb), NULL);
+			  G_CALLBACK(xyplot_button_press_cb), NULL);
 	g_signal_connect (G_OBJECT(&p->parent), "button-release-event",
-			  G_CALLBACK (xyplot_button_release_cb), NULL);
+			  G_CALLBACK(xyplot_button_release_cb), NULL);
 
+	g_signal_connect (G_OBJECT(&p->parent), "scroll-event",
+			  G_CALLBACK(xyplot_scroll_cb), NULL);
+
+	g_signal_connect (G_OBJECT(&p->parent), "key-press-event",
+			  G_CALLBACK(xyplot_key_press_cb), NULL);
+
+	/* need to set can-focus for key presses, need to grab focus
+	 * as well, we do this in enter-notify so we don't interfere with
+	 * other widgets all the time
+	 */
+	gtk_widget_set_can_focus(GTK_WIDGET(p), TRUE);
 
 	gtk_widget_set_events(GTK_WIDGET(&p->parent), GDK_EXPOSURE_MASK
 			       | GDK_LEAVE_NOTIFY_MASK
@@ -2766,7 +3104,9 @@ static void xyplot_init(XYPlot *p)
 			       | GDK_POINTER_MOTION_MASK
 			       | GDK_POINTER_MOTION_HINT_MASK
 			       | GDK_ENTER_NOTIFY_MASK
-			       | GDK_LEAVE_NOTIFY_MASK);
+			       | GDK_LEAVE_NOTIFY_MASK
+			       | GDK_SMOOTH_SCROLL_MASK
+			       | GDK_KEY_PRESS_MASK);
 }
 
 
