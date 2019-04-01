@@ -29,10 +29,14 @@ struct _HistoryConfig {
 	GArray		       *hst_idx;
 	GArray		       *hst_pwr;
 	void                   *r_hst;
+	void                   *r_lst;
 	gsize                   n_hst;
 	gsize			idx;
 	enum xyplot_graph_style s_hst;
 	GdkRGBA                 c_hst;
+
+	GdkPixbuf	       *wf_pb;
+	GtkDrawingArea	       *wf_da;
 
 	guint id_spd;
 };

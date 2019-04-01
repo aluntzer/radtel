@@ -35,6 +35,20 @@ G_DEFINE_TYPE_WITH_PRIVATE(History, history, GTK_TYPE_BOX)
 #define HISTORY_DEFAULT_HST_LEN 100
 #define HISTORY_DEFAULT_HST_GAP   5
 
+/* waterfall colours */
+#define HISTORY_R_LO		0
+#define HISTORY_G_LO		0
+#define HISTORY_B_LO		0
+
+#define HISTORY_R_MID		255
+#define HISTORY_G_MID		0
+#define HISTORY_B_MID		0
+
+#define HISTORY_R_HI		255
+#define HISTORY_G_HI		255
+#define HISTORY_B_H		0
+
+
 
 /**
  * @brief average colour set callback
@@ -99,7 +113,7 @@ static void history_clear_hst(History *p)
 
 
 /**
- * @brief append new data set to list of running averages
+ * @brief append new data to power history
  */
 
 static void history_append_hst(History *p, const gdouble *amp, gsize len)
@@ -116,10 +130,11 @@ static void history_append_hst(History *p, const gdouble *amp, gsize len)
 
 
 
-
 	/* remove the old graph */
 	xyplot_drop_graph(p->cfg->plot, p->cfg->r_hst);
 	p->cfg->r_hst = NULL;
+	xyplot_drop_graph(p->cfg->plot, p->cfg->r_lst);
+	p->cfg->r_lst = NULL;
 
 	/* history is disabled? */
 	if (!p->cfg->n_hst)
@@ -163,8 +178,214 @@ static void history_append_hst(History *p, const gdouble *amp, gsize len)
 	xyplot_set_graph_style(p->cfg->plot, p->cfg->r_hst, p->cfg->s_hst);
 	xyplot_set_graph_rgba(p->cfg->plot, p->cfg->r_hst, p->cfg->c_hst);
 
+
+	/* indicate last update as single point graph */
+	x = g_malloc(sizeof(double));
+	y = g_malloc(sizeof(double));
+
+	x[0] = p->cfg->idx;
+	y[0] = pwr;
+
+	p->cfg->r_lst = xyplot_add_graph(p->cfg->plot, x, y, NULL,
+					 1,
+					 g_strdup_printf("Last"));
+	xyplot_set_graph_style(p->cfg->plot, p->cfg->r_lst, CIRCLES);
+	xyplot_set_graph_rgba(p->cfg->plot, p->cfg->r_lst, red);
+
+
+
 	/* also redraws */
 	xyplot_set_range_x(p->cfg->plot, 0.0, (gdouble) p->cfg->n_hst);
+}
+
+
+/**
+ * @brief get an rgb colour mapping for a value
+ *
+ * @note the is scheme is stolen from somewhere, but I don't remember... d'oh!
+ */
+
+static void history_wf_get_rgb(gdouble val, gdouble thr_lo, gdouble thr_hi,
+			       guchar *r, guchar *g, guchar *b)
+{
+	gdouble R, G, B;
+
+	gdouble f;
+
+
+	if (val < thr_lo) {
+		(*r) = HISTORY_R_LO;
+		(*g) = HISTORY_G_LO;
+		(*b) = HISTORY_G_LO;
+		return;
+	}
+
+	if (val > thr_hi) {
+		(*r) = HISTORY_R_HI;
+		(*g) = HISTORY_G_HI;
+		(*b) = HISTORY_G_HI;
+		return;
+	}
+
+	f = (val - thr_lo) / (thr_hi - thr_lo);
+
+	if (f < 2.0/9.0) {
+
+		f = f / (2.0 / 9.0);
+
+		R = (1.0 - f) * (gdouble) HISTORY_R_LO;
+		G = (1.0 - f) * (gdouble) HISTORY_G_LO;
+		B = HISTORY_B_LO + f * (gdouble) (255 - HISTORY_B_LO);
+
+
+	} else if (f < (3.0 / 9.0)) {
+
+		f = (f - 2.0 / 9.0 ) / (1.0 / 9.0);
+
+		R = 0.0;
+		G = 255.0 * f;
+		B = 255.0;
+
+	} else if (f < (4.0 / 9.0) ) {
+
+		f = (f - 3.0 / 9.0) / (1.0 / 9.0);
+
+		R = 0.0;
+		G = 255.0;
+		B = 255.0 * (1.0 - f);
+
+	} else if (f < (5.0 / 9.0)) {
+
+		f = (f - 4.0 / 9.0 ) / (1.0 / 9.0);
+
+		R = 255.0 * f;
+		G = 255.0;
+		B = 0.0;
+
+	} else if ( f < (7.0 / 9.0)) {
+
+		f = (f - 5.0 / 9.0 ) / (2.0 / 9.0);
+
+		R = 255.0;
+		G = 255.0 * (1.0 - f);
+		B = 0.0;
+
+	} else if( f < (8.0 / 9.0)) {
+
+		f = (f - 7.0 / 9.0 ) / (1.0 / 9.0);
+
+		R = 255.0;
+		G = 0.0;
+		B = 255.0 * f;
+
+	} else {
+
+		f = (f - 8.0 / 9.0 ) / (1.0 / 9.0);
+
+		R = 255.0 * (0.75 + 0.25 * (1.0 - f));
+		G = 0.5 * 255.0 * f;
+		B = 255.0;
+	}
+
+	(*r) = (guchar) R;
+	(*g) = (guchar) G;
+	(*b) = (guchar) B;
+}
+
+
+
+
+/**
+ * @brief append new data set to waterfall
+ */
+
+static void history_append_wf(History *p, const gdouble *amp, gsize len)
+{
+
+	int i, j;
+       	int w, h;
+	int rs, nc;
+
+	gdouble min, max;
+
+	guchar *wf;
+	guchar *pix;
+
+
+
+	if (p->cfg->wf_pb) {
+		if (len != gdk_pixbuf_get_width(p->cfg->wf_pb)) {
+			g_object_unref(p->cfg->wf_pb);
+			p->cfg->wf_pb = NULL;
+		}
+	}
+
+	if (!p->cfg->wf_pb) {
+		p->cfg->wf_pb = gdk_pixbuf_new(GDK_COLORSPACE_RGB, FALSE, 8,
+					       len, 50);
+
+		if (!p->cfg->wf_pb) {
+			g_warning("Could not create pixbuf: out of memory");
+			return;
+		}
+
+		wf = gdk_pixbuf_get_pixels(p->cfg->wf_pb);
+
+		gdk_pixbuf_fill(p->cfg->wf_pb, 0x000000ff);
+	}
+
+
+	wf = gdk_pixbuf_get_pixels(p->cfg->wf_pb);
+
+	w = gdk_pixbuf_get_width(p->cfg->wf_pb);
+	h = gdk_pixbuf_get_height(p->cfg->wf_pb);
+
+	rs = gdk_pixbuf_get_rowstride(p->cfg->wf_pb);
+
+	nc = gdk_pixbuf_get_n_channels(p->cfg->wf_pb);
+
+
+	/* down shift (quite inefficiently) */
+	for (i = h - 1; i > 0; i--) {
+
+		pix = wf + rs * i;
+
+		/* meh... */
+
+		for(j = 0; j < w; j++) {
+
+			pix[0] = pix[0 - rs];
+			pix[1] = pix[1 - rs];
+			pix[2] = pix[2 - rs];
+
+			pix += nc;
+		}
+	}
+
+
+	min = DBL_MAX;
+	max = DBL_MIN;
+	for (i = 0; i < len; i++) {
+		if (amp[i] < min)
+			min = amp[i];
+
+		if (amp[i] > max)
+			max = amp[i];
+	}
+
+
+
+	pix = wf;
+	/* add new line */
+	for (i = 0; i < len; i++) {
+		history_wf_get_rgb((amp[i] - min) / (max - min),
+				   0.01, 0.99,
+				   &pix[0], &pix[1], &pix[2]);
+		pix += nc;
+	}
+
+
+	gtk_widget_queue_draw(GTK_WIDGET(p->cfg->wf_da));
 }
 
 
@@ -198,6 +419,7 @@ static void history_handle_pr_spec_data(gpointer instance,
 
 
 	history_append_hst(p, amp, s->n);
+	history_append_wf(p, amp, s->n);
 
 	g_free(amp);
 }
@@ -213,6 +435,9 @@ static void history_reset_hst_cb(GtkWidget *w, History *p)
 
 	xyplot_drop_graph(p->cfg->plot, p->cfg->r_hst);
 	p->cfg->r_hst = NULL;
+
+	xyplot_drop_graph(p->cfg->plot, p->cfg->r_lst);
+	p->cfg->r_lst = NULL;
 }
 
 
@@ -223,7 +448,6 @@ static void history_reset_hst_cb(GtkWidget *w, History *p)
 static gboolean history_hst_value_changed_cb(GtkSpinButton *sb, History *p)
 {
 	gsize n;
-	gsize tmp;
 
 	gdouble *x;
 	gdouble *y;
@@ -237,8 +461,13 @@ static gboolean history_hst_value_changed_cb(GtkSpinButton *sb, History *p)
 
 		xyplot_drop_graph(p->cfg->plot, p->cfg->r_hst);
 		p->cfg->r_hst = NULL;
+
 		goto exit;
 	}
+
+	/* always drop the "last data" indicator */
+	xyplot_drop_graph(p->cfg->plot, p->cfg->r_lst);
+	p->cfg->r_lst = NULL;
 
 	n = p->cfg->hst_idx->len;
 	if (!n)
@@ -267,6 +496,35 @@ static gboolean history_hst_value_changed_cb(GtkSpinButton *sb, History *p)
 exit:
 	return TRUE;
 }
+
+
+static gboolean history_wf_draw(GtkWidget *w, cairo_t *cr, gpointer data)
+{
+	History *p;
+
+	GdkPixbuf *pbuf;
+
+	GtkAllocation allocation;
+
+
+	p = HISTORY(data);
+
+	if (!p->cfg->wf_pb)
+		return FALSE;
+
+
+	gtk_widget_get_allocation(w, &allocation);
+
+	pbuf = gdk_pixbuf_scale_simple(p->cfg->wf_pb,
+				       allocation.width, allocation.height - 2,
+				       GDK_INTERP_NEAREST);
+
+	gdk_cairo_set_source_pixbuf(cr, pbuf, 0, 0);
+	cairo_paint (cr);
+
+	return FALSE;
+}
+
 
 
 /**
@@ -340,16 +598,30 @@ static void gui_create_history_controls(History *p)
 {
 	GtkWidget *w;
 
+	GtkWidget *hbox;
+
+
+	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 12);
 
 	w = xyplot_new();
-	gtk_box_pack_start(GTK_BOX(p), w, TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox), w, TRUE, TRUE, 0);
 	p->cfg->plot = w;
 
 	xyplot_set_xlabel(p->cfg->plot, "Sample");
 	xyplot_set_ylabel(p->cfg->plot, "Average Flux [K]");
 
 	w = history_sidebar_new(p);
-	gtk_box_pack_start(GTK_BOX(p), w, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox), w, FALSE, FALSE, 0);
+
+	gtk_box_pack_start(GTK_BOX(p), hbox, TRUE, TRUE, 0);
+
+
+	w = gtk_frame_new("Spectral Waterfall");
+	g_object_set(w, "margin", 6, NULL);
+	gtk_box_pack_start(GTK_BOX(p), w, TRUE, TRUE, 6);
+
+	g_object_set(GTK_WIDGET(p->cfg->wf_da), "margin", 12, NULL);
+	gtk_container_add(GTK_CONTAINER(w), GTK_WIDGET(p->cfg->wf_da));
 }
 
 
@@ -406,9 +678,12 @@ static void history_init(History *p)
 	p->cfg->s_hst = IMPULSES;
 	p->cfg->c_hst = COLOR_WHITE;
 
+	p->cfg->wf_pb = NULL;
+	p->cfg->wf_da = GTK_DRAWING_AREA(gtk_drawing_area_new());
+
 
 	gtk_orientable_set_orientation(GTK_ORIENTABLE(p),
-				       GTK_ORIENTATION_HORIZONTAL);
+				       GTK_ORIENTATION_VERTICAL);
 
 	gtk_box_set_spacing(GTK_BOX(p), 0);
 
@@ -419,6 +694,9 @@ static void history_init(History *p)
 				(gpointer) p);
 
 	g_signal_connect(p, "destroy", G_CALLBACK(history_destroy), NULL);
+
+	g_signal_connect(G_OBJECT(p->cfg->wf_da), "draw",
+			 G_CALLBACK(history_wf_draw), (gpointer) p);
 }
 
 
