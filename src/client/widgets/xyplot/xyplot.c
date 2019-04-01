@@ -656,7 +656,8 @@ static void xyplot_rubberband_minmax_order(XYPlot *p)
 
 static void xyplot_autorange_cb(GtkWidget *w, XYPlot *p)
 {
-	p->autorange = TRUE;
+	p->autorange_x = TRUE;
+	p->autorange_y = TRUE;
 
 	p->rub.px0 = 0.0;
 	p->rub.px1 = 0.0;
@@ -1773,6 +1774,54 @@ static void xyplot_draw_squares(XYPlot *p, cairo_t *cr, struct graph *g)
 
 
 /**
+ * @brief draw the plot data as impulses
+ */
+
+static void xyplot_draw_impulses(XYPlot *p, cairo_t *cr, struct graph *g)
+{
+	size_t i;
+
+	gdouble sx, sy;
+
+	gdouble *x, *y;
+
+	sx = p->scale_x;
+	sy = p->scale_y;
+
+	x  = g->data_x;
+	y  = g->data_y;
+
+	cairo_save(cr);
+
+	xyplot_transform_origin(p, cr);
+
+	cairo_set_source_rgba(cr, g->colour.red,  g->colour.green,
+			          g->colour.blue, g->colour.alpha);
+
+	cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+
+	cairo_set_line_width(cr, 2.0);
+
+
+
+	for (i = 0; i < g->data_len; i++) {
+		cairo_move_to(cr, (x[i] -  p->x_ax.min) * sx, 0.0);
+		cairo_rel_line_to(cr, 0.0, (y[i] - p->y_ax.min) * sy);
+		cairo_stroke(cr);
+
+		cairo_arc(cr,
+			  (x[i] - p->x_ax.min) * sx,
+			  (y[i] - p->y_ax.min) * sy,
+			  4.0, 0.0, 2.0 * M_PI);
+		cairo_fill(cr);
+	}
+
+	cairo_restore(cr);
+}
+
+
+
+/**
  * @brief draw the plot data as 2d map data
  */
 
@@ -2103,6 +2152,9 @@ static void xyplot_draw_graphs(XYPlot *p, cairo_t *cr)
 		case CIRCLES:
 			xyplot_draw_circles(p, cr, g);
 			break;
+		case IMPULSES:
+			xyplot_draw_impulses(p, cr, g);
+			break;
 		case LINES:
 			xyplot_draw_lines(p, cr, g);
 			break;
@@ -2260,15 +2312,17 @@ static void xyplot_auto_range(XYPlot *p)
 	struct graph *g;
 
 
-	if (!p->autorange)
-		return;
+	if (p->autorange_x) {
+		p->xmin = DBL_MAX;
+		p->xmax = -DBL_MAX;
+	}
 
-	p->xmin = DBL_MAX;
-	p->ymin = DBL_MAX;
+	if (p->autorange_y) {
+		p->ymin = DBL_MAX;
+		p->ymax = -DBL_MAX;
+	}
+
 	p->cmin = DBL_MAX;
-
-	p->xmax = -DBL_MAX;
-	p->ymax = -DBL_MAX;
 	p->cmax = -DBL_MAX;
 
 	p->dx = DBL_MAX;
@@ -2279,17 +2333,21 @@ static void xyplot_auto_range(XYPlot *p)
 
 		g = (struct graph *) elem->data;
 
-		if (g->xmin < p->xmin)
-			p->xmin = g->xmin;
+		if (p->autorange_x) {
+			if (g->xmin < p->xmin)
+				p->xmin = g->xmin;
 
-		if (g->xmax > p->xmax)
-			p->xmax = g->xmax;
+			if (g->xmax > p->xmax)
+				p->xmax = g->xmax;
+		}
 
-		if (g->ymin < p->ymin)
-			p->ymin = g->ymin;
+		if (p->autorange_y) {
+			if (g->ymin < p->ymin)
+				p->ymin = g->ymin;
 
-		if (g->ymax > p->ymax)
-			p->ymax = g->ymax;
+			if (g->ymax > p->ymax)
+				p->ymax = g->ymax;
+		}
 
 		/* 3rd axis is optional */
 		if (!g->data_c)
@@ -2301,29 +2359,41 @@ static void xyplot_auto_range(XYPlot *p)
 		if (g->cmax > p->cmax)
 			p->cmax = g->cmax;
 
-		if (p->dx > g->dx)
-			p->dx = g->dx;
+		if (p->autorange_x) {
+			if (p->dx > g->dx)
+				p->dx = g->dx;
+		}
 
-		if (p->dy > g->dy)
-			p->dy = g->dy;
+		if (p->autorange_y) {
+			if (p->dy > g->dy)
+				p->dy = g->dy;
+		}
 	}
 
-	p->xlen = p->xmax - p->xmin;
-	p->ylen = p->ymax - p->ymin;
+	if (p->autorange_x)
+		p->xlen = p->xmax - p->xmin;
+
+	if (p->autorange_y)
+		p->ylen = p->ymax - p->ymin;
+
 	p->clen = p->cmax - p->cmin;
 
 
 	/* set an arbitrary values for a singular data range */
-	if (p->xlen == 0.0) {
-		p->xmax += 0.5;
-		p->xmin -= 0.5;
-		p->xlen  = 1.0;
+	if (p->autorange_x) {
+		if (p->xlen == 0.0) {
+			p->xmax += 0.5;
+			p->xmin -= 0.5;
+			p->xlen  = 1.0;
+		}
 	}
 
-	if (p->ylen == 0.0) {
-		p->ymax += 0.5;
-		p->ymin -= 0.5;
-		p->ylen  = 1.0;
+	if (p->autorange_y) {
+		if (p->ylen == 0.0) {
+			p->ymax += 0.5;
+			p->ymin -= 0.5;
+			p->ylen  = 1.0;
+		}
 	}
 
 
@@ -2730,8 +2800,10 @@ static gboolean xyplot_motion_notify_event_cb(GtkWidget *widget,
 		p->shift.x0 = event->x;
 		p->shift.y0 = event->y;
 
-		if ((dx != 0.0) || (dy != 0.0))
-			p->autorange = FALSE;
+		if ((dx != 0.0) || (dy != 0.0)) {
+			p->autorange_x = FALSE;
+			p->autorange_y = FALSE;
+		}
 
 		p->xmin += dx;
 		p->xmax += dx;
@@ -2853,7 +2925,8 @@ static gboolean xyplot_button_release_cb(GtkWidget *widget,
 	p->xlen = xlen;
 	p->ylen = ylen;
 
-	p->autorange = FALSE;
+	p->autorange_x = FALSE;
+	p->autorange_y = FALSE;
 
 	xyplot_auto_axes(p);
 
@@ -2977,7 +3050,8 @@ static gboolean xyplot_scroll_cb(GtkWidget *widget, GdkEvent *event,
 	p->xlen = p->xmax - p->xmin;
 	p->ylen = p->ymax - p->ymin;
 
-	p->autorange = FALSE;
+	p->autorange_x = FALSE;
+	p->autorange_y = FALSE;
 
 	xyplot_auto_axes(p);
 
@@ -3096,7 +3170,8 @@ static void xyplot_init(XYPlot *p)
 	p->ax_colour.blue  = AXES_B;
 	p->ax_colour.alpha = 1.0;
 
-	p->autorange = TRUE;
+	p->autorange_x = TRUE;
+	p->autorange_y = TRUE;
 
 
 	/* connect the relevant signals of the DrawingArea */
@@ -3673,6 +3748,45 @@ void xyplot_get_data_axis_range(GtkWidget *widget,
 
 
 }
+
+
+void xyplot_set_range_x(GtkWidget *widget, gdouble min, gdouble max)
+{
+	XYPlot *p;
+
+
+	p = XYPLOT(widget);
+
+	p->autorange_x = FALSE;
+	p->xmin = min;
+	p->xmax = max;
+	p->xlen = max - min;
+
+	xyplot_auto_range(p);
+	xyplot_auto_axes(p);
+
+	xyplot_plot(p);
+}
+
+
+void xyplot_set_range_y(GtkWidget *widget, gdouble min, gdouble max)
+{
+	XYPlot *p;
+
+
+	p = XYPLOT(widget);
+
+	p->autorange_y = FALSE;
+	p->ymin = min;
+	p->ymax = max;
+	p->ylen = max - min;
+
+	xyplot_auto_range(p);
+	xyplot_auto_axes(p);
+
+	xyplot_plot(p);
+}
+
 
 
 void xyplot_redraw(GtkWidget *widget)

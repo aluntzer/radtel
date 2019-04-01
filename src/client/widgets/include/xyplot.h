@@ -107,7 +107,8 @@ struct _XYPlot {
 		gdouble y0;
 	} shift;
 
-	gboolean autorange;
+	gboolean autorange_x;
+	gboolean autorange_y;
 
 
 
@@ -122,7 +123,8 @@ struct _XYPlotClass {
 	GtkDrawingAreaClass parent_class;
 };
 
-enum xyplot_graph_style {STAIRS, CIRCLES, LINES, NAN_LINES, CURVES, DASHES, SQUARES};
+enum xyplot_graph_style {STAIRS, CIRCLES, LINES, NAN_LINES,
+			 CURVES, DASHES, SQUARES, IMPULSES};
 
 GtkWidget *xyplot_new(void);
 void xyplot_set_xlabel(GtkWidget *widget, gchar *label);
@@ -155,7 +157,19 @@ void xyplot_get_sel_axis_range(GtkWidget *widget,
 void xyplot_get_data_axis_range(GtkWidget *widget,
 			   gdouble *xmin, gdouble *xmax,
 			   gdouble *ymin, gdouble *ymax);
+
+
+void xyplot_set_range_x(GtkWidget *widget, gdouble min, gdouble max);
+void xyplot_set_range_y(GtkWidget *widget, gdouble min, gdouble max);
+
 void xyplot_redraw(GtkWidget *widget);
+
+
+
+static const GdkRGBA COLOR_YELLOW_PHOS = {0.804, 0.592, 0.047, 0.6};
+static const GdkRGBA COLOR_WHITE = {1.0, 1.0, 1.0, 0.7};
+static const GdkRGBA red = {0.3, 0.0, 0.0, 0.1};
+
 
 
 #endif /* _WIDGETS_XYPLOT_H_ */

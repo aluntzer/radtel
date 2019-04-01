@@ -32,10 +32,6 @@
 
 G_DEFINE_TYPE_WITH_PRIVATE(Spectrum, spectrum, GTK_TYPE_BOX)
 
-const GdkRGBA COLOR_YELLOW_PHOS = {0.804, 0.592, 0.047, 0.6};
-const GdkRGBA COLOR_WHITE = {1.0, 1.0, 1.0, 0.7};
-const GdkRGBA red = {0.3, 0.0, 0.0, 0.1};
-
 #define SPECTRUM_DEFAULT_AVG_LEN 10
 #define SPECTRUM_DEFAULT_PER_LEN 50
 
