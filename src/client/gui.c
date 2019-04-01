@@ -24,6 +24,7 @@
 #include <radio.h>
 #include <telescope.h>
 #include <spectrum.h>
+#include <history.h>
 #include <sys_status.h>
 #include <obs_assist.h>
 
@@ -96,6 +97,7 @@ static GtkWidget *gui_create_chat(void)
 }
 
 #include <glib.h>
+__attribute__((unused))
 static void log_output(const gchar *logdomain, GLogLevelFlags loglevel,
 		       const gchar *message, gpointer userdata)
 {
@@ -201,7 +203,7 @@ static GtkWidget *gui_create_chatlog(void)
 
 
 
-static GtkWidget *gui_create_status_view(void)
+GtkWidget *gui_create_status_view(void)
 {
 	GtkWidget *grid;
 
@@ -349,7 +351,6 @@ static GtkWidget *gui_create_default_window(void)
 {
 	GtkWidget *win;
 	GtkWidget *hdr;
-	GtkWidget *btn;
 
 
 	win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -417,11 +418,19 @@ static GtkWidget *gui_create_stack_switcher(void)
 {
 	GtkWidget *w;
 	GtkWidget *sswdnd;
-	GtkStack *stack;
 
 
 
 	sswdnd = sswdnd_new();
+
+
+	w = gtk_scrolled_window_new(NULL, NULL);
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(w),
+				       GTK_POLICY_AUTOMATIC,
+				       GTK_POLICY_AUTOMATIC);
+	gtk_container_add(GTK_CONTAINER(w), history_new());
+	sswdnd_add_named(sswdnd, w, "History");
+
 
 	w = gtk_scrolled_window_new(NULL, NULL);
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(w),
@@ -459,12 +468,6 @@ static GtkWidget *gui_create_stack_switcher(void)
 	sswdnd_add_named(sswdnd, sky_new(), "Sky View");
 
 
-	stack = gtk_stack_switcher_get_stack(GTK_STACK_SWITCHER(sswdnd));
-
-#if 0
-	g_signal_connect(stack, "sswdnd-create-window",
-			 G_CALLBACK(gui_create_window_with_widget), NULL);
-#endif
 	return sswdnd;
 }
 
@@ -478,6 +481,9 @@ int gui_client(int argc, char *argv[])
 
 	gtk_init(&argc, &argv);
 
+	g_object_set(gtk_settings_get_default(),
+		     "gtk-application-prefer-dark-theme", TRUE,
+		     NULL);
 
 	gui_create_window_with_widget(NULL, &window,
 				      gui_create_stack_switcher(), NULL);
