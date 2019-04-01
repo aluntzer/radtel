@@ -1797,9 +1797,9 @@ static void xyplot_draw_impulses(XYPlot *p, cairo_t *cr, struct graph *g)
 
 	cairo_set_source_rgba(cr, g->colour.red,  g->colour.green,
 			          g->colour.blue, g->colour.alpha);
-
+#if 0
 	cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-
+#endif
 	cairo_set_line_width(cr, 2.0);
 
 

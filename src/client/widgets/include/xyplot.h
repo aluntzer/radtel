@@ -168,7 +168,7 @@ void xyplot_redraw(GtkWidget *widget);
 
 static const GdkRGBA COLOR_YELLOW_PHOS = {0.804, 0.592, 0.047, 0.6};
 static const GdkRGBA COLOR_WHITE = {1.0, 1.0, 1.0, 0.7};
-static const GdkRGBA red = {0.3, 0.0, 0.0, 0.1};
+static const GdkRGBA red = {1.0, 0.0, 0.0, 1.0};
 
 
 
