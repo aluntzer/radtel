@@ -6,6 +6,7 @@ AM_CPPFLAGS += -Iwidgets/radio/
 AM_CPPFLAGS += -Iwidgets/telescope/
 AM_CPPFLAGS += -Iwidgets/sswdnd/
 AM_CPPFLAGS += -Iwidgets/spectrum
+AM_CPPFLAGS += -Iwidgets/history
 AM_CPPFLAGS += -Iwidgets/sys_status
 AM_CPPFLAGS += -Iwidgets/obs_assist
 AM_CPPFLAGS += -Iwidgets/sky
@@ -83,6 +84,8 @@ client_SOURCES += widgets/telescope/telescope.c \
 client_SOURCES += widgets/sswdnd/sswdnd.c
 
 client_SOURCES += widgets/spectrum/spectrum.c
+
+client_SOURCES += widgets/history/history.c
 
 client_SOURCES += widgets/sys_status/sys_status.c \
 		  widgets/sys_status/sys_status_position.c \
