@@ -547,7 +547,7 @@ static GtkWidget *history_sidebar_new(History *p)
 	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
 	gtk_grid_attach(grid, w, 0, 0, 2, 1);
 
-	w = gtk_spin_button_new_with_range(0, 100, 1);
+	w = gtk_spin_button_new_with_range(0, 1000, 1);
 	gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(w), TRUE);
 	gtk_spin_button_set_digits(GTK_SPIN_BUTTON(w), 0);
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w), p->cfg->n_hst);
