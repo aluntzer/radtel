@@ -25,6 +25,13 @@ client_LDADD += $(GIO_LIBS)
 client_LDADD += $(top_builddir)/src/net/libproto.a
 client_LDADD += $(top_builddir)/src/util/libutil.a
 
+
+gsettings_SCHEMAS = config/org.uvie.radtel.config.gschema.xml
+EXTRA_DIST = $(gsettings_SCHEMAS)
+
+@GSETTINGS_RULES@
+
+
 bin_PROGRAMS = client
 
 client_SOURCES = main.c \

@@ -1,0 +1,32 @@
+<schemalist>
+	<schema id="org.uvie.radtel.config" path="/org/uvie/radtel/config/">
+
+
+		<key name="server-addr" type="s">
+			<default>"radtel.astro.univie.ac.at"</default>
+			<summary>Server Address</summary>
+			<description>The address of the server to connect to.</description>
+		</key>
+
+
+		<key name="server-port" type="u">
+			<default>1420</default>
+			<summary>Server Port</summary>
+			<description>The server port to connect to.</description>
+		</key>
+
+		<key name="username" type="s">
+			<default>""</default>
+			<summary>Username</summary>
+			<description>The username for the chat feature.</description>
+		</key>
+
+		<key name="gui-font" type="s">
+			<default>""</default>
+			<summary>GUI Font</summary>
+			<description>A custom font that will be used for the GUI.</description>
+		</key>
+
+
+	</schema>
+</schemalist>

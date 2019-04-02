@@ -4,6 +4,8 @@ AM_INIT_AUTOMAKE([subdir-objects foreign dist-xz])
 AC_PROG_CC
 AC_PROG_RANLIB
 
+AC_PATH_PROG(GLIB_COMPILE_RESOURCES, glib-compile-resources)
+GLIB_GSETTINGS
 
 PKG_CHECK_MODULES([GMODULE], [gmodule-2.0])
 PKG_CHECK_MODULES([GTHREAD], [gthread-2.0])

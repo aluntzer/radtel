@@ -331,24 +331,34 @@ gint net_send(const char *pkt, size_t nbytes)
 
 int net_client_init(void)
 {
-	gboolean ret;
-
 	GSocketClient *client;
 	GSocketConnection *con;
 
+	GSettings *s;
+
 	GError *error = NULL;
+
+	gchar *host;
+
+	guint16 port;
+
+
+	s = g_settings_new("org.uvie.radtel.config");
+	if (!s)
+		return 0;
+
+	host = g_settings_get_string(s, "server-addr");
+	if (!host) {
+		g_warning("No host address specified!");
+		return 0;
+	}
+
+	port = (guint16) g_settings_get_uint(s, "server-port");
 
 
 	client = g_socket_client_new();
-#if 1
-	con = g_socket_client_connect_to_host(client,
-					      (gchar*)"radtel.astro.univie.ac.at",
-					      1420, NULL, &error);
-#else
-	con = g_socket_client_connect_to_host(client,
-					      (gchar*)"localhost",
-					      2345, NULL, &error);
-#endif
+	con = g_socket_client_connect_to_host(client, host, port, NULL, &error);
+
 	if (error) {
 		g_warning("%s\n", error->message);
 		g_clear_error(&error);
