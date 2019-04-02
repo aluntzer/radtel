@@ -2629,13 +2629,42 @@ static void xyplot_plot(XYPlot *p)
 	unsigned int width;
 	unsigned int height;
 
+	gint fs = 0;
+
+	gchar *t;
+	gchar *font;
+
 	cairo_t *cr;
 
 
 	width  = gtk_widget_get_allocated_width(GTK_WIDGET(p));
 	height = gtk_widget_get_allocated_height(GTK_WIDGET(p));
 
+
 	cr = cairo_create(p->plot);
+
+	/* we currently use the cairo_show_text "toy" api, so we just set the
+	 * font size for now
+	 */
+	g_object_get(gtk_settings_get_default(), "gtk-font-name", &font, NULL);
+
+	t = strtok(font, " ");
+	t = strtok(NULL, " ");
+
+	/* naively search for number */
+	while (!fs && t) {
+		fs = g_ascii_strtod(t, NULL);
+		t = strtok(NULL, " ");
+	}
+
+	/* make a sensible choice */
+	if ((fs < 5) || (fs > 20))
+		fs = 10;
+
+	cairo_set_font_size(cr, (double) fs);
+
+	g_free(font);
+
 
 	xyplot_plot_render(p, cr, width, height);
 
