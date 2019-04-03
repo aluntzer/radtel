@@ -30,10 +30,12 @@
 #include <levmar.h>
 #include <math.h>
 
+#include <coordinates.h>
+
+
 G_DEFINE_TYPE_WITH_PRIVATE(History, history, GTK_TYPE_BOX)
 
 #define HISTORY_DEFAULT_HST_LEN 100
-#define HISTORY_DEFAULT_HST_GAP   5
 
 /* waterfall colours */
 #define HISTORY_R_LO		0
@@ -106,7 +108,6 @@ static void history_hst_style_changed(GtkComboBox *cb, History *p)
 
 static void history_clear_hst(History *p)
 {
-	p->cfg->idx = 0;
 	g_array_set_size(p->cfg->hst_idx, 0);
 	g_array_set_size(p->cfg->hst_pwr, 0);
 }
@@ -126,9 +127,11 @@ static void history_append_hst(History *p, const gdouble *amp, gsize len)
 	gdouble *x;
 	gdouble *y;
 
-	gdouble tmp;
+	time_t *prv;
+	time_t now;
 
 
+	now = UT_seconds();
 
 	/* remove the old graph */
 	xyplot_drop_graph(p->cfg->plot, p->cfg->r_hst);
@@ -148,21 +151,12 @@ static void history_append_hst(History *p, const gdouble *amp, gsize len)
 		g_array_remove_index(p->cfg->hst_pwr, 0);
 	}
 
-	/* we could use a date later on, but this needs plot support first;
-	 * for now, we just rotate an index
-	 */
-	if (p->cfg->idx >= p->cfg->n_hst)
-		p->cfg->idx = 0;
-	else
-		p->cfg->idx++;
-
 	for (i = 0; i < len; i++)
 		pwr += amp[i];
 
 	pwr /= (gdouble) len;	/* average power */
 
-	tmp = (gdouble) p->cfg->idx;
-	g_array_append_val(p->cfg->hst_idx, tmp);
+	g_array_append_val(p->cfg->hst_idx, now);
 	g_array_append_val(p->cfg->hst_pwr, pwr);
 
 	/* create new graph */
@@ -170,6 +164,10 @@ static void history_append_hst(History *p, const gdouble *amp, gsize len)
 				 p->cfg->hst_idx->len * sizeof(gdouble));
 	y = (gdouble *) g_memdup(p->cfg->hst_pwr->data,
 				 p->cfg->hst_pwr->len * sizeof(gdouble));
+
+	prv = (time_t *) p->cfg->hst_idx->data;
+	for (i = 0; i < p->cfg->hst_idx->len; i++)
+		x[i] = prv[i] - now;
 
 
 	p->cfg->r_hst = xyplot_add_graph(p->cfg->plot, x, y, NULL,
@@ -183,7 +181,7 @@ static void history_append_hst(History *p, const gdouble *amp, gsize len)
 	x = g_malloc(sizeof(double));
 	y = g_malloc(sizeof(double));
 
-	x[0] = p->cfg->idx;
+	x[0] = 0.0;
 	y[0] = pwr;
 
 	p->cfg->r_lst = xyplot_add_graph(p->cfg->plot, x, y, NULL,
@@ -194,8 +192,7 @@ static void history_append_hst(History *p, const gdouble *amp, gsize len)
 
 
 
-	/* also redraws */
-	xyplot_set_range_x(p->cfg->plot, 0.0, (gdouble) p->cfg->n_hst);
+	xyplot_redraw(p->cfg->plot);
 }
 
 
@@ -490,9 +487,6 @@ static gboolean history_hst_value_changed_cb(GtkSpinButton *sb, History *p)
 					 g_strdup_printf("History"));
 	xyplot_set_graph_style(p->cfg->plot, p->cfg->r_hst, p->cfg->s_hst);
 	xyplot_set_graph_rgba(p->cfg->plot, p->cfg->r_hst, p->cfg->c_hst);
-
-	xyplot_set_range_x(p->cfg->plot, 0.0, (gdouble) p->cfg->n_hst);
-
 exit:
 	return TRUE;
 }
@@ -607,8 +601,8 @@ static void gui_create_history_controls(History *p)
 	gtk_box_pack_start(GTK_BOX(hbox), w, TRUE, TRUE, 0);
 	p->cfg->plot = w;
 
-	xyplot_set_xlabel(p->cfg->plot, "Sample");
-	xyplot_set_ylabel(p->cfg->plot, "Average Flux [K]");
+	xyplot_set_xlabel(p->cfg->plot, "Relative Sample Time [s]");
+	xyplot_set_ylabel(p->cfg->plot, "Average Flux / Bin [K]");
 
 	w = history_sidebar_new(p);
 	gtk_box_pack_start(GTK_BOX(hbox), w, FALSE, FALSE, 0);
@@ -669,9 +663,8 @@ static void history_init(History *p)
 
 	p->cfg = history_get_instance_private(p);
 
-	p->cfg->hst_idx = g_array_new(FALSE, FALSE, sizeof(gdouble));
+	p->cfg->hst_idx = g_array_new(FALSE, FALSE, sizeof(time_t));
 	p->cfg->hst_pwr = g_array_new(FALSE, FALSE, sizeof(gdouble));
-	p->cfg->idx = INT_MAX;
 
 	p->cfg->n_hst = HISTORY_DEFAULT_HST_LEN;
 	p->cfg->r_hst = NULL;

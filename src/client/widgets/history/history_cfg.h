@@ -31,7 +31,6 @@ struct _HistoryConfig {
 	void                   *r_hst;
 	void                   *r_lst;
 	gsize                   n_hst;
-	gsize			idx;
 	enum xyplot_graph_style s_hst;
 	GdkRGBA                 c_hst;
 
