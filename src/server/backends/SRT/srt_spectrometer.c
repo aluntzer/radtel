@@ -247,14 +247,16 @@ static int srt_spec_load_config(void)
 
 	GError *error = NULL;
 
+	gchar *cfg;
 
 
 	kf = g_key_file_new();
 	flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
 
 
-	ret = g_key_file_load_from_file(kf, "config/backends/srt_spectrometer.cfg",
-					flags, &error);
+	cfg = g_strconcat(CONFDIR, "backends/srt_spectrometer.cfg", NULL);
+	ret = g_key_file_load_from_file(kf, cfg, flags, &error);
+	g_free(cfg);
 
 	if (!ret) {
 		g_error(MSG "error loading config file %s", error->message);
@@ -286,12 +288,17 @@ static void srt_spec_load_calibration(void)
 
 	FILE *f;
 
+	gchar *cfg;
+
+
 
 	gfrq = g_array_new(FALSE, FALSE, sizeof(gdouble));
 	gamp = g_array_new(FALSE, FALSE, sizeof(gdouble));
 
+	cfg = g_strconcat(CONFDIR, "backends/calibration/spectral_response.dat");
+	f = g_fopen(cfg, "r");
+	g_free(cfg);
 
-	f = g_fopen("config/backends/calibration/spectral_response.dat", "r");
 	if (!f) {
 		g_warning(MSG "spectral response calibration not found");
 		return;

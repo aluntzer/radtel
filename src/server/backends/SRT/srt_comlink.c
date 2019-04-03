@@ -315,14 +315,16 @@ static int srt_com_load_config(void)
 
 	GError *error = NULL;
 
+	gchar *cfg;
 
 
 	kf = g_key_file_new();
 	flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
 
 
-	ret = g_key_file_load_from_file(kf, "config/backends/srt_comlink.cfg",
-					flags, &error);
+	cfg = g_strconcat(CONFDIR, "backends/srt_comlink.cfg", NULL);
+	ret = g_key_file_load_from_file(kf, cfg, flags, &error);
+	g_free(cfg);
 
 	if (!ret) {
 		g_error(MSG "error loading config file %s", error->message);

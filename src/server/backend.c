@@ -95,6 +95,8 @@ int backend_load_plugins(void)
 	gsize i;
 	gchar **pluglist;
 
+	gchar *plug;
+
 
 	if (!g_module_supported()) {
 		g_error("Module loading not supported on platform.");
@@ -108,8 +110,9 @@ int backend_load_plugins(void)
 
 
 	for (i = 0; pluglist[i] != NULL; i++)  {
-		g_message("Loading plugin %s", pluglist[i]);
-		backend_load_module(pluglist[i]);
+		plug = g_strconcat(PLUGDIR, pluglist[i], NULL);
+		g_message("Loading plugin %s", plug);
+		backend_load_module(plug);
 	}
 
 

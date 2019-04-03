@@ -379,14 +379,17 @@ static int sky_load_config(Sky *p)
 
 	GError *error = NULL;
 
+	gchar *cfg;
 
 
 	kf = g_key_file_new();
 	flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
 
 
-	ret = g_key_file_load_from_file(kf, "config/sky_objects.cfg",
-					flags, &error);
+	cfg = g_strconcat(CONFDIR, "sky_objects.cfg", NULL);
+	ret = g_key_file_load_from_file(kf, cfg, flags, &error);
+
+	g_free(cfg);
 
 	if (!ret) {
 		g_error("error loading config file %s", error->message);

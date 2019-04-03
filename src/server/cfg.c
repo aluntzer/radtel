@@ -164,6 +164,8 @@ int server_cfg_load(void)
 
 	GError *error = NULL;
 
+	gchar *cfg;
+
 
 
 
@@ -171,15 +173,17 @@ int server_cfg_load(void)
 	kf = g_key_file_new();
 	flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
 
-
-	ret = g_key_file_load_from_file(kf, "config/server.cfg",
-					flags, &error);
+	cfg = g_strconcat(CONFDIR, "server.cfg", NULL);
+	ret = g_key_file_load_from_file(kf, cfg, flags, &error);
 
 	if (!ret) {
-		g_error(error->message);
+		g_error("Error loading server config file %s", error->message);
 		g_clear_error(&error);
+		g_free(cfg);
 		return -1;
 	}
+
+	g_free(cfg);
 
 	server_cfg = g_malloc0(sizeof(struct server_settings));
 
