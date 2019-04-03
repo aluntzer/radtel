@@ -94,6 +94,9 @@ static void radio_handle_pr_spec_acq_cfg(gpointer instance,
 
 
 	/* acq_max is useless (counts down if running), ignore */
+
+	/* block handler to disallow updates util "get config is pressed */
+	g_signal_handler_block(sig_get_instance(), p->cfg->id_cfg);
 }
 
 
@@ -242,6 +245,10 @@ static void radio_init(Radio *p)
 	p->cfg->id_cfg = g_signal_connect(sig_get_instance(), "pr-spec-acq-cfg",
 			 G_CALLBACK(radio_handle_pr_spec_acq_cfg),
 			 (void *) p);
+	/* immediately block the handler. it is unblocked only when the
+	 * "Get Configuration" button is pressed
+	 */
+	g_signal_handler_block(sig_get_instance(), p->cfg->id_cfg);
 
 	p->cfg->id_acq = g_signal_connect(sig_get_instance(), "pr-status-acq",
 			 G_CALLBACK(radio_handle_pr_status_acq),

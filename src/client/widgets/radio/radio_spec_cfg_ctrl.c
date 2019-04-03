@@ -34,6 +34,8 @@
 
 static void radio_spec_cfg_get_cb(GtkWidget *w, Radio *p)
 {
+	/* unblock handler to allow updating */
+	g_signal_handler_unblock(sig_get_instance(), p->cfg->id_cfg);
 	cmd_spec_acq_cfg_get(PKT_TRANS_ID_UNDEF);
 }
 
