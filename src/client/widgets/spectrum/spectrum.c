@@ -33,7 +33,7 @@
 G_DEFINE_TYPE_WITH_PRIVATE(Spectrum, spectrum, GTK_TYPE_BOX)
 
 #define SPECTRUM_DEFAULT_AVG_LEN 10
-#define SPECTRUM_DEFAULT_PER_LEN 50
+#define SPECTRUM_DEFAULT_PER_LEN 10
 
 struct spectrum {
 	gdouble *x;
