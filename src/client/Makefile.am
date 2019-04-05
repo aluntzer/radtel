@@ -34,8 +34,16 @@ radtel_LDADD += $(top_builddir)/src/util/libutil.a
 sysconf_radteldir = $(confdir)
 sysconf_radtel_DATA = config/sky_objects.cfg
 
-gsettings_SCHEMAS = config/org.uvie.radtel.config.gschema.xml
-EXTRA_DIST = $(gsettings_SCHEMAS)
+data_desktopdir = $(datadir)/applications
+data_desktop_DATA = data/org.uvie.radtel.desktop
+EXTRA_DIST = $(data_desktop_DATA)
+
+appicondir=$(datadir)/icons/hicolor/scalable/apps
+appicon_DATA=data/org.uvie.radtel.svg
+
+
+gsettings_SCHEMAS = data/org.uvie.radtel.config.gschema.xml
+EXTRA_DIST += $(gsettings_SCHEMAS)
 
 @GSETTINGS_RULES@
 

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Radio Telescope Client GUI 
+Comment=Control a radio telescope
+Exec=radtel
+Terminal=false
+Type=Application
+StartupNotify=true
+Icon=org.uvie.radtel
+Categories=GTK;Science;Astronomy;
+Keywords=RadioAstronomy;SRT;UVIE;
