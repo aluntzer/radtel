@@ -4,9 +4,21 @@ AM_INIT_AUTOMAKE([subdir-objects foreign dist-xz])
 AC_PROG_CC
 AC_PROG_RANLIB
 
+
 AC_PREFIX_DEFAULT([/usr])
 # want /etc by default
 test "x$prefix" = xNONE && test "x$sysconfdir" = 'x${prefix}/etc' && sysconfdir='/etc'
+
+
+AC_CANONICAL_HOST
+# Detect the target system
+case "${host_os}" in
+    mingw*)
+        IS_WINDOWS=true
+        ;;
+esac
+
+AM_CONDITIONAL([OS_WINDOWS], [test x$IS_WINDOWS = xtrue])
 
 AC_PATH_PROG(GLIB_COMPILE_RESOURCES, glib-compile-resources)
 GLIB_GSETTINGS

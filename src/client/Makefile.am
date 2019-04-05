@@ -21,7 +21,8 @@ AM_CFLAGS += $(GTHREAD_CFLAGS)
 AM_CFLAGS += $(GLIB_CFLAGS)
 AM_CFLAGS += $(GIO_CFLAGS)
 
-radtel_LDFLAGS = -lm $(radtel_LIBS)
+
+radtel_LDFLAGS = -lm $(radtel_LIBS) 
 
 radtel_LDADD := $(GTK3_LIBS)
 radtel_LDADD += $(GTHREAD_LIBS)
@@ -29,6 +30,15 @@ radtel_LDADD += $(GLIB_LIBS)
 radtel_LDADD += $(GIO_LIBS)
 radtel_LDADD += $(top_builddir)/src/net/libproto.a
 radtel_LDADD += $(top_builddir)/src/util/libutil.a
+
+
+if OS_WINDOWS
+radtel_LDFLAGS += -mwindows
+
+radtel-res.o: data/radtel.rc
+	windres -i data/radtel.rc -o radtel-res.o -O coff
+        radtel_LDADD += radtel-res.o
+endif
 
 
 sysconf_radteldir = $(confdir)
