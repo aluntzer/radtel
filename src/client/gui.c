@@ -175,8 +175,8 @@ static GtkWidget *gui_create_log(void)
 		gtk_text_buffer_create_mark(b, "end", &iter, FALSE);
 	}
 /**** XXX console for now... ****/
-#if 0
-	 g_log_set_handler(NULL, G_LOG_LEVEL_MASK, log_output, (gpointer) textview);
+#if 1
+	 g_log_set_handler(NULL, G_LOG_LEVEL_MESSAGE, log_output, (gpointer) textview);
 #endif
 	/* TODO add callbacks, right-click menu */
 
