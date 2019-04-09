@@ -17,12 +17,88 @@
 
 #include <radio.h>
 #include <radio_cfg.h>
+#include <radio_internal.h>
 
 #include <default_grid.h>
 #include <desclabel.h>
 
 #include <coordinates.h>
 #include <signals.h>
+
+
+
+
+static void radio_vrest_entry_changed_cb(GtkEditable *ed, gpointer data)
+{
+	gdouble vrest;
+
+	Radio *p;
+
+
+	p = RADIO(data);
+
+
+	if (!gtk_entry_get_text_length(GTK_ENTRY(ed)))
+		return;
+
+	vrest = g_strtod(gtk_entry_get_text(GTK_ENTRY(ed)), NULL);
+
+	p->cfg->freq_ref_mhz = vrest;
+
+	radio_input_freq_val_refresh(p);
+}
+
+
+
+static void radio_vrest_entry_insert_text_cb(GtkEditable *ed, gchar *new_text,
+					  gint new_text_len, gpointer pos,
+					  gpointer data)
+{
+	gint i;
+
+
+	/* allow digits and decimal separators only */
+	for (i = 0; i < new_text_len; i++) {
+		if (!g_ascii_isdigit(new_text[i])
+		    && new_text[i] != ','
+		    && new_text[i] != '.') {
+			g_signal_stop_emission_by_name(ed, "insert-text");
+			break;
+		}
+	}
+
+}
+
+
+
+static void radio_vrest_sel_changed(GtkComboBox *cb, gpointer data)
+{
+	GtkListStore *ls;
+
+	GtkTreeIter iter;
+
+	Radio *p;
+
+	gdouble vrest;
+
+
+	p = RADIO(data);
+
+	if (!p)
+		return;
+
+	if (!gtk_combo_box_get_active_iter(cb, &iter))
+		return;
+
+	ls = GTK_LIST_STORE(gtk_combo_box_get_model(cb));
+
+	gtk_tree_model_get(GTK_TREE_MODEL(ls), &iter, 2, &vrest, -1);
+
+	p->cfg->freq_ref_mhz = vrest;
+
+
+	radio_input_freq_val_refresh(p);
+}
 
 
 /**
@@ -36,11 +112,14 @@
  *	 below
  */
 
-GtkWidget *radio_vrest_ctrl_new(void)
+GtkWidget *radio_vrest_ctrl_new(Radio *p)
 {
 	GtkWidget *grid;
 	GtkWidget *w;
 	GtkWidget *cb;
+
+	GtkListStore *ls;
+	GtkCellRenderer *col;
 
 
 	grid = new_default_grid();
@@ -79,25 +158,67 @@ GtkWidget *radio_vrest_ctrl_new(void)
 	 * even exceed the intensity of the main lines.
 	 */
 
-	cb = gtk_combo_box_text_new();
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(cb), "1420.406", "(HI) J=1/2 F=1-0");
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(cb), "1612.231", "(OH) J=3/2 F=1-2");
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(cb), "1665.402", "(OH) J=3/2 F=1-1");
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(cb), "1667.359", "(OH) J=3/2 F=2-2");
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(cb), "1720.530", "(OH) J=3/2 F=2-1");
 
+	ls = gtk_list_store_new(3, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_DOUBLE);
 
-	w = gtk_entry_new();
-	g_object_bind_property(cb, "active-id", w, "text",
-			       G_BINDING_BIDIRECTIONAL);
+	/* printf to get locale decimal style */
+	gtk_list_store_insert_with_values(ls, NULL, -1,
+					  0, "(HI) J=1/2 F=1-0",
+					  1, g_strdup_printf("%7.3f", 1420.406),
+					  2, 1420.406, -1);
 
+	gtk_list_store_insert_with_values(ls, NULL, -1,
+					  0, "(OH) J=3/2 F=1-2",
+					  1, g_strdup_printf("%7.3f", 1612.231),
+					  2, 1612.231, -1);
 
-	gtk_grid_attach(GTK_GRID(grid), gtk_label_new("Presets"), 1, 2, 1, 1);
-	gtk_grid_attach(GTK_GRID(grid), cb, 2, 2, 1, 1);
-	gtk_grid_attach(GTK_GRID(grid), w, 2, 1, 1, 1);
+	gtk_list_store_insert_with_values(ls, NULL, -1,
+					  0, "(OH) J=3/2 F=1-1",
+					  1, g_strdup_printf("%7.3f", 1665.402),
+					  2, 1665.402, -1);
 
+	gtk_list_store_insert_with_values(ls, NULL, -1,
+					  0, "(OH) J=3/2 F=2-2",
+					  1, g_strdup_printf("%7.3f", 1667.359),
+					  2, 1667.359, -1);
+
+	gtk_list_store_insert_with_values(ls, NULL, -1,
+					  0, "(OH) J=3/2 F=2-1",
+					  1, g_strdup_printf("%7.3f", 1720.530),
+					  2, 1720.530, -1);
+
+	cb = gtk_combo_box_new_with_model_and_entry(GTK_TREE_MODEL(ls));
+
+	g_object_unref(ls);
+
+	col = gtk_cell_renderer_text_new();
+	gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(cb), col, TRUE);
+
+	gtk_cell_layout_set_attributes(GTK_CELL_LAYOUT(cb), col, "text", 0, NULL );
+	gtk_combo_box_set_entry_text_column(GTK_COMBO_BOX(cb), 1);
+
+	/* the entry is a child of the box */
+	w = gtk_bin_get_child(GTK_BIN(cb));
+	gtk_entry_set_width_chars(GTK_ENTRY(w), 8);
+
+	g_signal_connect(w, "insert-text",
+			 G_CALLBACK(radio_vrest_entry_insert_text_cb), p);
+	g_signal_connect(w, "changed",
+			 G_CALLBACK(radio_vrest_entry_changed_cb), p);
+	gtk_entry_set_input_purpose(GTK_ENTRY(w), GTK_INPUT_PURPOSE_DIGITS);
+
+	gtk_combo_box_set_id_column(GTK_COMBO_BOX(cb), 1);
+
+	g_signal_connect(G_OBJECT(cb), "changed",
+			 G_CALLBACK(radio_vrest_sel_changed), (gpointer) p);
 
 	gtk_combo_box_set_active(GTK_COMBO_BOX(cb), 0);
+
+
+	gtk_grid_attach(GTK_GRID(grid), gtk_label_new("Reference [MHz]"),
+					1, 2, 1, 1);
+	gtk_grid_attach(GTK_GRID(grid), cb, 2, 2, 1, 1);
+
 
 	return grid;
 }

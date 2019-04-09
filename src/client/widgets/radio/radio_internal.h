@@ -28,7 +28,7 @@ GtkWidget *radio_spec_cfg_ctrl_get_new(Radio *p);
 GtkWidget *radio_spec_cfg_ctrl_set_new(Radio *p);
 GtkWidget *radio_spec_acq_num_ctrl_new(Radio *p);
 GtkWidget *radio_spec_doppler_ctrl_new(Radio *p);
-GtkWidget *radio_vrest_ctrl_new(void);
+GtkWidget *radio_vrest_ctrl_new(Radio *p);
 
 void radio_update_avg_lbl(Radio *p);
 void radio_update_conf_bw_lbl(Radio *p);
@@ -43,6 +43,7 @@ gboolean radio_spec_acq_cmd_spec_acq_disable(gpointer instance, gpointer data);
 
 void radio_input_block_signals(Radio *p);
 void radio_input_unblock_signals(Radio *p);
+void radio_input_freq_val_refresh(Radio *p);
 
 
 #endif /* _WIDGETS_RADIO_INTERNAL_H_ */

@@ -61,6 +61,15 @@ void radio_input_unblock_signals(Radio *p)
 }
 
 
+void radio_input_freq_val_refresh(Radio *p)
+{
+	if (p->cfg->id_fl)
+		radio_freq_value_changed(p->cfg->sb_frq_lo, p);
+	if (p->cfg->id_fh)
+		radio_freq_value_changed(p->cfg->sb_frq_hi, p);
+}
+
+
 /**
  * @brief show input field configuration configuration
  */
