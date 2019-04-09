@@ -3054,14 +3054,18 @@ static gboolean xyplot_scroll_cb(GtkWidget *widget, GdkEvent *event,
 	if (event->scroll.state & GDK_MOD1_MASK) {
 		p->xmin += dx;
 		p->xmax -= dx;
+		p->autorange_x = FALSE;
 	} else  if (event->scroll.state & GDK_SHIFT_MASK) {
 		p->ymin += dy;
 		p->ymax -= dy;
+		p->autorange_y = FALSE;
 	} else {
 		p->xmin += dx;
 		p->xmax -= dx;
 		p->ymin += dy;
 		p->ymax -= dy;
+		p->autorange_x = FALSE;
+		p->autorange_y = FALSE;
 	}
 
 	if (p->ymin > p->ymax) {
@@ -3079,8 +3083,6 @@ static gboolean xyplot_scroll_cb(GtkWidget *widget, GdkEvent *event,
 	p->xlen = p->xmax - p->xmin;
 	p->ylen = p->ymax - p->ymin;
 
-	p->autorange_x = FALSE;
-	p->autorange_y = FALSE;
 
 	xyplot_auto_axes(p);
 
