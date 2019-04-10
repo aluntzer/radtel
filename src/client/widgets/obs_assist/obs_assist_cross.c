@@ -27,110 +27,9 @@
 #include <default_grid.h>
 #include <xyplot.h>
 #include <levmar.h>
+#include <fitfunc.h>
 #include <cmd.h>
 #include <math.h>
-
-
-/**
- * @brief the gaussian we use for fitting the beam
- */
-
-static double gaussian(gdouble *p, gdouble x)
-{
-	return  p[3] + p[0] * exp( - pow( ((x - p[2]) / p[1]), 2));
-}
-
-
-/**
- * @brief determine initial parameters for the gaussian
- *
- * @param par the parameter array (4 elements, see gaussian())
- *
- * @param x the array of x values
- * @param y the array of y values
- * @param n the number of data elements
- */
-
-static void gaussian_calc_param(gdouble par[4],
-				const gdouble *x, const gdouble *y, size_t n)
-{
-	size_t i;
-
-	gdouble tmp;
-
-	gdouble sig = 0.0;
-	gdouble mean = 0.0;
-
-	gdouble xmin = DBL_MAX;
-	gdouble xmax = DBL_MIN;
-	gdouble ymin = DBL_MAX;
-	gdouble ymax = DBL_MIN;
-
-
-	if (!n)
-		return;
-
-	for (i = 0; i < n; i++) {
-
-		if (x[i] > xmax)
-			xmax = x[i];
-
-		if (x[i] < xmin)
-			xmin = x[i];
-
-		if (y[i] > ymax)
-			ymax = y[i];
-
-		if (y[i] < ymin)
-			ymin = y[i];
-
-		mean += x[i];
-	}
-
-	mean /= (gdouble) n;
-
-	for (i = 0; i < n; i++) {
-		tmp = x[i] - mean;
-		sig += tmp * tmp;
-	}
-
-	sig /= (gdouble) n;
-
-	sig = sqrt(sig);
-
-	par[0] = (ymax - ymin);		/* amplitude */
-	par[1] = sig;			/* sigma */
-	par[2] = mean;			/* center shift */
-	par[3] = ymin;			/* baseline shift */
-}
-
-
-/**
- * @brief function to do the fitting
- *
- * @returns 0 on success, otherwise error
- *
- * @note the number of data must be at least the number of parameters
- */
-
-static int fit_gaussian(gdouble par[4],
-			 const gdouble *x, const gdouble *y, size_t n)
-{
-	struct lm_ctrl lm;
-
-
-	if (n < 4)
-		return -1;
-
-	lm_init(&lm);
-	lm_set_fit_param(&lm, &gaussian, NULL, par, 4);
-
-
-	lm_min(&lm, x, y, NULL, n);
-
-
-	return 0;
-}
 
 
 /**
@@ -232,9 +131,9 @@ static gboolean cross_plt_fitbox_selected(GtkWidget *w, gpointer data)
 		return TRUE;
 	}
 
-	gaussian_calc_param(par, x, y, n);
+	gaussian_guess_param(par, x, y, n);
 
-	ret = fit_gaussian(par, x, y, n);
+	ret = gaussian_fit(par, x, y, n);
 
 	g_free(x);
 	g_free(y);
@@ -732,8 +631,8 @@ static void on_assistant_apply(GtkWidget *as, ObsAssist *p)
 	grid = GTK_GRID(new_default_grid());
 
 	p->cfg->cross.plt_az = xyplot_new();
-	xyplot_set_xlabel(p->cfg->cross.plt_az, "Offset");
-	xyplot_set_ylabel(p->cfg->cross.plt_az, "Amplitude");
+	xyplot_set_xlabel(p->cfg->cross.plt_az, "Offset [deg]");
+	xyplot_set_ylabel(p->cfg->cross.plt_az, "Amplitude [K]");
 
 	gtk_widget_set_hexpand(p->cfg->cross.plt_az, TRUE);
 	gtk_widget_set_vexpand(p->cfg->cross.plt_az, TRUE);
@@ -741,8 +640,8 @@ static void on_assistant_apply(GtkWidget *as, ObsAssist *p)
 	gtk_grid_attach(grid, p->cfg->cross.plt_az, 0, 0, 2, 1);
 
 	p->cfg->cross.plt_el = xyplot_new();
-	xyplot_set_xlabel(p->cfg->cross.plt_el, "Offset");
-	xyplot_set_ylabel(p->cfg->cross.plt_el, "Amplitude");
+	xyplot_set_xlabel(p->cfg->cross.plt_el, "Offset [deg]");
+	xyplot_set_ylabel(p->cfg->cross.plt_el, "Amplitude [K]");
 
 	gtk_widget_set_hexpand(p->cfg->cross.plt_el, TRUE);
 	gtk_widget_set_vexpand(p->cfg->cross.plt_el, TRUE);

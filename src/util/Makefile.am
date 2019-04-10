@@ -3,4 +3,4 @@ AM_CFLAGS = $(server_CFLAGS)
 
 noinst_LIBRARIES = libutil.a
 
-libutil_a_SOURCES = coordinates.c levmar.c
+libutil_a_SOURCES = coordinates.c levmar.c fitfunc.c

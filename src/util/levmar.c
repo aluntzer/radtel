@@ -30,7 +30,7 @@
 
 
 #include <stdio.h>
-#include "levmar.h"
+#include <levmar.h>
 
 /* this is pretty permissive */
 #define LM_TOL (1e6 * DBL_EPSILON)

@@ -25,9 +25,9 @@
 #include <signals.h>
 #include <default_grid.h>
 #include <cmd.h>
-#include <math.h>
 
 #include <levmar.h>
+#include <fitfunc.h>
 #include <math.h>
 
 G_DEFINE_TYPE_WITH_PRIVATE(Spectrum, spectrum, GTK_TYPE_BOX)
@@ -35,173 +35,165 @@ G_DEFINE_TYPE_WITH_PRIVATE(Spectrum, spectrum, GTK_TYPE_BOX)
 #define SPECTRUM_DEFAULT_AVG_LEN 10
 #define SPECTRUM_DEFAULT_PER_LEN 10
 
-struct spectrum {
-	gdouble *x;
-	gdouble *y;
-	gsize    n;
-};
 
+/**
+ * @brief signal handler for toggle switch
+ */
 
-
-
-/*** begin crap...*/
-
-double gaussian(double *p, double x)
+static gboolean spectrum_acq_toggle_cb(GtkWidget *w,
+					 gboolean state, gpointer data)
 {
-	return  p[3] + p[0] * exp( - pow( ((x - p[2]) / p[1]), 2));
+	if (gtk_switch_get_active(GTK_SWITCH(w)))
+		cmd_spec_acq_enable(PKT_TRANS_ID_UNDEF);
+	else
+		cmd_spec_acq_disable(PKT_TRANS_ID_UNDEF);
+
+	return TRUE;
 }
 
 
-int fit_gaussian(double *par, const gdouble *x, const gdouble *y, size_t n)
+
+/**
+ * @brief helper function to change to state of our acquistion toggle button
+ *	  without it emitting the "toggle" signal
+ */
+
+static void spectrum_acq_toggle_button(GtkSwitch *s, gboolean state)
 {
-	struct lm_ctrl lm;
-	int i;
-
-	lm_init(&lm);
-	lm_set_fit_param(&lm, &gaussian, NULL, par, 4);
-
-#if 0
-	for (i = 0; i < n; i++)
-		printf("%g, %g\n", x[i], y[i]);
-#endif
-
-	g_message("POINTS: %d\n", n);
-
-	if (n < 4)
-		return -1;
-
-	lm_min(&lm, x, y, NULL, n);
-
-	g_message("GAUSSIAN: peak: %10g, height: %10g, FWHM: %10g\n",
-		  par[2], par[0], fabs(par[1]) * 2.0 * sqrt(log(2.0)));
+	const GCallback cb = G_CALLBACK(spectrum_acq_toggle_cb);
 
 
-	return 0;
+	/* block/unblock the state-set handler of the switch for all copies of
+	 * the widget, so we can change the state without emitting a signal
+	 */
+
+	g_signal_handlers_block_matched(s, G_SIGNAL_MATCH_FUNC, 0, 0, NULL,
+					cb, NULL);
+	gtk_switch_set_state(s, state);
+
+	g_signal_handlers_unblock_matched(s, G_SIGNAL_MATCH_FUNC, 0, 0, NULL,
+					  cb, NULL);
 }
 
 
-static gboolean gui_fitbox_selected(GtkWidget *w, gpointer data)
+/**
+ * @brief signal handler for acquisition button "on" status
+ *
+ * @note when using the internal signal server, widget pointers must be
+ *	 transported via the userdata argument
+ */
+
+gboolean spectrum_acq_cmd_spec_acq_enable(gpointer instance, gpointer data)
 {
-	size_t n;
+	Spectrum *p;
+
+
+	p = SPECTRUM(data);
+
+	spectrum_acq_toggle_button(p->cfg->sw_acq, TRUE);
+
+	return FALSE;
+}
+
+
+/**
+ * @brief signal handler for acquisition button "off" status
+ *
+ * @note when using the internal signal server, widget pointers must be
+ *	 transported via the userdata argument
+ */
+
+gboolean spectrum_acq_cmd_spec_acq_disable(gpointer instance, gpointer data)
+{
+	Spectrum *p;
+
+
+	p = SPECTRUM(data);
+
+	spectrum_acq_toggle_button(p->cfg->sw_acq, FALSE);
+
+	return FALSE;
+}
+
+
+/**
+ * @brief handle status acq
+ *
+ * @note we use the acq status to update the state of the acqusition control
+ *       button, because there is no status-get command and I don't want to add
+ *       one because the spectrometer backend is supposed to push the acq status
+ *       anyway
+ */
+
+static void spectrum_handle_pr_status_acq(gpointer instance,
+					  const struct status *s,
+					  gpointer data)
+{
+	Spectrum *p;
+
+
+	p = SPECTRUM(data);
+
+	if (!s->busy)
+		return;
+
+	if (!gtk_switch_get_active(p->cfg->sw_acq))
+		spectrum_acq_cmd_spec_acq_enable(instance, data);
+}
+
+
+
+
+
+
+/**
+ * @brief plot a gaussian
+ */
+
+static void spectrum_plot_gaussian(GtkWidget *w, gdouble par[4], size_t n,
+				   struct fitdata *fit)
+{
+	size_t i;
+
+
 	gdouble *x;
 	gdouble *y;
-
-	double par[4];
-	int i;
-
-	static void *ref;
-	static void *ref2;
-
-
-	gdouble xmin = DBL_MAX;
-	gdouble xmax = DBL_MIN;
-	gdouble ymin = DBL_MAX;
-	gdouble ymax = DBL_MIN;
-
-
-
-#define DLEN 100
-
-	par[0] = 768.; // ymax - ymin;		amplitude
-	par[1] = 0.05;   // (xmax - xmin) / len * 5.0;  sigma
-	par[2] = 1420.41;  // (xmax + xmin )/ 2		x0
-	par[3] = 2350.; // ymin		offset
-
-
-
-	n = xyplot_get_selection_data(w, &x, &y, NULL);
-
-	if (!n) {
-
-		xyplot_drop_graph(w, ref);
-		xyplot_drop_graph(w, ref2);
-		return TRUE;
-	}
-
-
-	gdouble mean = 0.0;
-	for (i = 0; i < n; i++) {
-
-		if (x[i] > xmax)
-			xmax = x[i];
-
-		if (x[i] < xmin)
-			xmin = x[i];
-
-		if (y[i] > ymax)
-			ymax = y[i];
-
-		if (y[i] < ymin)
-			ymin = y[i];
-
-		mean += x[i];
-	}
-
-	mean /= (gdouble) n;
-
-	gdouble v = 0.0;
-	gdouble tmp;
-	for (i = 0; i < n; i++) {
-		tmp = x[i] - mean;
-		v += tmp * tmp;
-	}
-
-	v /= (gdouble) n;
-
-	v = sqrt(v);
-
-
-
-	g_message("mean %f, sig %f", mean, v);
-
-
-	par[0] = (ymax - ymin);				/* amplitude */
-	par[1] = v;	/* sigma */
-	par[2] = mean;				/* center shift */
-	par[3] = ymin;					/* baseline shift */
-
-
-	g_message("INITAL PAR: %f %f %f %f", par[0], par[1], par[2], par[3]);
-
-	if (fit_gaussian(par, x, y, n)) {
-
-		g_free(x);
-		g_free(y);
-		return TRUE;
-	}
-	g_free(x);
-	g_free(y);
-
-	x = g_malloc(DLEN * sizeof(gdouble));
-	y = g_malloc(DLEN * sizeof(gdouble));
 
 	gdouble pmin, pmax;
 	gdouble smin, smax, symin, symax;
 
+	const GdkRGBA red = {1.0, 0.0, 0.0, 1.0};
+
+
+	x = g_malloc(n * sizeof(gdouble));
+	y = g_malloc(n * sizeof(gdouble));
+
+
 	xyplot_get_data_axis_range(w, &pmin, &pmax, NULL, NULL);
 	xyplot_get_sel_axis_range(w, &smin, &smax, &symin,&symax);
 
-	g_message("pmin %g pmax %g", pmin, pmax);
-	g_message("smin %g smax %g symin %g symax %g", smin, smax, symin, symax);
 
-	for (i = 0; i < DLEN; i++) {
-		x[i] = pmin + ((gdouble) i) * (pmax - pmin) / ((double) DLEN);
+	for (i = 0; i < n; i++) {
+		x[i] = pmin + ((gdouble) i) * (pmax - pmin) / ((double) n);
 		y[i] = gaussian(par, x[i]);
 	}
 
-	xyplot_drop_graph(w, ref);
-	ref = xyplot_add_graph(w, x, y, NULL, DLEN, g_strdup_printf("FIT"));
 
-	const GdkRGBA red = {1.0, 0.0, 0.0, 1.0};
-	xyplot_set_graph_style(w, ref, DASHES);
-	xyplot_set_graph_rgba(w, ref, red);
+	/* graph outside box */
+	xyplot_drop_graph(w, fit->plt_ref_in);
+	fit->plt_ref_in = xyplot_add_graph(w, x, y, NULL, n,
+					   g_strdup_printf("FIT"));
+
+	xyplot_set_graph_style(w, fit->plt_ref_in, DASHES);
+	xyplot_set_graph_rgba(w, fit->plt_ref_in, red);
 
 
-	/* inside box */
-	x = g_malloc(DLEN * sizeof(gdouble));
-	y = g_malloc(DLEN * sizeof(gdouble));
-	for (i = 0; i < DLEN; i++) {
-		x[i] = smin + ((gdouble) i) * (smax - smin) / ((double) DLEN);
+	/* graph inside box */
+	x = g_malloc(n * sizeof(gdouble));
+	y = g_malloc(n * sizeof(gdouble));
+
+	for (i = 0; i < n; i++) {
+		x[i] = smin + ((gdouble) i) * (smax - smin) / ((double) n);
 		y[i] = gaussian(par, x[i]);
 
 		if ((y[i] > symax) || (y[i] < symin)) {
@@ -211,19 +203,91 @@ static gboolean gui_fitbox_selected(GtkWidget *w, gpointer data)
 
 	}
 
-	xyplot_drop_graph(w, ref2);
-	ref2 = xyplot_add_graph(w, x, y, NULL, DLEN, g_strdup_printf("FIT"));
+	xyplot_drop_graph(w, fit->plt_ref_out);
+	fit->plt_ref_out = xyplot_add_graph(w, x, y, NULL, n, g_strdup_printf("FIT"));
 
-	xyplot_set_graph_style(w, ref2, LINES);
-	xyplot_set_graph_rgba(w, ref2, red);
+	xyplot_set_graph_style(w, fit->plt_ref_out, NAN_LINES);
+	xyplot_set_graph_rgba(w, fit->plt_ref_out, red);
 
 	xyplot_redraw(w);
-
-	return TRUE;
 }
 
 
-/*** end crap */
+
+/**
+ * @brief connect to coord signal
+ */
+
+static gboolean spectrum_plt_clicked_coord(GtkWidget *w, gdouble x, gdouble y,
+					   gpointer data)
+{
+	g_message("TODO: shift to new center frequency %g", x);
+
+	return  TRUE;
+}
+
+
+/**
+ * @brief fit selection box callback
+ */
+
+static gboolean spectrum_plt_fitbox_selected(GtkWidget *w, gpointer data)
+{
+	int ret;
+	size_t n;
+
+	gdouble *x;
+	gdouble *y;
+	gchar *lbl;
+
+	gdouble par[4];
+
+	struct fitdata *fit;
+
+
+	if (!data)
+		return TRUE;
+
+	fit = (struct fitdata *) data;
+
+	n = xyplot_get_selection_data(w, &x, &y, NULL);
+	if (!n) {
+		xyplot_drop_graph(w, fit->plt_ref_in);
+		xyplot_drop_graph(w, fit->plt_ref_out);
+		return TRUE;
+	}
+
+	gaussian_guess_param(par, x, y, n);
+
+	ret = gaussian_fit(par, x, y, n);
+
+	g_free(x);
+	g_free(y);
+
+	if (ret)
+		return TRUE;
+
+
+	lbl = g_strdup_printf("Last Fit Results:\n\n"
+			      "<tt>"
+			      "Peak:\n"
+			      "<b>%8.2f [MHz]</b>\n\n"
+			      "Height:\n"
+			      "<b>%8.2f [K]</b>\n\n"
+			      "FWHM:\n"
+			      "<b>%8.2f [deg]</b>\n\n"
+			      "</tt>",
+			      par[2], par[0],
+			      fabs(par[1]) * 2.0 * sqrt(log(2.0)));
+
+	gtk_label_set_markup(fit->fitpar, lbl);
+	g_free(lbl);
+
+	/* XXX plot a fixed 100 points for now */
+	spectrum_plot_gaussian(w, par, 100, fit);
+
+	return TRUE;
+}
 
 
 /**
@@ -293,8 +357,6 @@ static void spectrum_set_plot_style(gint active, enum xyplot_graph_style *s)
 
 static void spectrum_data_style_changed(GtkComboBox *cb, Spectrum *p)
 {
-	GdkRGBA c;
-
 	GList *elem;
 
 
@@ -407,23 +469,9 @@ static void spectrum_append_data(Spectrum *p, struct spectrum *sp)
 		}
 	}
 
-	/* waterfall test */
-#if 1
+
 	ref = xyplot_add_graph(p->cfg->plot, sp->x, sp->y, NULL, sp->n,
 			       g_strdup_printf("SPECTRUM"));
-#else
-	{
-	gsize i;
-	static double cnt = 0.0;
-	gdouble *y = (gdouble *) g_malloc(sp->n * sizeof(gdouble));
-	for (i = 0; i < sp->n; i++)
-		y[i] = cnt;
-
-	ref = xyplot_add_graph(p->cfg->plot, y, sp->x, sp->y, sp->n,
-			       g_strdup_printf("SPECTRUM"));
-	cnt += 1.0;
-	}
-#endif
 
 	xyplot_set_graph_style(p->cfg->plot, ref, p->cfg->s_per);
 	xyplot_set_graph_rgba(p->cfg->plot, ref, p->cfg->c_per);
@@ -457,7 +505,7 @@ static void spectrum_append_avg(Spectrum *p, struct spectrum *sp)
 {
 	GList *elem;
 
-	gsize i, j;
+	gsize i;
 	gsize n;
 
 	gdouble inv;
@@ -672,8 +720,6 @@ static gboolean spectrum_per_value_changed_cb(GtkSpinButton *sb, Spectrum *p)
 
 	GList *elem;
 
-	struct spectrum *sp;
-
 
 
 	p->cfg->n_per = gtk_spin_button_get_value_as_int(sb);
@@ -711,17 +757,36 @@ static GtkWidget *spectrum_sidebar_new(Spectrum *p)
 	GtkGrid *grid;
 
 	GtkWidget *w;
-	GtkWidget *tmp;
 
 
 	grid = GTK_GRID(new_default_grid());
 
 
+	w = gtk_label_new("ACQ");
+	gtk_widget_set_halign(w, GTK_ALIGN_START);
+	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
+	gtk_grid_attach(grid, w, 0, 0, 1, 1);
+
+
+	w = gtk_switch_new();
+	gtk_widget_set_tooltip_text(w, "Enable/Disable acquisition");
+	gtk_widget_set_halign(w, GTK_ALIGN_END);
+
+	p->cfg->sw_acq = GTK_SWITCH(w);
+	g_signal_connect(G_OBJECT(w), "state-set",
+			 G_CALLBACK(spectrum_acq_toggle_cb), p);
+
+	gtk_grid_attach(grid, w, 1, 0, 1, 1);
+
+
+	w = gtk_separator_new(GTK_ORIENTATION_HORIZONTAL);
+	gtk_grid_attach(grid, w, 0, 1, 2, 1);
+
 
 	w = gtk_label_new("Data");
 	gtk_widget_set_halign(w, GTK_ALIGN_START);
 	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
-	gtk_grid_attach(grid, w, 0, 0, 1, 1);
+	gtk_grid_attach(grid, w, 0, 2, 1, 1);
 
 	w = gtk_spin_button_new_with_range(0, 100, 1);
 	gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(w), TRUE);
@@ -729,7 +794,7 @@ static GtkWidget *spectrum_sidebar_new(Spectrum *p)
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w), p->cfg->n_per);
 	gtk_widget_set_halign(w, GTK_ALIGN_FILL);
 	gtk_widget_set_hexpand(w, FALSE);
-	gtk_grid_attach(grid, w, 0, 1, 2, 1);
+	gtk_grid_attach(grid, w, 0, 3, 2, 1);
 	g_signal_connect(GTK_SPIN_BUTTON(w), "value-changed",
 			 G_CALLBACK(spectrum_per_value_changed_cb), p);
 
@@ -742,33 +807,33 @@ static GtkWidget *spectrum_sidebar_new(Spectrum *p)
 	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(w), NULL, "Squares");
 	gtk_combo_box_set_active(GTK_COMBO_BOX(w), 0);
 	gtk_combo_box_set_active(GTK_COMBO_BOX(w), 4);	/* default circles */
-	gtk_grid_attach(grid, w, 0, 2, 2, 1);
+	gtk_grid_attach(grid, w, 0, 4, 2, 1);
 	g_signal_connect(GTK_COMBO_BOX(w), "changed",
 			 G_CALLBACK(spectrum_data_style_changed), p);
 
 
 	w = gtk_color_button_new_with_rgba(&p->cfg->c_per);
 	gtk_color_chooser_set_use_alpha(GTK_COLOR_CHOOSER(w), TRUE);
-	gtk_grid_attach(grid, w, 0, 3, 1, 1);
+	gtk_grid_attach(grid, w, 0, 5, 1, 1);
 	g_signal_connect(w, "color-set",
 			 G_CALLBACK(spectrum_per_colour_set_cb), p);
 
 
 	w = gtk_button_new_with_label("Clear");
 	gtk_widget_set_halign(w, GTK_ALIGN_CENTER);
-	gtk_grid_attach(grid, w, 1, 3, 1, 1);
+	gtk_grid_attach(grid, w, 1, 5, 1, 1);
 	g_signal_connect(G_OBJECT(w), "clicked",
 			 G_CALLBACK(spectrum_reset_per_cb), p);
 
 	w = gtk_separator_new(GTK_ORIENTATION_HORIZONTAL);
-	gtk_grid_attach(grid, w, 0, 4, 2, 1);
+	gtk_grid_attach(grid, w, 0, 6, 2, 1);
 
 
 
 	w = gtk_label_new("Average");
 	gtk_widget_set_halign(w, GTK_ALIGN_START);
 	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
-	gtk_grid_attach(grid, w, 0, 5, 1, 1);
+	gtk_grid_attach(grid, w, 0, 7, 1, 1);
 
 	w = gtk_spin_button_new_with_range(0, 100, 1);
 	gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(w), TRUE);
@@ -776,7 +841,7 @@ static GtkWidget *spectrum_sidebar_new(Spectrum *p)
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w), p->cfg->n_avg);
 	gtk_widget_set_halign(w, GTK_ALIGN_FILL);
 	gtk_widget_set_hexpand(w, FALSE);
-	gtk_grid_attach(grid, w, 0, 6, 2, 1);
+	gtk_grid_attach(grid, w, 0, 8, 2, 1);
 	g_signal_connect(GTK_SPIN_BUTTON(w), "value-changed",
 			 G_CALLBACK(spectrum_avg_value_changed_cb), p);
 
@@ -790,26 +855,29 @@ static GtkWidget *spectrum_sidebar_new(Spectrum *p)
 	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(w), NULL, "Squares");
 	gtk_combo_box_set_active(GTK_COMBO_BOX(w), 0);
 	gtk_combo_box_set_active(GTK_COMBO_BOX(w), 0);	/* default HiSteps */
-	gtk_grid_attach(grid, w, 0, 7, 2, 1);
+	gtk_grid_attach(grid, w, 0, 9, 2, 1);
 	g_signal_connect(GTK_COMBO_BOX(w), "changed",
 			 G_CALLBACK(spectrum_avg_style_changed), p);
 
 	w = gtk_color_button_new_with_rgba(&p->cfg->c_avg);
 	gtk_color_chooser_set_use_alpha(GTK_COLOR_CHOOSER(w), TRUE);
-	gtk_grid_attach(grid, w, 0, 8, 1, 1);
+	gtk_grid_attach(grid, w, 0, 10, 1, 1);
 	g_signal_connect(w, "color-set",
 			 G_CALLBACK(spectrum_avg_colour_set_cb), p);
 
 
 	w = gtk_button_new_with_label("Clear");
 	gtk_widget_set_halign(w, GTK_ALIGN_CENTER);
-	gtk_grid_attach(grid, w, 1, 8, 1, 1);
+	gtk_grid_attach(grid, w, 1, 10, 1, 1);
 	g_signal_connect(G_OBJECT(w), "clicked",
 			 G_CALLBACK(spectrum_reset_avg_cb), p);
 
 	w = gtk_separator_new(GTK_ORIENTATION_HORIZONTAL);
-	gtk_grid_attach(grid, w, 0, 9, 2, 1);
+	gtk_grid_attach(grid, w, 0, 11, 2, 1);
 
+	w = gtk_label_new("");
+	gtk_grid_attach(grid, w, 0, 12, 2, 1);
+	p->cfg->fit.fitpar = GTK_LABEL(w);
 
 
 	return GTK_WIDGET(grid);
@@ -826,10 +894,15 @@ static void gui_create_spectrum_controls(Spectrum *p)
 	gtk_box_pack_start(GTK_BOX(p), w, TRUE, TRUE, 0);
 	p->cfg->plot = w;
 
-	xyplot_set_xlabel(p->cfg->plot, "Frequency");
-	xyplot_set_ylabel(p->cfg->plot, "Amplitude");
+	xyplot_set_xlabel(p->cfg->plot, "Frequency [MHz]");
+	xyplot_set_ylabel(p->cfg->plot, "Amplitude [K]");
 	g_signal_connect(p->cfg->plot, "xyplot-fit-selection",
-			 G_CALLBACK(gui_fitbox_selected), NULL);
+			 G_CALLBACK(spectrum_plt_fitbox_selected),
+			 &p->cfg->fit);
+
+	g_signal_connect(p->cfg->plot, "xyplot-clicked-xy-coord",
+			 G_CALLBACK(spectrum_plt_clicked_coord),
+			 p);
 
 	w = spectrum_sidebar_new(p);
 	gtk_box_pack_start(GTK_BOX(p), w, FALSE, FALSE, 0);
@@ -849,6 +922,8 @@ static gboolean spectrum_destroy(GtkWidget *w, void *data)
 	p = SPECTRUM(w);
 
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_spd);
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_ena);
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_dis);
 
 	return TRUE;
 }
@@ -901,8 +976,23 @@ static void spectrum_init(Spectrum *p)
 	gui_create_spectrum_controls(p);
 
 	p->cfg->id_spd = g_signal_connect(sig_get_instance(), "pr-spec-data",
-				G_CALLBACK(spectrum_handle_pr_spec_data),
-				(gpointer) p);
+			 G_CALLBACK(spectrum_handle_pr_spec_data),
+			 (gpointer) p);
+
+	p->cfg->id_acq = g_signal_connect(sig_get_instance(), "pr-status-acq",
+			 G_CALLBACK(spectrum_handle_pr_status_acq),
+			 (gpointer) p);
+
+	p->cfg->id_ena = g_signal_connect(sig_get_instance(),
+			 "pr-spec-acq-enable",
+			 G_CALLBACK(spectrum_acq_cmd_spec_acq_enable),
+			 (gpointer) p);
+
+	p->cfg->id_dis = g_signal_connect(sig_get_instance(),
+			 "pr-spec-acq-disable",
+			 G_CALLBACK(spectrum_acq_cmd_spec_acq_disable),
+			 (gpointer) p);
+
 
 	g_signal_connect(p, "destroy", G_CALLBACK(spectrum_destroy), NULL);
 }

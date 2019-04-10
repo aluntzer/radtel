@@ -20,6 +20,24 @@
 #include <spectrum.h>
 #include <cmd.h>
 #include <xyplot.h>
+#include <gio/gio.h>
+
+struct spectrum {
+	gdouble *x;
+	gdouble *y;
+	gsize    n;
+};
+
+struct fitdata {
+	GArray *frq;
+	GArray *amp;
+
+	void *plt_ref_in;
+	void *plt_ref_out;
+
+	GtkLabel *fitpar;
+};
+
 
 struct _SpectrumConfig {
 
@@ -37,7 +55,14 @@ struct _SpectrumConfig {
 	enum xyplot_graph_style s_avg;
 	GdkRGBA                 c_avg;
 
+	GtkSwitch *sw_acq;
+
+	struct fitdata fit;
+
 	guint id_spd;
+	guint id_acq;
+	guint id_ena;
+	guint id_dis;
 };
 
 

@@ -2770,6 +2770,9 @@ static gboolean xyplot_motion_notify_event_cb(GtkWidget *widget,
 		goto exit;
 
 
+	if (event->state & GDK_MOD1_MASK)
+		return TRUE;
+
 
 	p = XYPLOT(widget);
 
@@ -2928,6 +2931,9 @@ static gboolean xyplot_button_release_cb(GtkWidget *widget,
 	if (event->state & GDK_SHIFT_MASK)
 		return TRUE;
 
+	if (event->state & GDK_SHIFT_MASK)
+		return TRUE;
+
 
 	if (event->state & GDK_CONTROL_MASK) {
 
@@ -2989,6 +2995,9 @@ static gboolean xyplot_key_press_cb(GtkWidget *widget, GdkEventKey *event,
 static gboolean xyplot_button_press_cb(GtkWidget *widget, GdkEventButton *event,
 				       gpointer data)
 {
+	gdouble x, y;
+	gdouble px, py;
+
 	XYPlot *p;
 
 
@@ -2996,6 +3005,27 @@ static gboolean xyplot_button_press_cb(GtkWidget *widget, GdkEventButton *event,
 
 	if (event->type != GDK_BUTTON_PRESS)
 		goto exit;
+
+
+
+	if ((event->button == 1) &&
+	    (event->state & GDK_MOD1_MASK) ) {
+
+		/* get plot pixel reference */
+
+		px = event->x - p->plot_x;
+		py = p->plot_y + p->plot_h - event->y;
+
+		/* get data range reference */
+		x = px / p->scale_x + p->x_ax.min;
+		y = py / p->scale_y + p->y_ax.min;
+
+		g_signal_emit_by_name(p, "xyplot-clicked-xy-coord", x, y);
+
+		goto exit;
+	}
+
+
 
 
 	/* get plot pixel reference for axis shift */
@@ -3155,6 +3185,12 @@ static void xyplot_class_init(XYPlotClass *klass)
 		     TYPE_XYPLOT, G_SIGNAL_RUN_FIRST,
 		     0, NULL, NULL, NULL,
 		     G_TYPE_NONE, 0);
+
+	g_signal_new("xyplot-clicked-xy-coord",
+		     TYPE_XYPLOT, G_SIGNAL_RUN_FIRST,
+		     0, NULL, NULL, NULL,
+		     G_TYPE_NONE, 2, G_TYPE_DOUBLE, G_TYPE_DOUBLE);
+
 
 	/* override widget methods go here if needed */
 }
