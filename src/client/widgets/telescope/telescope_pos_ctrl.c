@@ -141,6 +141,25 @@ static void telescope_set_pos_cb(GtkWidget *w, Telescope *p)
 
 
 /**
+ * @brief signal handler for stop button press event
+ */
+
+static void telescope_stop_at_last_pos_cb(GtkWidget *w, Telescope *p)
+{
+	/* disable tracking */
+	g_signal_emit_by_name(sig_get_instance(), "tracking", FALSE, 0.0, 0.0);
+
+	/* if moving, issue move command to last known position */
+	if (p->cfg->moving)
+		cmd_moveto_azel(PKT_TRANS_ID_UNDEF, p->cfg->az, p->cfg->el);
+
+	/** XXX notify user via status **/
+}
+
+
+
+
+/**
  * @brief create telescope set position button
  */
 
@@ -171,6 +190,39 @@ GtkWidget *telescope_pos_ctrl_new(Telescope *p)
 }
 
 
+/**
+ * @brief create telescope stop button
+ *
+ * @note this emulates a "stop drive" command by issuing a move command
+ *	 to the last known telescope position
+ */
+
+GtkWidget *telescope_stop_ctrl_new(Telescope *p)
+{
+	GtkGrid *grid;
+	GtkWidget *w;
+
+
+	grid = GTK_GRID(new_default_grid());
+
+	w = gui_create_desclabel("Interrupt Move",
+				 "Disable tracking and return to last known "
+				 "coordinates.");
+
+	gtk_grid_attach(GTK_GRID(grid), w, 0, 0, 1, 1);
+
+	w = gtk_button_new_with_label("Interrupt Move");
+	gtk_widget_set_tooltip_text(w, "Return to last\nknown position.");
+
+	gtk_widget_set_hexpand(w, TRUE);
+	gtk_widget_set_halign(w, GTK_ALIGN_END);
+	gtk_grid_attach(grid, w, 1, 0, 1, 1);
+	g_signal_connect(G_OBJECT(w), "clicked",
+			 G_CALLBACK(telescope_stop_at_last_pos_cb), p);
+
+
+	return GTK_WIDGET(grid);
+}
 
 /**
  * @brief signal handler for PARK button press event
@@ -195,7 +247,7 @@ GtkWidget *telescope_park_ctrl_new(Telescope *p)
 	grid = GTK_GRID(new_default_grid());
 
 	w = gui_create_desclabel("Park Telescope",
-				 "Move telescope to park position");
+				 "Move telescope to park position.");
 
 	gtk_grid_attach(GTK_GRID(grid), w, 0, 0, 1, 1);
 

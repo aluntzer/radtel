@@ -86,6 +86,9 @@ static void gui_create_telescope_controls(Telescope *p)
 	w = telescope_pos_ctrl_new(p);
 	gtk_box_pack_start(GTK_BOX(p), w, FALSE, FALSE, 0);
 
+	w = telescope_stop_ctrl_new(p);
+	gtk_box_pack_start(GTK_BOX(p), w, FALSE, FALSE, 0);
+
 	w = telescope_park_ctrl_new(p);
 	gtk_box_pack_start(GTK_BOX(p), w, FALSE, FALSE, 0);
 
