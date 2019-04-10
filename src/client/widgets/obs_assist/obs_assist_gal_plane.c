@@ -453,13 +453,10 @@ static void obs_assist_on_prepare_gal_plane(GtkWidget *as, GtkWidget *pg,
 	p->cfg->gal_plane.n_rpt = gtk_spin_button_get_value_as_int(sb);
 
 
-	/* swap around */
-	if (p->cfg->gal_plane.glon_lo > p->cfg->gal_plane.glon_hi) {
-		tmp = p->cfg->gal_plane.glon_hi;
-		p->cfg->gal_plane.glon_hi = p->cfg->gal_plane.glon_lo;
-		p->cfg->gal_plane.glon_lo = tmp;
-	}
-
+	/* determine initial direction*/
+	tmp = p->cfg->gal_plane.glon_hi - p->cfg->gal_plane.glon_lo;
+	if (tmp < 0.0)
+		p->cfg->gal_plane.glon_stp *= -1.0;
 
 	/* initial scan position is at lower bound */
 	p->cfg->gal_plane.glon_cur = p->cfg->gal_plane.glon_lo;
