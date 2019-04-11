@@ -23,6 +23,19 @@
 
 
 /**
+ * @brief map an hour angle to sidereal from mean solar
+ *
+ * @note the sidereal day is 23h 56m 4.091s or 23.934469722h
+ *	 the mean solar day is currently 24h 0h 0.002s
+ */
+
+static double solar_ha_shift_to_sid(double ha_shift)
+{
+	return ha_shift * (24.0 / 23.934469722);
+}
+
+
+/**
  * @brief computes julian dates
  *
  * @param a struct tm, years in years since 1900, months: jan=1, feb=2,...
@@ -195,6 +208,8 @@ struct coord_horizontal equatorial_to_horizontal(struct coord_equatorial eq,
 	struct coord_horizontal hor;
 
 
+	hour_angle_shift = solar_ha_shift_to_sid(hour_angle_shift);
+
 	hour_angle = local_sidereal_time(lon) - eq.ra + hour_angle_shift;
 
 	if(hour_angle < 0.0)
@@ -243,6 +258,8 @@ struct coord_equatorial horizontal_to_equatorial(struct coord_horizontal hor,
 
 	struct coord_equatorial eq;
 
+
+	hour_angle_shift = solar_ha_shift_to_sid(hour_angle_shift);
 
 	hor.az = RAD(hor.az);
 	hor.el = RAD(hor.el);
@@ -592,6 +609,8 @@ struct coord_equatorial moon_ra_dec(double lat, double lon,
 	struct coord_equatorial moon;
 
 
+	hour_angle_shift = solar_ha_shift_to_sid(hour_angle_shift);
+
 	hour_angle = local_sidereal_time(lon);
 
 	/* fractional day number since 1999 Jan 0, 0h TT (terrestrial time) */
@@ -683,6 +702,8 @@ struct coord_equatorial sun_ra_dec(double hour_angle_shift)
 
 	struct coord_equatorial sun;
 
+
+	/* we use day number, no correction needed of ha_shift */
 
 	/* days since Jan 0th, 0h UT */
 	d = daynumber() + hour_angle_shift / 24.0;
