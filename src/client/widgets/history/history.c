@@ -305,6 +305,8 @@ static void history_append_wf(History *p, const gdouble *amp, gsize len)
 
 	gdouble min, max;
 
+	static gdouble th_lo, th_hi;
+
 	guchar *wf;
 	guchar *pix;
 
@@ -319,7 +321,7 @@ static void history_append_wf(History *p, const gdouble *amp, gsize len)
 
 	if (!p->cfg->wf_pb) {
 		p->cfg->wf_pb = gdk_pixbuf_new(GDK_COLORSPACE_RGB, FALSE, 8,
-					       len, 50);
+					       len, 100);
 
 		if (!p->cfg->wf_pb) {
 			g_warning("Could not create pixbuf: out of memory");
@@ -371,11 +373,23 @@ static void history_append_wf(History *p, const gdouble *amp, gsize len)
 	}
 
 
+	/* prime thresholds and update slowly for a nicer graph
+	 * until we have sliders to adjust the cuts
+	 */
+	if (th_lo == 0.0)
+		th_lo = min;
+	else
+		th_lo = (th_lo + min) * 0.5;
+
+	if (th_hi == 0.0)
+		th_hi = max;
+	else
+		th_hi = (th_hi + max) * 0.5;
 
 	pix = wf;
 	/* add new line */
 	for (i = 0; i < len; i++) {
-		history_wf_get_rgb((amp[i] - min) / (max - min),
+		history_wf_get_rgb((amp[i] - th_lo) / (th_hi - th_lo),
 				   0.01, 0.99,
 				   &pix[0], &pix[1], &pix[2]);
 		pix += nc;
