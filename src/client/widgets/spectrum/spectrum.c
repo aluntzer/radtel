@@ -37,6 +37,16 @@ G_DEFINE_TYPE_WITH_PRIVATE(Spectrum, spectrum, GTK_TYPE_BOX)
 
 
 
+/**
+ * @brief handle connected
+ */
+
+static void spectrum_connected(gpointer instance, gpointer data)
+{
+	/* fetch the config */
+	cmd_spec_acq_cfg_get(PKT_TRANS_ID_UNDEF);
+}
+
 
 /**
  * @brief signal handler for toggle switch
@@ -981,6 +991,7 @@ static gboolean spectrum_destroy(GtkWidget *w, void *data)
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_ena);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_dis);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_cfg);
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_con);
 
 	return TRUE;
 }
@@ -1054,10 +1065,12 @@ static void spectrum_init(Spectrum *p)
 			 G_CALLBACK(spectrum_handle_pr_spec_acq_cfg),
 			 (gpointer) p);
 
+	p->cfg->id_con = g_signal_connect(sig_get_instance(), "connected",
+			 G_CALLBACK(spectrum_connected),
+			 (gpointer) p);
+
 	g_signal_connect(p, "destroy", G_CALLBACK(spectrum_destroy), NULL);
 
-	/* fetch the config */
-	cmd_spec_acq_cfg_get(PKT_TRANS_ID_UNDEF);
 }
 
 

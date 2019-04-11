@@ -175,7 +175,7 @@ static GtkWidget *gui_create_log(void)
 		gtk_text_buffer_create_mark(b, "end", &iter, FALSE);
 	}
 /**** XXX console for now... ****/
-#if 1
+#if 0
 	 g_log_set_handler(NULL, G_LOG_LEVEL_MESSAGE, log_output, (gpointer) textview);
 #endif
 	/* TODO add callbacks, right-click menu */
@@ -198,153 +198,6 @@ static GtkWidget *gui_create_chatlog(void)
 	gtk_paned_pack2(GTK_PANED(paned), w, TRUE, TRUE);
 
 	return paned;
-}
-
-
-
-
-
-GtkWidget *gui_create_status_view(void)
-{
-	GtkWidget *grid;
-
-	GtkWidget *w;
-
-
-
-
-	grid = gtk_grid_new();
-	gtk_grid_set_row_spacing(GTK_GRID(grid), 6);
-	gtk_grid_set_column_spacing(GTK_GRID(grid), 12);
-	g_object_set(grid, "margin", 18, NULL);
-
-
-
-	w = gtk_label_new(NULL);
-	gtk_label_set_markup(GTK_LABEL(w), "<span alpha='50%'>Azimuth</span>");
-	gtk_label_set_xalign(GTK_LABEL(w), 1.0);
-	gtk_grid_attach(GTK_GRID(grid), w, 0, 0, 1, 1);
-
-	w = gtk_label_new("180°");
-	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
-	gtk_grid_attach(GTK_GRID(grid), w, 1, 0, 1, 1);
-
-	w = gtk_label_new(NULL);
-	gtk_label_set_markup(GTK_LABEL(w), "<span alpha='50%'>Elevation</span>");
-	gtk_label_set_xalign(GTK_LABEL(w), 1.0);
-	gtk_grid_attach(GTK_GRID(grid), w, 0, 1, 1, 1);
-
-	w = gtk_label_new("45°");
-	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
-	gtk_grid_attach(GTK_GRID(grid), w, 1, 1, 1, 1);
-
-	w = gtk_label_new(NULL);
-	gtk_label_set_markup(GTK_LABEL(w), "<span alpha='50%'>RA</span>");
-	gtk_label_set_xalign(GTK_LABEL(w), 1.0);
-	gtk_grid_attach(GTK_GRID(grid), w, 0, 2, 1, 1);
-
-	w = gtk_label_new("1h 2m 3s");
-	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
-	gtk_grid_attach(GTK_GRID(grid), w, 1, 2, 1, 1);
-
-	w = gtk_label_new(NULL);
-	gtk_label_set_markup(GTK_LABEL(w), "<span alpha='50%'>DE</span>");
-	gtk_label_set_xalign(GTK_LABEL(w), 1.0);
-	gtk_grid_attach(GTK_GRID(grid), w, 0, 3, 1, 1);
-
-	w = gtk_label_new("1° 2m 3s");
-	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
-	gtk_grid_attach(GTK_GRID(grid), w, 1, 3, 1, 1);
-
-
-
-
-	w = gtk_separator_new(GTK_ORIENTATION_VERTICAL);
-	gtk_grid_attach(GTK_GRID(grid), w, 2, 0, 1, 4);
-
-	w = gtk_label_new(NULL);
-	gtk_label_set_markup(GTK_LABEL(w), "<span alpha='50%'>F<sub>upper</sub></span>");
-	gtk_label_set_xalign(GTK_LABEL(w), 1.0);
-	gtk_grid_attach(GTK_GRID(grid), w, 3, 0, 1, 1);
-
-	w = gtk_label_new("1000 MHz");
-	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
-	gtk_grid_attach(GTK_GRID(grid), w, 4, 0, 1, 1);
-
-	w = gtk_label_new(NULL);
-	gtk_label_set_markup(GTK_LABEL(w), "<span alpha='50%'>F<sub>lower</sub></span>");
-	gtk_label_set_xalign(GTK_LABEL(w), 1.0);
-	gtk_grid_attach(GTK_GRID(grid), w, 3, 1, 1, 1);
-
-	w = gtk_label_new("1200 MHz");
-	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
-	gtk_grid_attach(GTK_GRID(grid), w, 4, 1, 1, 1);
-
-	w = gtk_label_new(NULL);
-	gtk_label_set_markup(GTK_LABEL(w), "<span alpha='50%'>Bandwith</span>");
-	gtk_label_set_xalign(GTK_LABEL(w), 1.0);
-	gtk_grid_attach(GTK_GRID(grid), w, 3, 2, 1, 1);
-
-	w = gtk_label_new("123 kHz");
-	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
-	gtk_grid_attach(GTK_GRID(grid), w, 4, 2, 1, 1);
-
-	w = gtk_label_new(NULL);
-	gtk_label_set_markup(GTK_LABEL(w), "<span alpha='50%'>Resolution</span>");
-	gtk_label_set_xalign(GTK_LABEL(w), 1.0);
-	gtk_grid_attach(GTK_GRID(grid), w, 3, 3, 1, 1);
-
-	w = gtk_label_new("50 kHz");
-	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
-	gtk_grid_attach(GTK_GRID(grid), w, 4, 3, 1, 1);
-
-
-
-
-
-	w = gtk_separator_new(GTK_ORIENTATION_VERTICAL);
-	gtk_grid_attach(GTK_GRID(grid), w, 5, 0, 1, 4);
-
-	w = gtk_label_new(NULL);
-	gtk_label_set_markup(GTK_LABEL(w), "<span alpha='50%'>Network Data Rate</span>");
-	gtk_label_set_xalign(GTK_LABEL(w), 1.0);
-	gtk_grid_attach(GTK_GRID(grid), w, 6, 0, 1, 1);
-
-	w = gtk_label_new("720 kB/s");
-	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
-	gtk_grid_attach(GTK_GRID(grid), w, 7, 0, 1, 1);
-
-
-	w = gtk_label_new(NULL);
-	gtk_label_set_markup(GTK_LABEL(w), "<span alpha='50%'>Readout Rate</span>");
-	gtk_label_set_xalign(GTK_LABEL(w), 1.0);
-	gtk_grid_attach(GTK_GRID(grid), w, 6, 1, 1, 1);
-
-	w = gtk_label_new("100 Hz");
-	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
-	gtk_grid_attach(GTK_GRID(grid), w, 7, 1, 1, 1);
-
-
-	w = gtk_label_new(NULL);
-	gtk_label_set_markup(GTK_LABEL(w), "<span alpha='50%'>Refresh Rate</span>");
-	gtk_label_set_xalign(GTK_LABEL(w), 1.0);
-	gtk_grid_attach(GTK_GRID(grid), w, 6, 2, 1, 1);
-
-	w = gtk_label_new("10 Hz");
-	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
-	gtk_grid_attach(GTK_GRID(grid), w, 7, 2, 1, 1);
-
-
-	w = gtk_label_new(NULL);
-	gtk_label_set_markup(GTK_LABEL(w), "<span alpha='50%'>Averaging</span>");
-	gtk_label_set_xalign(GTK_LABEL(w), 1.0);
-	gtk_grid_attach(GTK_GRID(grid), w, 6, 3, 1, 1);
-
-	w = gtk_label_new("5x");
-	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
-	gtk_grid_attach(GTK_GRID(grid), w, 7, 3, 1, 1);
-
-	return grid;
 }
 
 
@@ -417,7 +270,6 @@ static void gui_port_entry_changed_cb(GtkEditable *ed, gpointer data)
 	}
 
 	g_settings_set_uint(s, "server-port", (guint) port);
-
 }
 
 
@@ -621,6 +473,31 @@ static GtkWidget *gui_create_stack_switcher(void)
 
 	sswdnd = sswdnd_new();
 
+	w = gtk_scrolled_window_new(NULL, NULL);
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(w),
+				       GTK_POLICY_AUTOMATIC,
+				       GTK_POLICY_AUTOMATIC);
+	gtk_container_add(GTK_CONTAINER(w), spectrum_new());
+	sswdnd_add_named(sswdnd, w, "Spectrum");
+
+
+
+
+	w = gtk_scrolled_window_new(NULL, NULL);
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(w),
+				       GTK_POLICY_AUTOMATIC,
+				       GTK_POLICY_AUTOMATIC);
+	gtk_container_add(GTK_CONTAINER(w), telescope_new());
+	sswdnd_add_named(sswdnd, w, "Telescope");
+
+
+	w = gtk_scrolled_window_new(NULL, NULL);
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(w),
+				       GTK_POLICY_AUTOMATIC,
+				       GTK_POLICY_AUTOMATIC);
+	gtk_container_add(GTK_CONTAINER(w), radio_new());
+	sswdnd_add_named(sswdnd, w, "Spectrometer");
+
 
 	w = gtk_scrolled_window_new(NULL, NULL);
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(w),
@@ -638,28 +515,10 @@ static GtkWidget *gui_create_stack_switcher(void)
 	sswdnd_add_named(sswdnd, w, "Observation");
 
 
-	w = gtk_scrolled_window_new(NULL, NULL);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(w),
-				       GTK_POLICY_AUTOMATIC,
-				       GTK_POLICY_AUTOMATIC);
-	gtk_container_add(GTK_CONTAINER(w), spectrum_new());
-	sswdnd_add_named(sswdnd, w, "Spectrum");
 
 
-	w = gtk_scrolled_window_new(NULL, NULL);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(w),
-				       GTK_POLICY_AUTOMATIC,
-				       GTK_POLICY_AUTOMATIC);
-	gtk_container_add(GTK_CONTAINER(w), telescope_new());
-	sswdnd_add_named(sswdnd, w, "Telescope");
 
 
-	w = gtk_scrolled_window_new(NULL, NULL);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(w),
-				       GTK_POLICY_AUTOMATIC,
-				       GTK_POLICY_AUTOMATIC);
-	gtk_container_add(GTK_CONTAINER(w), radio_new());
-	sswdnd_add_named(sswdnd, w, "Spectrometer");
 
 
 	sswdnd_add_named(sswdnd, gui_create_chatlog(), "Log");
@@ -693,11 +552,9 @@ int gui_client(int argc, char *argv[])
 
 	if (s) {
 		name = g_settings_get_string(s, "gui-font");
-		if (name) {
-			g_message("name: %s", name);
+		if (name)
 			g_object_set(gtk_settings_get_default(),
 				     "gtk-font-name", name, NULL);
-		}
 	}
 
 

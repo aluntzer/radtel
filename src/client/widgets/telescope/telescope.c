@@ -31,6 +31,16 @@
 G_DEFINE_TYPE_WITH_PRIVATE(Telescope, telescope, GTK_TYPE_BOX)
 
 
+/**
+ * @brief handle connected
+ */
+
+static void telescope_connected(gpointer instance, gpointer data)
+{
+	cmd_capabilities(PKT_TRANS_ID_UNDEF);
+	cmd_getpos_azel(PKT_TRANS_ID_UNDEF);
+}
+
 
 /**
  * @brief handle capabilities data
@@ -120,6 +130,7 @@ static gboolean telescope_destroy(GtkWidget *w, void *data)
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_pos);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_trk);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_mov);
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_con);
 
 	return TRUE;
 }
@@ -178,7 +189,6 @@ static void telescope_init(Telescope *p)
 				  (GCallback) telescope_tracker_moveto_azel_cb,
 				  (gpointer) p);
 
-
 	p->cfg->id_trk = g_signal_connect(sig_get_instance(), "tracking",
 				  (GCallback) telescope_tracker_ctrl,
 				  (gpointer) p);
@@ -186,6 +196,10 @@ static void telescope_init(Telescope *p)
 	p->cfg->id_mov = g_signal_connect(sig_get_instance(), "pr-status-move",
 				  G_CALLBACK(telscope_handle_pr_status_move),
 				  (void *) p);
+
+	p->cfg->id_con = g_signal_connect(sig_get_instance(), "connected",
+				  (GCallback) telescope_connected,
+				  (gpointer) p);
 
 	g_signal_connect(p, "destroy", G_CALLBACK(telescope_destroy), NULL);
 }

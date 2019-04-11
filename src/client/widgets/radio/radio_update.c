@@ -18,6 +18,7 @@
 
 #include <radio.h>
 #include <radio_cfg.h>
+#include <radio_internal.h>
 #include <coordinates.h>
 
 

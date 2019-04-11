@@ -23,7 +23,7 @@
 #include <net.h>
 #include <cmd.h>
 #include <pkt_proc.h>
-
+#include <signals.h>
 
 #include <gio/gio.h>
 #include <glib.h>
@@ -36,6 +36,13 @@ struct con_data {
 } server_con;
 
 
+
+static gboolean net_reconnect_cb(gpointer data)
+{
+	net_client_init();
+
+	return G_SOURCE_REMOVE;
+}
 
 
 /**
@@ -70,7 +77,11 @@ static void drop_connection(struct con_data *c)
 		}
 	}
 
-	g_warning("Dropped connection to server!");
+	const GSourceFunc sf = net_reconnect_cb;
+	sig_status_push("Dropped connection to server, attempting "
+			"reconnect in 10s");
+
+	g_timeout_add_seconds(10, sf, NULL);
 }
 
 
@@ -144,7 +155,7 @@ pending:
 			  g_buffered_input_stream_get_buffer_size(bistream));
 
 		if (pkt_size < MAX_PAYLOAD_SIZE) {
-			g_message("Increasing input buffer to packet size\n");
+			g_message("Increasing input buffer to packet size");
 			g_buffered_input_stream_set_buffer_size(bistream,
 								pkt_size);
 			goto exit;
@@ -292,6 +303,7 @@ gint net_send(const char *pkt, size_t nbytes)
 	stream = G_IO_STREAM(server_con.con);
 
 	if (!stream) {
+		sig_status_push("Remote not connected, failed to send packet");
 		g_warning("Remote not connected, cannot send packet");
 		return -1;
 	}
@@ -300,13 +312,13 @@ gint net_send(const char *pkt, size_t nbytes)
 
 
 	if (g_io_stream_is_closed(stream)) {
-		g_message("Error sending packet: stream closed\n");
+		g_message("Error sending packet: stream closed");
 		return -1;
 	}
 
 
 	if (!g_socket_connection_is_connected(server_con.con)) {
-		g_message("Error sending packet: socket not connected\n");
+		g_message("Error sending packet: socket not connected");
 		return -1;
 	}
 
@@ -321,6 +333,7 @@ gint net_send(const char *pkt, size_t nbytes)
 
 	return ret;
 }
+
 
 
 /**
@@ -343,6 +356,7 @@ int net_client_init(void)
 	guint16 port;
 
 
+
 	s = g_settings_new("org.uvie.radtel.config");
 	if (!s)
 		return 0;
@@ -360,18 +374,31 @@ int net_client_init(void)
 	con = g_socket_client_connect_to_host(client, host, port, NULL, &error);
 
 	if (error) {
-		g_warning("%s\n", error->message);
+		const GSourceFunc sf = net_reconnect_cb;
+		gchar *msg;
+
+		msg = g_strdup_printf("%s; Attempting reconnect in 10s",
+				      error->message);
+
+		sig_status_push(msg);
+		g_free(msg);
+		g_timeout_add_seconds(10, sf, NULL);
+
+		g_warning("%s", error->message);
 		g_clear_error(&error);
+
+
 		return -1;
 	}
 
 	net_setup_recv(con);
 
-	g_message("Client started");
+	sig_connected();
 
-	cmd_capabilities(PKT_TRANS_ID_UNDEF);
-	cmd_getpos_azel(PKT_TRANS_ID_UNDEF);
 
+	g_debug("Client started");
+
+	sig_status_push("Connected to server");
 
 
 	return 0;

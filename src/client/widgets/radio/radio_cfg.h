@@ -90,6 +90,7 @@ struct _RadioConfig {
 	guint id_ena;
 	guint id_dis;
 	guint id_pos;
+	guint id_con;
 
 
 	guint id_vh;

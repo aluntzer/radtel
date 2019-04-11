@@ -46,6 +46,17 @@ static void sky_plot(GtkWidget *w);
 
 
 /**
+ * @brief handle connected
+ */
+
+static void sky_connected(gpointer instance, gpointer data)
+{
+	cmd_capabilities(PKT_TRANS_ID_UNDEF);
+	cmd_getpos_azel(PKT_TRANS_ID_UNDEF);
+}
+
+
+/**
  * @brief handle tracking signal and turn of internal object selection
  */
 
@@ -2105,6 +2116,7 @@ static gboolean sky_destroy(GtkWidget *w, void *data)
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_pos);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_tgt);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_trk);
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_con);
 
 	return TRUE;
 }
@@ -2193,6 +2205,10 @@ static void sky_init(Sky *p)
 
 	p->cfg->id_trk = g_signal_connect(sig_get_instance(), "tracking",
 			  G_CALLBACK(sky_handle_tracking),
+			  (gpointer) p);
+
+	p->cfg->id_con = g_signal_connect(sig_get_instance(), "connected",
+			  G_CALLBACK(sky_connected),
 			  (gpointer) p);
 
 

@@ -91,6 +91,7 @@ struct _SkyConfig {
 	guint id_pos;
 	guint id_tgt;
 	guint id_trk;
+	guint id_con;
 };
 
 

@@ -67,6 +67,7 @@ struct _TelescopeConfig {
 	guint id_trk;
 	guint id_mov;
 	guint id_tgt;
+	guint id_con;
 };
 
 

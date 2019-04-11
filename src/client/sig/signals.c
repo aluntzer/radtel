@@ -37,6 +37,19 @@ static void setup_sig_shutdown(void)
 
 
 /**
+ *  @brief internal signal to notify all components of an established connection
+ */
+
+static void setup_sig_connected(void)
+{
+	g_signal_new("connected",
+		     G_TYPE_OBJECT, G_SIGNAL_RUN_FIRST,
+		     0, NULL, NULL, NULL,
+		     G_TYPE_NONE, 0);
+}
+
+
+/**
  *  @brief internal signal to control position tracking
  */
 
@@ -173,6 +186,7 @@ void sig_init(void)
 
 
 	setup_sig_shutdown();
+	setup_sig_connected();
 	setup_sig_tracking();
 	setup_sig_status_push();
 

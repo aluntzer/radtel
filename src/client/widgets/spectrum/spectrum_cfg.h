@@ -65,6 +65,7 @@ struct _SpectrumConfig {
 	guint id_ena;
 	guint id_dis;
 	guint id_cfg;
+	guint id_con;
 };
 
 

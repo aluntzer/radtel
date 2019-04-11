@@ -69,10 +69,6 @@ static void radio_acq_res_handle_pr_capabilities(gpointer instance,
 static gint radio_sb_bin_div_input_cb(GtkSpinButton *sb, gdouble *new_val,
 				      Radio *p)
 {
-	int div;
-	gdouble disp;
-
-
 	if (p->cfg->c.bw_max_bin_div_lin)
 		(*new_val) = p->cfg->c.bw_max_bin_div_lin - p->cfg->bin_div;
 	else
@@ -143,10 +139,6 @@ static gboolean radio_sb_bin_div_output_cb(GtkSpinButton *sb, Radio *p)
 static gint radio_sb_bw_div_input_cb(GtkSpinButton *sb, gdouble *new_val,
 				     Radio *p)
 {
-	int div;
-	gdouble disp;
-
-
 	if (p->cfg->c.bw_max_div_lin)
 		(*new_val) = p->cfg->c.bw_max_div_lin - p->cfg->bw_div;
 	else
@@ -188,6 +180,8 @@ static gboolean radio_sb_bw_div_output_cb(GtkSpinButton *sb, Radio *p)
 		bw = p->cfg->c.bw_max_hz / (gdouble) (1 << p->cfg->bw_div);
 	}
 
+	bw *= 1e-3; /* to kHz */
+
 	lbl = g_strdup_printf("%g", bw);
 
 	gtk_entry_set_text(GTK_ENTRY(sb), lbl);
@@ -226,7 +220,7 @@ GtkWidget *radio_acq_res_ctrl_new(Radio *p)
 
 
 
-	w = gui_create_desclabel("Bandwidth Resolution",
+	w = gui_create_desclabel("Acquisition Bandwidth Resolution",
 				 "Configure the receiver's acquisition mode\n"
 				 "Note that this configures the acquisition "
 				 "size from which spectrae are assembled");
@@ -242,7 +236,7 @@ GtkWidget *radio_acq_res_ctrl_new(Radio *p)
 	/* TODO: add callback to label for remote range updates */
 
 
-	w = gtk_label_new("Bandwidth");
+	w = gtk_label_new("Resolution Bandwidth [kHz]");
 	gtk_grid_attach(grid, w, 1, 1, 1, 1);
 	p->cfg->sb_bw_lbl = GTK_LABEL(w);
 

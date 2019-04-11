@@ -439,7 +439,7 @@ static gboolean sswdnd_rescue_me(GtkWidget *w, gpointer data)
 
 
 	if (g_ref_count_dec(&sswdnd_ref))
-		g_signal_emit_by_name(sig_get_instance(), "shutdown", NULL);
+		sig_shutdown();
 	else
 		g_ref_count_inc(&sswdnd_ref);
 

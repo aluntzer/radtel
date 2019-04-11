@@ -101,6 +101,8 @@ radtel_SOURCES += sig/sig_pr_success.c \
 		  sig/sig_pr_moveto_azel.c \
 		  sig/sig_status_push.c \
 		  sig/sig_tracking.c \
+		  sig/sig_shutdown.c \
+		  sig/sig_connected.c \
 		  sig/signals.c
 
 radtel_SOURCES += widgets/radio/radio.c \

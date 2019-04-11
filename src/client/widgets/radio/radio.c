@@ -31,6 +31,18 @@
 G_DEFINE_TYPE_WITH_PRIVATE(Radio, radio, GTK_TYPE_BOX)
 
 
+
+/**
+ * @brief handle connected
+ */
+
+static void radio_connected(gpointer instance, gpointer data)
+{
+	cmd_capabilities(PKT_TRANS_ID_UNDEF);
+	cmd_getpos_azel(PKT_TRANS_ID_UNDEF);
+}
+
+
 /**
  * @brief handle capabilities data
  */
@@ -196,6 +208,7 @@ static gboolean radio_destroy(GtkWidget *w, void *data)
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_ena);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_dis);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_pos);
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_con);
 
 	return TRUE;
 }
@@ -267,6 +280,10 @@ static void radio_init(Radio *p)
 	p->cfg->id_pos = g_signal_connect(sig_get_instance(), "pr-getpos-azel",
 			 G_CALLBACK(radio_getpos_azel_cb),
 			 (gpointer) p);
+
+	p->cfg->id_con = g_signal_connect(sig_get_instance(), "connected",
+			  G_CALLBACK(radio_connected),
+			  (gpointer) p);
 
 	g_signal_connect(p, "destroy", G_CALLBACK(radio_destroy), NULL);
 }
