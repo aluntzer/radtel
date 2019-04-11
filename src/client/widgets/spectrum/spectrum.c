@@ -504,7 +504,8 @@ static void spectrum_append_data(Spectrum *p, struct spectrum *sp)
 			p->cfg->per = g_list_delete_link(p->cfg->per, elem);
 		}
 
-		alpha_frac = p->cfg->c_per.alpha / (gdouble) (p->cfg->n_per - 1);
+		alpha_frac = p->cfg->c_per.alpha * 1.0 / ((gdouble) (p->cfg->n_per));
+
 
 		for (elem = p->cfg->per; elem; elem = elem->next) {
 			ref = elem->data;
@@ -525,10 +526,8 @@ static void spectrum_append_data(Spectrum *p, struct spectrum *sp)
 			/* could happen if the base alpha was changed by user,
 			 * just set it to low
 			 */
-			if (c.alpha < 0.0) {
-				g_warning("%s:%d alpha < 0.0!", __func__, __LINE__);
+			if (c.alpha < 0.0)
 				c.alpha = alpha_frac;
-			}
 
 			xyplot_set_graph_rgba(p->cfg->plot, ref, c);
 		}
