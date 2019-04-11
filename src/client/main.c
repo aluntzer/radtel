@@ -40,11 +40,12 @@ int main(int argc, char *argv[])
 	/* initialise the signal server */
 	sig_init();
 
+	/* initialise networking */
+	net_client_init();
+
 	/* build the gui */
 	gui_client(argc, argv);
 
-	/* initialise networking */
-	net_client_init();
 
 
 	g_signal_connect(sig_get_instance(), "shutdown",
