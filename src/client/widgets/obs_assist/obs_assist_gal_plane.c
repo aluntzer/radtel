@@ -460,6 +460,15 @@ static void obs_assist_on_prepare_gal_plane(GtkWidget *as, GtkWidget *pg,
 
 	/* initial scan position is at lower bound */
 	p->cfg->gal_plane.glon_cur = p->cfg->gal_plane.glon_lo;
+
+	/* swap around */
+	if (p->cfg->gal_plane.glon_lo > p->cfg->gal_plane.glon_hi) {
+		tmp = p->cfg->gal_plane.glon_hi;
+		p->cfg->gal_plane.glon_hi = p->cfg->gal_plane.glon_lo;
+		p->cfg->gal_plane.glon_lo = tmp;
+	}
+
+
 	p->cfg->gal_plane.rpt_cur  = 1;
 
 
