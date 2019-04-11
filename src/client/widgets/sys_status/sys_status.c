@@ -31,6 +31,17 @@
 G_DEFINE_TYPE_WITH_PRIVATE(SysStatus, sys_status, GTK_TYPE_BOX)
 
 
+/**
+ * @brief handle connected
+ */
+
+static void sys_status_connected(gpointer instance, gpointer data)
+{
+	/* fetch configuration */
+	cmd_capabilities(PKT_TRANS_ID_UNDEF);
+	cmd_getpos_azel(PKT_TRANS_ID_UNDEF);
+}
+
 
 /**
  * @brief handle status acq
@@ -324,6 +335,7 @@ static gboolean sys_status_destroy(GtkWidget *w, void *data)
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_rec);
 
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_msg);
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_con);
 
 
 	return TRUE;
@@ -389,6 +401,9 @@ static void sys_status_init(SysStatus *p)
 				 G_CALLBACK(sys_status_handle_status_push),
 				 (void *) p);
 
+	p->cfg->id_con = g_signal_connect(sig_get_instance(), "connected",
+				 G_CALLBACK(sys_status_connected),
+				 (void *) p);
 
 	g_signal_connect(p, "destroy", G_CALLBACK(sys_status_destroy), NULL);
 }

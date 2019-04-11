@@ -292,11 +292,6 @@ GtkWidget *sys_status_pos_new(SysStatus *p)
 
 	p->cfg->id_to = g_timeout_add_seconds(1, sys_status_timeout_cb, p);
 
-	/* fetch configuration */
-	cmd_capabilities(PKT_TRANS_ID_UNDEF);
-	cmd_getpos_azel(PKT_TRANS_ID_UNDEF);
-
-
 
 	return GTK_WIDGET(grid);
 }

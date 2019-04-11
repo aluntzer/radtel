@@ -71,6 +71,7 @@ struct _SysStatusConfig {
 	guint id_mov;
 	guint id_rec;
 	guint id_msg;
+	guint id_con;
 };
 
 
