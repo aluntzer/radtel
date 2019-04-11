@@ -342,7 +342,7 @@ static void on_assistant_apply(GtkWidget *as, ObsAssist *p)
 	p->cfg->azel.amp = g_array_new(FALSE, FALSE, sizeof(gdouble));
 
 
-	g_signal_emit_by_name(sig_get_instance(), "tracking", FALSE, 0.0, 0.0);
+	sig_tracking(FALSE, 0.0, 0.0);
 
 	obs_assist_hide_procedure_selectors(p);
 

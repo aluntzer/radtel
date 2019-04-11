@@ -43,6 +43,9 @@ struct _SysStatusClass {
 };
 
 
+GType sys_status_get_type(void) G_GNUC_CONST;
+
+
 GtkWidget *sys_status_new(void);
 
 

@@ -147,7 +147,6 @@ static void sys_status_handle_pr_capabilities(gpointer instance,
 static void sys_status_hide_widgets(GtkWidget *w, gpointer data)
 {
 	SysStatus *p;
-	static int once; /** XXX demo */
 
 
 	p = SYS_STATUS(data);
@@ -161,20 +160,12 @@ static void sys_status_hide_widgets(GtkWidget *w, gpointer data)
 
 	gtk_widget_set_no_show_all(p->cfg->btn_show, FALSE);
 	gtk_widget_show(p->cfg->btn_show);
-
-
-	if (!once) {
-		gtk_label_set_text(p->cfg->info_bar_lbl, "Hidden!");
-		gtk_info_bar_set_revealed(GTK_INFO_BAR(p->cfg->info_bar), TRUE);
-		once = 1;
-	}
 }
 
 
 static void sys_status_show_widgets(GtkWidget *w, gpointer data)
 {
 	SysStatus *p;
-	static int once; /** XXX demo */
 
 
 	p = SYS_STATUS(data);
@@ -188,13 +179,6 @@ static void sys_status_show_widgets(GtkWidget *w, gpointer data)
 
 	gtk_widget_set_no_show_all(p->cfg->btn_show, TRUE);
 	gtk_widget_hide(p->cfg->btn_show);
-
-
-	if (!once) {
-		gtk_label_set_text(p->cfg->info_bar_lbl, "Visible!");
-		gtk_info_bar_set_revealed(GTK_INFO_BAR(p->cfg->info_bar), TRUE);
-		once = 1;
-	}
 }
 
 
@@ -327,6 +311,10 @@ static gboolean sys_status_destroy(GtkWidget *w, void *data)
 	p = SYS_STATUS(w);
 
 	g_source_remove(p->cfg->id_to);
+
+	if (p->cfg->id_to_msg)
+	    g_source_remove(p->cfg->id_to_msg);
+
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_pos);
 
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_cap);
@@ -334,6 +322,9 @@ static gboolean sys_status_destroy(GtkWidget *w, void *data)
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_slw);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_mov);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_rec);
+
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_msg);
+
 
 	return TRUE;
 }
@@ -366,6 +357,8 @@ static void sys_status_init(SysStatus *p)
 
 	p->cfg = sys_status_get_instance_private(p);
 
+	p->cfg->id_to_msg = 0;;
+
 	gtk_orientable_set_orientation(GTK_ORIENTABLE(p),
 				       GTK_ORIENTATION_VERTICAL);
 
@@ -391,6 +384,11 @@ static void sys_status_init(SysStatus *p)
 	p->cfg->id_rec = g_signal_connect(sig_get_instance(), "pr-status-rec",
 				 G_CALLBACK(sys_status_handle_pr_status_rec),
 				 (void *) p);
+
+	p->cfg->id_msg = g_signal_connect(sig_get_instance(), "status-push",
+				 G_CALLBACK(sys_status_handle_status_push),
+				 (void *) p);
+
 
 	g_signal_connect(p, "destroy", G_CALLBACK(sys_status_destroy), NULL);
 }

@@ -35,6 +35,69 @@ static void sys_status_on_bar_response(GtkInfoBar *bar, gint resp_id,
 }
 
 
+/**
+ * @brief keep showing the messages until the buffer is empty
+ */
+
+static gboolean sys_status_bar_update_cb(gpointer data)
+{
+	SysStatus *p;
+
+
+	p = SYS_STATUS(data);
+
+
+	gtk_info_bar_set_revealed(GTK_INFO_BAR(p->cfg->info_bar), FALSE);
+
+	p->cfg->id_to_msg = 0;
+
+	return G_SOURCE_REMOVE;
+}
+
+
+/**
+ * @brief handle status bar messages
+ */
+
+void sys_status_handle_status_push(gpointer instance, const gchar *msg,
+				   gpointer data)
+{
+	const GSourceFunc sf = sys_status_bar_update_cb;
+
+
+	gint64 now;
+	time_t now_secs;
+	struct tm *now_tm;
+	char time_buf[128];
+
+	gchar *showmsg;
+
+	SysStatus *p;
+
+
+	p = SYS_STATUS(data);
+
+
+	/* timestamp */
+	now = g_get_real_time();
+	now_secs = (time_t) (now / 1000000);
+	now_tm = localtime(&now_secs);
+
+	strftime(time_buf, sizeof(time_buf), "%H:%M:%S", now_tm);
+
+	showmsg = g_strdup_printf("%s %s",time_buf, msg);
+
+	gtk_label_set_text(p->cfg->info_bar_lbl, showmsg);
+	gtk_info_bar_set_revealed(GTK_INFO_BAR(p->cfg->info_bar), TRUE);
+
+	g_free(showmsg);
+
+	if (p->cfg->id_to_msg)
+	    g_source_remove(p->cfg->id_to_msg);
+
+	p->cfg->id_to_msg = g_timeout_add_seconds(10, sf, p);
+}
+
 
 /**
  * @brief create a info bar which can update its label and appear on signal
@@ -50,7 +113,7 @@ GtkWidget *sys_status_info_bar_new(SysStatus *p)
 
 	gtk_info_bar_set_show_close_button(GTK_INFO_BAR (w), TRUE);
 	gtk_info_bar_set_revealed(GTK_INFO_BAR(w), FALSE);
-	gtk_info_bar_set_message_type(GTK_INFO_BAR(w), GTK_MESSAGE_WARNING);
+	gtk_info_bar_set_message_type(GTK_INFO_BAR(w), GTK_MESSAGE_INFO);
 	g_signal_connect(w, "response",
 			 G_CALLBACK(sys_status_on_bar_response), p);
 

@@ -1,5 +1,5 @@
 /**
- * @file    widgets/sys_status/sys_status_internal.h
+ * @file    client/sig/sig_status_push.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -14,16 +14,18 @@
  *
  */
 
-#ifndef _WIDGETS_SYS_STATUS_INTERNAL_H_
-#define _WIDGETS_SYS_STATUS_INTERNAL_H_
-
-#include <sys_status.h>
-
-
-GtkWidget *sys_status_info_bar_new(SysStatus *p);
-GtkWidget *sys_status_pos_new(SysStatus *p);
-void sys_status_handle_status_push(gpointer instance, const gchar *msg,
-				   gpointer data);
+#include <glib.h>
+#include <glib-object.h>
+#include <signals.h>
 
 
-#endif /* _WIDGETS_SYS_STATUS_INTERNAL_H */
+/**
+ * @brief emit status_push signal
+ */
+
+void sig_status_push(const gchar *msg)
+{
+	g_debug("Emit signal \"status-push\"");
+
+	g_signal_emit_by_name(sig_get_instance(), "status-push", msg);
+}

@@ -36,6 +36,8 @@ G_DEFINE_TYPE_WITH_PRIVATE(Spectrum, spectrum, GTK_TYPE_BOX)
 #define SPECTRUM_DEFAULT_PER_LEN 10
 
 
+
+
 /**
  * @brief signal handler for toggle switch
  */
@@ -143,7 +145,21 @@ static void spectrum_handle_pr_status_acq(gpointer instance,
 
 
 
+/**
+ * @brief handle spectral acquisition configuration data
+ */
 
+static void spectrum_handle_pr_spec_acq_cfg(gpointer instance,
+					    const struct spec_acq_cfg *acq,
+					    gpointer data)
+{
+	Spectrum *p;
+
+
+	p = SPECTRUM(data);
+
+	p->cfg->acq = (*acq);
+}
 
 
 /**
@@ -215,15 +231,54 @@ static void spectrum_plot_gaussian(GtkWidget *w, gdouble par[4], size_t n,
 
 
 /**
- * @brief connect to coord signal
+ * @brief update remote frequency setting on coord signal
  */
 
-static gboolean spectrum_plt_clicked_coord(GtkWidget *w, gdouble x, gdouble y,
+static gboolean spectrum_plt_clicked_coord(GtkWidget *w, gdouble x,
+					   __attribute__((unused)) gdouble y,
 					   gpointer data)
 {
-	g_message("TODO: shift to new center frequency %g", x);
+	uint64_t f, bw2;
 
-	return  TRUE;
+	gchar *msg;
+
+	struct spec_acq_cfg acq;
+
+	Spectrum *p;
+
+
+
+	p = SPECTRUM(data);
+
+
+	f = (uint64_t) (x * 1e6); /* to Hz */
+
+	acq = p->cfg->acq;
+
+	bw2 = (acq.freq_stop_hz - acq.freq_start_hz) / 2;
+
+
+	/* we do not really care whether the configuration is valid,
+	 * we'll just try to set it
+	 */
+
+	acq.freq_start_hz = f - bw2;
+	acq.freq_stop_hz  = f + bw2;
+
+	cmd_spec_acq_cfg(PKT_TRANS_ID_UNDEF,
+			 acq.freq_start_hz, acq.freq_stop_hz, acq.bw_div,
+			 acq.bin_div, 0, 0);
+
+	msg = g_strdup_printf("Acquisition frequency range update: "
+			      "%6.2f - %6.2f MHz",
+			      (gdouble) acq.freq_start_hz * 1e-6,
+			      (gdouble) acq.freq_stop_hz * 1e-6);
+
+	sig_status_push(msg);
+
+	g_free(msg);
+
+	return TRUE;
 }
 
 
@@ -922,8 +977,10 @@ static gboolean spectrum_destroy(GtkWidget *w, void *data)
 	p = SPECTRUM(w);
 
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_spd);
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_acq);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_ena);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_dis);
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_cfg);
 
 	return TRUE;
 }
@@ -993,8 +1050,14 @@ static void spectrum_init(Spectrum *p)
 			 G_CALLBACK(spectrum_acq_cmd_spec_acq_disable),
 			 (gpointer) p);
 
+	p->cfg->id_cfg = g_signal_connect(sig_get_instance(), "pr-spec-acq-cfg",
+			 G_CALLBACK(spectrum_handle_pr_spec_acq_cfg),
+			 (gpointer) p);
 
 	g_signal_connect(p, "destroy", G_CALLBACK(spectrum_destroy), NULL);
+
+	/* fetch the config */
+	cmd_spec_acq_cfg_get(PKT_TRANS_ID_UNDEF);
 }
 
 

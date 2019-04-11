@@ -146,17 +146,30 @@ static void telescope_set_pos_cb(GtkWidget *w, Telescope *p)
 
 static void telescope_stop_at_last_pos_cb(GtkWidget *w, Telescope *p)
 {
-	/* disable tracking */
-	g_signal_emit_by_name(sig_get_instance(), "tracking", FALSE, 0.0, 0.0);
+	gchar *msg;
+
+
+	sig_tracking(FALSE, 0.0, 0.0);
 
 	/* if moving, issue move command to last known position */
-	if (p->cfg->moving)
+	if (p->cfg->moving) {
 		cmd_moveto_azel(PKT_TRANS_ID_UNDEF, p->cfg->az, p->cfg->el);
+		msg = g_strdup_printf("Telescope target move interrupted. "
+				      "Returning to last known Azimuth: "
+				      "%5.2f°, Elevation %5.2f°",
+				      p->cfg->az,
+				      p->cfg->el);
+	} else {
+		msg = g_strdup_printf("Telescope stopped at Azimuth %5.2f°, "
+				      "Elevation %5.2f°",
+				      p->cfg->az,
+				      p->cfg->el);
+	}
 
-	/** XXX notify user via status **/
+	sig_status_push(msg);
+
+	g_free(msg);
 }
-
-
 
 
 /**
@@ -231,6 +244,9 @@ GtkWidget *telescope_stop_ctrl_new(Telescope *p)
 static void telescope_park_cb(GtkWidget *w, Telescope *p)
 {
 	cmd_park_telescope(PKT_TRANS_ID_UNDEF);
+
+	sig_status_push("Moving telescope to park position. "
+			"This may take a while.");
 }
 
 
@@ -272,6 +288,9 @@ GtkWidget *telescope_park_ctrl_new(Telescope *p)
 static void telescope_recal_pointing_cb(GtkWidget *w, Telescope *p)
 {
 	cmd_recalibrate_pointing(PKT_TRANS_ID_UNDEF);
+
+	sig_status_push("Issued drive recalibration command. "
+			"This may take a while.");
 }
 
 
@@ -398,8 +417,7 @@ static gboolean telescope_track_sky_toggle_cb(GtkWidget *w,
 		g_source_remove(p->cfg->id_to);
 		p->cfg->tracking = G_SOURCE_REMOVE;
 
-		g_signal_emit_by_name(sig_get_instance(), "tracking", FALSE,
-				      0.0, 0.0);
+		sig_tracking(FALSE, 0.0, 0.0);
 
 	}
 

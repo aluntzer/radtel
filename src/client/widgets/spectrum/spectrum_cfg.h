@@ -58,11 +58,13 @@ struct _SpectrumConfig {
 	GtkSwitch *sw_acq;
 
 	struct fitdata fit;
+	struct spec_acq_cfg acq;
 
 	guint id_spd;
 	guint id_acq;
 	guint id_ena;
 	guint id_dis;
+	guint id_cfg;
 };
 
 

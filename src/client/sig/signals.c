@@ -50,6 +50,18 @@ static void setup_sig_tracking(void)
 }
 
 
+/**
+ *  @brief internal signal to pass status bar notifications
+ */
+
+static void setup_sig_status_push(void)
+{
+	g_signal_new("status-push",
+		     G_TYPE_OBJECT, G_SIGNAL_RUN_FIRST,
+		     0, NULL, NULL, NULL,
+		     G_TYPE_NONE, 1, G_TYPE_STRING);
+}
+
 
 static void setup_sig_pr_success(void)
 {
@@ -162,6 +174,7 @@ void sig_init(void)
 
 	setup_sig_shutdown();
 	setup_sig_tracking();
+	setup_sig_status_push();
 
 	setup_sig_pr_success();
 	setup_sig_pr_capabilities();

@@ -58,11 +58,11 @@ struct _SysStatusConfig {
 	gdouble eta_rec;
 
 
-
 	GtkWidget *info_bar;
 	GtkLabel  *info_bar_lbl;
 
 	guint id_to;
+	guint id_to_msg;
 	guint id_pos;
 
 	guint id_cap;
@@ -70,6 +70,7 @@ struct _SysStatusConfig {
 	guint id_slw;
 	guint id_mov;
 	guint id_rec;
+	guint id_msg;
 };
 
 

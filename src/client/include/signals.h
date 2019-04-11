@@ -32,6 +32,9 @@ void sig_pr_status_move(const struct status *s);
 void sig_pr_status_rec(const struct status *s);
 void sig_pr_moveto_azel(const gdouble az, const gdouble el);
 
+void sig_status_push(const gchar *msg);
+void sig_tracking(gboolean track, double ra, double de);
+
 gpointer *sig_get_instance(void);
 void sig_init(void);
 

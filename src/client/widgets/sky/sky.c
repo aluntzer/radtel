@@ -169,8 +169,7 @@ static void sky_update_tracked_pos(Sky *p)
 		return;
 
 
-	g_signal_emit_by_name(sig_get_instance(), "tracking", TRUE,
-			      p->cfg->sel->hor.az, p->cfg->sel->hor.el);
+	sig_tracking(TRUE, p->cfg->sel->hor.az, p->cfg->sel->hor.el);
 }
 
 
@@ -1843,8 +1842,7 @@ static void sky_selection(GtkWidget *widget, GdkEventButton *event)
 
 	/* if something was selected, it was tracked. signal disable */
 	if (p->cfg->sel)
-		g_signal_emit_by_name(sig_get_instance(), "tracking", FALSE,
-				      p->cfg->sel->hor.az, p->cfg->sel->hor.el);
+		sig_tracking(FALSE, p->cfg->sel->hor.az, p->cfg->sel->hor.el);
 	/* deselect all */
 
 	p->cfg->sel = NULL;
@@ -1933,9 +1931,7 @@ static gboolean sky_button_press_cb(GtkWidget *widget, GdkEventButton *event,
 			hor = sky_xy_rel_to_horizontal(p, px, py);
 
 			/* always disable tracking, but update anyway */
-			g_signal_emit_by_name(sig_get_instance(),
-					      "tracking", FALSE,
-					      hor.az, hor.el);
+			sig_tracking(FALSE, hor.az, hor.el);
 
 			/* ignore click if outside of axis range, the external
 			 * tracker will take care of selected objects
