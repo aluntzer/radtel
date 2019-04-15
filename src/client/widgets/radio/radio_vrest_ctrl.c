@@ -231,12 +231,13 @@ GtkWidget *radio_vrest_ctrl_new(Radio *p)
 
 static gboolean radio_spec_doppler_track_timeout_cb(gpointer data)
 {
-	uint64_t f0, f1;
+	uint64_t f0, f1, b;
 
 	gdouble vcent, vspan;
-	gdouble fc, bw2;
+	gdouble fc, bw;
 
-	gdouble step;
+	gdouble tmp;
+	gdouble min, max, step;
 
 	static gdouble fclast;
 	static int bw_div_last;
@@ -267,25 +268,56 @@ static gboolean radio_spec_doppler_track_timeout_cb(gpointer data)
 
 	vcent = vcent + vlsr(equ, 0.0);
 
-	fc  = doppler_freq(vcent, p->cfg->freq_ref_mhz);
-	bw2 = fabs(doppler_freq_relative(vspan, p->cfg->freq_ref_mhz) * 0.5);
+	fc = doppler_freq(vcent, p->cfg->freq_ref_mhz);
+	bw = fabs(doppler_freq_relative(vspan, p->cfg->freq_ref_mhz));
 
 
 	gtk_spin_button_get_increments(p->cfg->sb_frq_ce, &step, NULL);
-
 
 	if ((fabs(fclast - fc) < step) &&
 	     (bin_div_last == p->cfg->bin_div) &&
 	     (bw_div_last == p->cfg->bw_div))
 		return p->cfg->tracking;
 
-	/* otherwise adjust */
+	/* otherwise: adjust frequency span */
+
+	/* snap fc to ticks */
+	gtk_spin_button_get_range(p->cfg->sb_frq_ce, &min, &max);
+	tmp = (fc - min) / step;
+	if (tmp - floor(tmp) < ceil(tmp) - tmp)
+		fc = min + floor(tmp) * step;
+	else
+		fc = min + ceil (tmp) * step;
+
+	/* snap bw to ticks */
+	gtk_spin_button_get_range(p->cfg->sb_frq_bw, &min, &max);
+	tmp = (bw - min) / step;
+	if (tmp - floor(tmp) < ceil(tmp) - tmp)
+		bw = min + floor(tmp) * step;
+	else
+		bw = min + ceil (tmp) * step;
+
+
 	fclast = fc;
 	bin_div_last = p->cfg->bin_div;
 	bw_div_last =  p->cfg->bw_div;
 
-	f0 = (uint64_t) ((fc - bw2) * 1e6);
-	f1 = (uint64_t) ((fc + bw2) * 1e6);
+	f0 = (uint64_t) (fc * 1e6);
+	f1 = (uint64_t) (fc * 1e6);
+	b  = (uint64_t) (bw * 1e6);
+
+	f0 -= b / 2;
+	f1 += b / 2;
+
+	tmp = (f0 - min) / step;
+	if (tmp - floor(tmp) < ceil(tmp) - tmp)
+		f0 = min + floor(tmp) * step;
+	else
+		f0 = min + ceil (tmp) * step;
+
+#if 0
+	g_message("f0 %lu, f1: %lu, delta %lu, fc: %f, step %f", f0, f1, f1-f0, fc, step);
+#endif
 
 	cmd_spec_acq_cfg(PKT_TRANS_ID_UNDEF,
 			 f0, f1, p->cfg->bw_div, p->cfg->bin_div,
