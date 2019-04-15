@@ -110,6 +110,15 @@ struct _XYPlot {
 	gboolean autorange_x;
 	gboolean autorange_y;
 
+	struct {
+		gdouble pos;
+		gchar   *lbl;
+	} ind_x;
+
+	struct {
+		gdouble pos;
+		gchar   *lbl;
+	} ind_y;
 
 
 	GList *graphs;
@@ -164,6 +173,9 @@ void xyplot_set_range_y(GtkWidget *widget, gdouble min, gdouble max);
 
 void xyplot_redraw(GtkWidget *widget);
 
+void xyplot_draw_indicator_x(GtkWidget *widget, gdouble x, gchar *label);
+void xyplot_draw_indicator_y(GtkWidget *widget, gdouble y, gchar *label);
+void xyplot_erase_indicators(GtkWidget *widget);
 
 
 static const GdkRGBA COLOR_YELLOW_PHOS = {0.804, 0.592, 0.047, 0.6};

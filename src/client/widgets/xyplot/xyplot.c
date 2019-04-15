@@ -1184,6 +1184,43 @@ static void xyplot_write_text_ralign(cairo_t *cr,
 
 
 /**
+ * @brief write text vertically centered and left aligned at x/y coordinate
+ *
+ * @param cr the cairo context to draw on
+ * @param x the x coordinate
+ * @param y the y coordinate
+ * @param buf a pointer to the text buffer
+ */
+
+static void xyplot_write_text_lalign(cairo_t *cr,
+				     const double x, const double y,
+				     const char *buf)
+{
+	cairo_text_extents_t te;
+
+
+	cairo_save(cr);
+
+	cairo_text_extents(cr, buf, &te);
+
+	/* translate origin to center of text location */
+	cairo_translate(cr, x, y);
+
+	/* translate origin so text will be centered */
+	cairo_translate(cr, 0.0, te.height * 0.5);
+
+	/* start new path at origin */
+	cairo_move_to(cr, 0.0, 0.0);
+
+	cairo_show_text(cr, buf);
+
+	cairo_stroke(cr);
+
+	cairo_restore(cr);
+}
+
+
+/**
  * @brief write text with center at x/y coordinate and a given rotation
  *
  * @param cr the cairo context to draw on
@@ -2177,6 +2214,91 @@ static void xyplot_draw_graphs(XYPlot *p, cairo_t *cr)
 }
 
 
+static void xyplot_draw_indicators(XYPlot *p, cairo_t *cr)
+{
+	gdouble sx, sy;
+	gdouble px, py;
+
+	const gdouble arr_size = 10.0;
+
+	cairo_matrix_t matrix;
+
+
+	sx = p->scale_x;
+	sy = p->scale_y;
+
+	cairo_save(cr);
+
+
+	xyplot_transform_origin(p, cr);
+
+	cairo_set_source_rgba(cr, 1.0, 0.0, 0.0, 1.0);
+
+
+	if (p->ind_x.lbl) {
+		px = (p->ind_x.pos - p->x_ax.min) * sx;
+		py = p->y_ax.min;
+
+		cairo_move_to(cr, px, py);
+		cairo_rel_line_to(cr, arr_size * 0.5, arr_size);
+		cairo_rel_line_to(cr, -arr_size, 0.0);
+		cairo_rel_line_to(cr, arr_size * 0.5, -arr_size);
+		cairo_close_path(cr);
+		cairo_fill(cr);
+		cairo_stroke(cr);
+
+
+		/* flip cairo transformation matrix for text */
+		cairo_get_matrix(cr, &matrix);
+		matrix.yy = - matrix.yy;
+		cairo_set_matrix(cr, &matrix);
+
+		xyplot_write_text_centered(cr,  px, -py  - arr_size * 2,
+					 p->ind_x.lbl, 0.0);
+
+		/* and back */
+		cairo_get_matrix(cr, &matrix);
+		matrix.yy = - matrix.yy;
+		cairo_set_matrix(cr, &matrix);
+	}
+
+
+	if (p->ind_y.lbl) {
+		px = p->x_ax.min;
+		py = (p->ind_y.pos - p->y_ax.min) * sy;
+
+		cairo_move_to(cr, px, py);
+		cairo_rel_line_to(cr, arr_size, arr_size * 0.5);
+		cairo_rel_line_to(cr, 0.0, -arr_size);
+		cairo_rel_line_to(cr, -arr_size, arr_size * 0.5);
+		cairo_close_path(cr);
+		cairo_fill(cr);
+		cairo_stroke(cr);
+
+
+		/* flip cairo transformation matrix for text */
+		cairo_get_matrix(cr, &matrix);
+		matrix.yy = - matrix.yy;
+		cairo_set_matrix(cr, &matrix);
+
+		xyplot_write_text_lalign(cr,  px + arr_size * 2, -py,
+					 p->ind_y.lbl);
+
+		/* and back */
+		cairo_get_matrix(cr, &matrix);
+		matrix.yy = - matrix.yy;
+		cairo_set_matrix(cr, &matrix);
+	}
+
+
+
+
+
+	cairo_stroke(cr);
+	cairo_restore(cr);
+}
+
+
 /**
  * @brief set the label for the X-Axis
  */
@@ -2609,6 +2731,7 @@ static void xyplot_plot_render(XYPlot *p, cairo_t *cr,
 		}
 
 		xyplot_draw_graphs(p, cr);
+		xyplot_draw_indicators(p, cr);
 
 	} else {
 		xyplot_write_text_centered(cr, 0.5 * width, 0.5 * height,
@@ -3443,6 +3566,67 @@ void xyplot_select_all_data(GtkWidget *widget)
 
 	g_signal_emit_by_name(widget, "xyplot-fit-selection");
 }
+
+
+
+/**
+ * @brief add an indicator with a label to the x-Axis
+ *
+ * @note a call to xyplot_erase_indicators will free the label!
+ */
+
+void xyplot_draw_indicator_x(GtkWidget *widget, gdouble x, gchar *label)
+{
+	XYPlot *plot;
+
+	plot = XYPLOT(widget);
+
+
+	if (plot->ind_x.lbl)
+		g_free(plot->ind_x.lbl);
+
+	plot->ind_x.lbl = label;
+	plot->ind_x.pos = x;
+}
+
+
+/**
+ * @brief add an indicator with a label to the Y-Axis
+ *
+ * @note a call to xyplot_erase_indicators will free the label!
+ */
+
+void xyplot_draw_indicator_y(GtkWidget *widget, gdouble y, gchar *label)
+{
+	XYPlot *plot;
+
+	plot = XYPLOT(widget);
+
+
+	if (plot->ind_y.lbl)
+		g_free(plot->ind_y.lbl);
+
+	plot->ind_y.lbl = label;
+	plot->ind_y.pos = y;
+}
+
+/**
+ * @brief clear all indicators
+ */
+
+void xyplot_erase_indicators(GtkWidget *widget)
+{
+	XYPlot *plot;
+
+	plot = XYPLOT(widget);
+
+	g_free(plot->ind_x.lbl);
+	g_free(plot->ind_y.lbl);
+
+	plot->ind_x.lbl = NULL;
+	plot->ind_y.lbl = NULL;
+}
+
 
 
 /**
