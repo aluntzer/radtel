@@ -209,6 +209,57 @@ struct _ObsAssistConfig {
 	} spectral_axis;
 
 
+
+	struct {
+		GtkSpinButton *sb_az_off1_deg;
+		GtkSpinButton *sb_az_off2_deg;
+
+		GtkSpinButton *sb_el_off1_deg;
+		GtkSpinButton *sb_el_off2_deg;
+
+		GtkSpinButton *sb_avg;
+		GtkSpinButton *sb_rpt;
+
+		gdouble ra_cent;
+		gdouble de_cent;
+
+		gdouble az_off1;
+		gdouble el_off1;
+
+		gdouble az_off2;
+		gdouble el_off2;
+
+		gint n_avg;
+		gint n_rpt;
+
+
+		gdouble az_cur;
+		gdouble el_cur;
+
+		gint rpt_cur;
+
+		enum {OFF1, TGT, OFF2} pos;
+
+		struct spectrum pos1;
+		struct spectrum pos2;
+		struct spectrum tgt;
+
+		GArray *idx;
+		GArray *amp;
+
+		GtkWidget *pbar;
+
+		GtkWidget *plt_pos1;
+		GtkWidget *plt_pos2;
+		GtkWidget *plt_tgt;
+		GtkWidget *plt_corr;
+		GtkWidget *plt_cont;
+
+
+	} bswitch;
+
+
+
 };
 
 

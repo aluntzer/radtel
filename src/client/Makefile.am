@@ -133,6 +133,7 @@ radtel_SOURCES += widgets/sys_status/sys_status.c \
 radtel_SOURCES += widgets/obs_assist/obs_assist.c \
 		  widgets/obs_assist/obs_assist_cross.c \
 		  widgets/obs_assist/obs_assist_azel.c \
+		  widgets/obs_assist/obs_assist_bswitch.c \
 		  widgets/obs_assist/obs_assist_spectral_axis.c \
 		  widgets/obs_assist/obs_assist_gal_plane.c
 
