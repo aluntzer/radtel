@@ -19,6 +19,11 @@
 
 double gaussian(double p[4], double x);
 
+double gaussian_height(double p[4]);
+double gaussian_fwhm(double p[4]);
+double gaussian_peak(double p[4]);
+double gaussian_offset(double p[4]);
+
 void gaussian_guess_param(double par[4],
 			  const double *x, const double *y,
 			  size_t n);

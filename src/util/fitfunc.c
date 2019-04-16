@@ -29,7 +29,7 @@
 /**
  * @brief a 4-parameter gaussian
  *
- * @param p the parameter array (4 elements, see gaussian())
+ * @param p the parameter array (4 elements)
  *
  * @param x the function argument
  *
@@ -38,7 +38,64 @@
 
 double gaussian(double p[4], double x)
 {
-	return  p[3] + p[0] * exp( - pow( ((x - p[2]) / p[1]), 2));
+	return  p[3] + p[0] * exp( - (x - p[2]) * (x - p[2]) /
+				     (2.0 * p[1] * p[1]));
+}
+
+
+/**
+ * @brief get the FWHM of the gaussian)
+ *
+ * @param p the parameter array (4 elements, see gaussian())
+ *
+ * @returns the FWHM
+ */
+
+double gaussian_fwhm(double p[4])
+{
+	return 2.0 * sqrt(2.0 * log(2.0)) * p[1];
+}
+
+
+/**
+ * @brief get the peak shift of the gaussian)
+ *
+ * @param p the parameter array (4 elements, see gaussian())
+ *
+ * @returns the peak shift from 0
+ */
+
+double gaussian_peak(double p[4])
+{
+	return p[2];
+}
+
+
+/**
+ * @brief get the height of the gaussian
+ *
+ * @param p the parameter array (4 elements, see gaussian())
+ *
+ * @returns the height (multiples of unity)
+ */
+
+double gaussian_height(double p[4])
+{
+	return p[0];
+}
+
+
+/**
+ * @brief get the offset of the gaussian
+ *
+ * @param p the parameter array (4 elements, see gaussian())
+ *
+ * @returns the offset (vertical shift from 0)
+ */
+
+double gaussian_offset(double p[4])
+{
+	return p[3];
 }
 
 
