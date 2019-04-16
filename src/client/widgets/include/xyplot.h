@@ -70,8 +70,12 @@ struct _XYPlot {
 	XYPlotAxis x_ax;
 	XYPlotAxis y_ax;
 
+	gchar *title;
+
 	gchar *xlabel;
 	gchar *ylabel;
+	gchar *x2label;
+	gchar *y2label;
 
 	gdouble plot_x;	/* plot frame starting points and size */
 	gdouble plot_y;
@@ -121,6 +125,16 @@ struct _XYPlot {
 	} ind_y;
 
 
+	/* alt axis conversions */
+	gdouble (*conv_to_x2)(gdouble x, gpointer data);
+	gdouble (*conv_to_y2)(gdouble y, gpointer data);
+
+	/* extra data for conversion function */
+	gpointer x2_userdata;
+	gpointer y2_userdata;
+
+
+
 	GList *graphs;
 	GList *graphs_cleanup;
 
@@ -136,8 +150,13 @@ enum xyplot_graph_style {STAIRS, CIRCLES, LINES, NAN_LINES,
 			 CURVES, DASHES, SQUARES, IMPULSES};
 
 GtkWidget *xyplot_new(void);
+
+void xyplot_set_title(GtkWidget *widget, gchar *title);
+
 void xyplot_set_xlabel(GtkWidget *widget, gchar *label);
 void xyplot_set_ylabel(GtkWidget *widget, gchar *label);
+void xyplot_set_x2label(GtkWidget *widget, gchar *label);
+void xyplot_set_y2label(GtkWidget *widget, gchar *label);
 void xyplot_set_padding(GtkWidget *widget, gdouble pad);
 
 void *xyplot_add_graph(GtkWidget *widget,
@@ -176,6 +195,15 @@ void xyplot_redraw(GtkWidget *widget);
 void xyplot_draw_indicator_x(GtkWidget *widget, gdouble x, gchar *label);
 void xyplot_draw_indicator_y(GtkWidget *widget, gdouble y, gchar *label);
 void xyplot_erase_indicators(GtkWidget *widget);
+
+
+void xyplot_set_x2_conversion(GtkWidget *widget,
+			      gdouble (*conv_func)(gdouble x, gpointer data),
+			      gpointer userdata);
+
+void xyplot_set_y2_conversion(GtkWidget *widget,
+			      gdouble (*conv_func)(gdouble y, gpointer data),
+			      gpointer userdata);
 
 
 static const GdkRGBA COLOR_YELLOW_PHOS = {0.804, 0.592, 0.047, 0.6};

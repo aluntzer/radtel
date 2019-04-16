@@ -1291,8 +1291,9 @@ static void xyplot_draw_plot_frame(XYPlot *p, cairo_t *cr,
 
 	cairo_text_extents_t te_x;
 	cairo_text_extents_t te_y;
-
-
+	cairo_text_extents_t te_x2;
+	cairo_text_extents_t te_y2;
+	cairo_text_extents_t te_title;
 
 	cairo_save(cr);
 
@@ -1300,13 +1301,24 @@ static void xyplot_draw_plot_frame(XYPlot *p, cairo_t *cr,
 	cairo_text_extents(cr, p->xlabel, &te_x);
 	cairo_text_extents(cr, p->ylabel, &te_y);
 
+	/* get extents of the x2/y2 axis labels */
+	cairo_text_extents(cr, p->x2label, &te_x2);
+	cairo_text_extents(cr, p->y2label, &te_y2);
+
+	/* get extents of the plot title */
+	cairo_text_extents(cr, p->title, &te_title);
+
+
+
 	/* start of the plot frame; add extra space for y label */
 	x = p->pad + 4.0 * te_y.height;
-	y = p->pad;
+	y = p->pad + 4.0 * te_x2.height + 4.0 * te_title.height;
 
 	/* size of frame; subtract paddings and extra text space */
-	w = width  - 2.0 * (p->pad + 2.0 * te_y.height);
-	h = height - 2.0 * (p->pad + 2.0 * te_x.height);
+	w = width  - 2.0 * (p->pad + 2.0 * (te_y.height + te_y2.height));
+	h = height - 2.0 * (p->pad + 2.0 * (te_x.height + te_x2.height
+					    + te_title.height));
+
 
 	xyplot_update_plot_size(p, x, y, w, h);
 
@@ -1321,20 +1333,54 @@ static void xyplot_draw_plot_frame(XYPlot *p, cairo_t *cr,
 	 */
 
 	/* draw the x-axis label */
-	xyplot_write_text_centered(cr,
-				   x + 0.5 * w ,
-				   y + h + 4.0 * te_x.height,
-				   p->xlabel,
-				   0.0);
+	if (p->xlabel)
+		xyplot_write_text_centered(cr,
+					   x + 0.5 * w ,
+					   y + h + 4.0 * te_x.height,
+					   p->xlabel,
+					   0.0);
 
 	/* draw the y-axis label */
-	xyplot_write_text_centered(cr,
-				   te_y.height,
-				   x + 0.5 * h - 4.0 * te_y.height,
-				   p->ylabel,
-				   -90.0 * M_PI / 180.0);
+	if (p->ylabel)
+		xyplot_write_text_centered(cr,
+					   te_y.height,
+					   x + 0.5 * h - 4.0 * te_y.height,
+					   p->ylabel,
+					   -90.0 * M_PI / 180.0);
+
+	/* draw the x2-axis label */
+	if (p->x2label)
+		xyplot_write_text_centered(cr,
+					   x + 0.5 * w ,
+					   y - 4.0 * te_x2.height,
+					   p->x2label,
+					   0.0);
+
+	/* draw the y2-axis label */
+	if (p->y2label)
+		xyplot_write_text_centered(cr,
+					   width - 2.0 * te_y2.height,
+					   x + 0.5 * h - 4.0 * te_y2.height,
+					   p->y2label,
+					   90.0 * M_PI / 180.0);
 
 	cairo_stroke(cr);
+
+	/* draw the plot title */
+	if (p->title) {
+
+		cairo_set_source_rgba(cr, 1.0, 1.0, 0.0, 1.0);
+
+		xyplot_write_text_centered(cr,
+					   x + 0.5 * w,
+					   2.0 * te_title.height,
+					   p->title,
+					   0.0);
+
+		cairo_stroke(cr);
+	}
+
+
 
 	cairo_restore(cr);
 }
@@ -1378,6 +1424,8 @@ static void xyplot_draw_ticks_x(XYPlot *p, cairo_t *cr,
 	double min;
 	double scl;
 
+	const gdouble lw = 3.0;
+
 
 	cairo_save(cr);
 
@@ -1387,7 +1435,7 @@ static void xyplot_draw_ticks_x(XYPlot *p, cairo_t *cr,
 	/* disable antialiasing for sharper line */
 	cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
 
-	cairo_set_line_width(cr, 2.0);
+	cairo_set_line_width(cr, lw);
 
 	xyplot_transform_origin(p, cr);
 
@@ -1412,6 +1460,68 @@ static void xyplot_draw_ticks_x(XYPlot *p, cairo_t *cr,
 	cairo_restore(cr);
 }
 
+/**
+ * @brief draw tick marks on x2-axis
+ *
+ * @param cr the cairo context to draw on
+ * @param width the area width
+ * @param height the area height
+ *
+ */
+
+static void xyplot_draw_ticks_x2(XYPlot *p, cairo_t *cr,
+				 const double width, const double height)
+{
+	double idx;
+	double stp;
+	double inc;
+	double min;
+	double scl;
+	double y;
+
+	const gdouble lw = 3.0;
+
+
+	if (!p->conv_to_x2)
+		return;
+
+
+	cairo_save(cr);
+
+	cairo_set_source_rgba(cr, p->ax_colour.red,  p->ax_colour.green,
+				  p->ax_colour.blue, p->ax_colour.alpha);
+
+	/* disable antialiasing for sharper line */
+	cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+
+	cairo_set_line_width(cr, lw);
+
+	xyplot_transform_origin(p, cr);
+
+	idx = p->x_ax.tick_min + p->x_ax.step;
+	inc = p->x_ax.step;
+	stp = p->x_ax.max;
+	min = p->x_ax.min;
+	scl = p->scale_x;
+	y   = (p->y_ax.max - p->y_ax.min) * p->scale_y;
+
+	for ( ; idx < stp; idx += inc) {
+		cairo_move_to(cr, (idx - min) * scl, y);
+		cairo_rel_line_to(cr, 0.0, -10.);
+
+		if ((idx + 0.5 * inc) < stp) {
+			cairo_move_to(cr, (idx + 0.5 * inc - min) * scl,
+				      y);
+			cairo_rel_line_to(cr, 0.0, -5.);
+		}
+	}
+
+	cairo_stroke(cr);
+
+	cairo_restore(cr);
+}
+
+
 
 /**
  * @brief draw tick marks on y-axis
@@ -1431,6 +1541,7 @@ static void xyplot_draw_ticks_y(XYPlot *p, cairo_t *cr,
 	double min;
 	double scl;
 
+	const gdouble lw = 3.0;
 
 	cairo_save(cr);
 
@@ -1441,7 +1552,7 @@ static void xyplot_draw_ticks_y(XYPlot *p, cairo_t *cr,
 	/* disable antialiasing for sharper line */
 	cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
 
-	cairo_set_line_width(cr, 2.0);
+	cairo_set_line_width(cr, lw);
 
 	xyplot_transform_origin(p, cr);
 
@@ -1469,7 +1580,69 @@ static void xyplot_draw_ticks_y(XYPlot *p, cairo_t *cr,
 
 
 /**
- * @brief draw labels to y-axis ticks
+ * @brief draw tick marks on y2-axis
+ *
+ * @param cr the cairo context to draw on
+ * @param width the area width
+ * @param height the area height
+ *
+ */
+
+static void xyplot_draw_ticks_y2(XYPlot *p, cairo_t *cr,
+				 const double width, const double height)
+{
+	double idx;
+	double stp;
+	double inc;
+	double min;
+	double scl;
+	double x;
+
+	const gdouble lw = 3.0;
+
+
+	if (!p->conv_to_y2)
+		return;
+
+	cairo_save(cr);
+
+	/* background color */
+	cairo_set_source_rgba(cr, p->ax_colour.red,  p->ax_colour.green,
+				  p->ax_colour.blue, p->ax_colour.alpha);
+
+	/* disable antialiasing for sharper line */
+	cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+
+	cairo_set_line_width(cr, lw);
+
+	xyplot_transform_origin(p, cr);
+
+	/* horizontal grid lines */
+	idx = p->y_ax.tick_min + p->y_ax.step;
+	inc = p->y_ax.step;
+	stp = p->y_ax.max;
+	min = p->y_ax.min;
+	scl = p->scale_y;
+	x   = (p->x_ax.max - p->x_ax.min) * p->scale_x;
+
+	for ( ; idx < stp; idx += inc) {
+		cairo_move_to(cr, x, (idx - min) * scl);
+		cairo_rel_line_to(cr, -10.0, 0.0);
+
+		if ((idx + 0.5 * inc) < stp) {
+			cairo_move_to(cr, x, (idx + 0.5 * inc - min) * scl);
+			cairo_rel_line_to(cr, -5.0, 0.0);
+		}
+	}
+
+	cairo_stroke(cr);
+
+	cairo_restore(cr);
+}
+
+
+/**
+ * @brief draw labels to x-axis ticks
  */
 
 static void xyplot_draw_tickslabels_x(XYPlot *p, cairo_t *cr,
@@ -1520,6 +1693,62 @@ static void xyplot_draw_tickslabels_x(XYPlot *p, cairo_t *cr,
 
 
 /**
+ * @brief draw labels to x2-axis ticks
+ */
+
+static void xyplot_draw_tickslabels_x2(XYPlot *p, cairo_t *cr,
+				       const double width, const double height)
+{
+	double idx;
+	double stp;
+	double inc;
+	double min;
+	double scl;
+	double off;
+	double x2;
+
+	char buf[14];	/* should be large enough */
+
+	cairo_text_extents_t te;
+
+
+	if (!p->conv_to_x2)
+		return;
+
+	cairo_save(cr);
+
+	/* translate to upper right corner */
+	cairo_translate(cr, p->plot_x, p->plot_y);
+
+	/* get text extents to determine the height of the current font */
+	cairo_text_extents(cr, "0", &te);
+
+	/* horizontal ticks */
+	idx = p->x_ax.tick_min + p->x_ax.step;
+	inc = p->x_ax.step;
+	stp = p->x_ax.max;
+	min = p->x_ax.min;
+	scl = p->scale_x;
+	off = -1.5 * te.height;
+
+	if (min < p->x_ax.min)
+		min -= inc;
+
+	for ( ; idx < stp; idx += inc) {
+		x2 = p->conv_to_x2(idx, p->x2_userdata);
+		snprintf(buf, ARRAY_SIZE(buf), "%4g", x2);
+		xyplot_write_text_centered(cr, (idx - min) * scl,
+					   off, buf, 0.0);
+	}
+
+	cairo_stroke(cr);
+
+	cairo_restore(cr);
+}
+
+
+
+/**
  * @brief draw labels to y-axis ticks
  */
 
@@ -1557,6 +1786,58 @@ static void xyplot_draw_tickslabels_y(XYPlot *p, cairo_t *cr,
 	for ( ; idx < stp; idx += inc) {
 		snprintf(buf, ARRAY_SIZE(buf), "%.6g", idx);
 		xyplot_write_text_ralign(cr, -te.width, (min - idx) * scl, buf);
+	}
+
+
+	cairo_stroke(cr);
+
+	cairo_restore(cr);
+}
+
+
+/**
+ * @brief draw labels to y2-axis ticks
+ */
+
+static void xyplot_draw_tickslabels_y2(XYPlot *p, cairo_t *cr,
+				       const double width, const double height)
+{
+	double idx;
+	double stp;
+	double inc;
+	double min;
+	double scl;
+	double y2;
+
+	char buf[14];	/* should be large enough */
+
+	cairo_text_extents_t te;
+
+
+	if (!p->conv_to_y2)
+		return;
+
+	cairo_save(cr);
+
+	/* translate to lower right corner */
+	cairo_translate(cr, p->plot_x + p->plot_w, p->plot_y + p->plot_h);
+
+	/* get text extents to determine the width of a character of the current
+	 * font and use it as offset from the y-axis
+	 */
+	cairo_text_extents(cr, "0", &te);
+
+	/* vertical ticks */
+	idx = p->y_ax.tick_min + p->y_ax.step;
+	inc = p->y_ax.step;
+	stp = p->y_ax.max;
+	min = p->y_ax.min;
+	scl = p->scale_y;
+
+	for ( ; idx < stp; idx += inc) {
+		y2 = p->conv_to_y2(idx, p->y2_userdata);
+		snprintf(buf, ARRAY_SIZE(buf), "%.6g", y2);
+		xyplot_write_text_lalign(cr, te.width, (min - idx) * scl, buf);
 	}
 
 
@@ -2300,6 +2581,23 @@ static void xyplot_draw_indicators(XYPlot *p, cairo_t *cr)
 
 
 /**
+ * @brief set the plot title
+ */
+
+void xyplot_set_title(GtkWidget *widget, gchar *title)
+{
+	XYPlot *plot;
+
+
+	plot = XYPLOT(widget);
+
+	plot->title = title;
+	gtk_widget_queue_draw(widget);
+}
+
+
+
+/**
  * @brief set the label for the X-Axis
  */
 
@@ -2327,6 +2625,37 @@ void xyplot_set_ylabel(GtkWidget *widget, gchar *label)
 	plot = XYPLOT(widget);
 
 	plot->ylabel = label;
+	gtk_widget_queue_draw(widget);
+}
+
+/*
+ * @brief set the label for the x2-Axis
+ */
+
+void xyplot_set_x2label(GtkWidget *widget, gchar *label)
+{
+	XYPlot *plot;
+
+
+	plot = XYPLOT(widget);
+
+	plot->x2label = label;
+	gtk_widget_queue_draw(widget);
+}
+
+
+/**
+ * @brief set the label for the Y-Axis
+ */
+
+void xyplot_set_y2label(GtkWidget *widget, gchar *label)
+{
+	XYPlot *plot;
+
+
+	plot = XYPLOT(widget);
+
+	plot->y2label = label;
 	gtk_widget_queue_draw(widget);
 }
 
@@ -2697,8 +3026,12 @@ static void xyplot_plot_render(XYPlot *p, cairo_t *cr,
 		xyplot_draw_grid_y(p, cr, width, height);
 		xyplot_draw_ticks_x(p, cr, width, height);
 		xyplot_draw_ticks_y(p, cr, width, height);
+		xyplot_draw_ticks_x2(p, cr, width, height);
+		xyplot_draw_ticks_y2(p, cr, width, height);
 		xyplot_draw_tickslabels_x(p, cr, width, height);
 		xyplot_draw_tickslabels_y(p, cr, width, height);
+		xyplot_draw_tickslabels_x2(p, cr, width, height);
+		xyplot_draw_tickslabels_y2(p, cr, width, height);
 
 		/* create a clipping region so we won't draw parts of a graph
 		 * outside of the frame
@@ -2852,6 +3185,7 @@ static gboolean xyplot_pointer_crossing_cb(GtkWidget *widget,
 	case GDK_LEAVE_NOTIFY:
 	default:
 		cursor = gdk_cursor_new_from_name(display, "default");
+		xyplot_plot(XYPLOT(widget));
 		break;
 	}
 
@@ -2920,12 +3254,22 @@ static gboolean xyplot_motion_notify_event_cb(GtkWidget *widget,
 	snprintf(buf, ARRAY_SIZE(buf),
 		 "<span foreground='#dddddd'"
 		 "	font_desc='Sans Bold 8'>"
-		 "<tt>"
-		 "X: %+.6g\n"
-		 "Y: %+.6g\n"
-		 "</tt>"
-		 "</span>",
-		 x, y);
+		 "<tt>X:  %+6g\n", x );
+
+	if (p->conv_to_x2)
+		snprintf(&buf[strlen(buf)], ARRAY_SIZE(buf) - strlen(buf),
+			 "X2: %+6g\n", p->conv_to_x2(x, p->x2_userdata));
+
+	snprintf(&buf[strlen(buf)], ARRAY_SIZE(buf) - strlen(buf),
+		 "Y:  %+6g\n", y );
+
+	if (p->conv_to_y2)
+		snprintf(&buf[strlen(buf)], ARRAY_SIZE(buf) - strlen(buf),
+			 "Y2: %+6g\n", p->conv_to_y2(x, p->y2_userdata));
+
+	snprintf(&buf[strlen(buf)], ARRAY_SIZE(buf) - strlen(buf),
+		 "</tt></span>");
+
 
 	layout = xyplot_create_layout(cr, buf, strlen(buf));
 	pango_layout_get_pixel_size(layout, &w, &h);
@@ -3363,6 +3707,9 @@ static void xyplot_init(XYPlot *p)
 	p->autorange_x = TRUE;
 	p->autorange_y = TRUE;
 
+	p->conv_to_x2 = NULL;
+	p->conv_to_y2 = NULL;
+
 
 	/* connect the relevant signals of the DrawingArea */
 	g_signal_connect(G_OBJECT(&p->parent), "draw",
@@ -3627,6 +3974,42 @@ void xyplot_erase_indicators(GtkWidget *widget)
 	plot->ind_y.lbl = NULL;
 }
 
+
+/**
+ * @brief set a conversion function for the x2-axis display
+ * @param conv_func the conversion function, pass NULL to unset
+ */
+
+void xyplot_set_x2_conversion(GtkWidget *widget,
+			      gdouble (*conv_func)(gdouble x, gpointer data),
+			      gpointer userdata)
+{
+	XYPlot *plot;
+
+	plot = XYPLOT(widget);
+
+
+	plot->conv_to_x2  = conv_func;
+	plot->x2_userdata = userdata;
+}
+
+/**
+ * @brief set a conversion function for the y2-axis display
+ * @param conv_func the conversion function, pass NULL to unset
+ */
+
+void xyplot_set_y2_conversion(GtkWidget *widget,
+			      gdouble (*conv_func)(gdouble y, gpointer data),
+			      gpointer userdata)
+{
+	XYPlot *plot;
+
+	plot = XYPLOT(widget);
+
+
+	plot->conv_to_y2  = conv_func;
+	plot->y2_userdata = userdata;
+}
 
 
 /**
