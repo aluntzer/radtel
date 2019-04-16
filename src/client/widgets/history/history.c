@@ -52,6 +52,30 @@ G_DEFINE_TYPE_WITH_PRIVATE(History, history, GTK_TYPE_BOX)
 
 
 
+static void history_wf_slide_lo_value_changed(GtkRange *range,
+					      gpointer  data)
+{
+	History *p;
+
+
+	p = HISTORY(data);
+
+	p->cfg->th_lo = gtk_range_get_value(range);
+}
+
+
+static void history_wf_slide_hi_value_changed(GtkRange *range,
+					      gpointer  data)
+{
+	History *p;
+
+
+	p = HISTORY(data);
+
+	p->cfg->th_hi = gtk_range_get_value(range);
+}
+
+
 /**
  * @brief average colour set callback
  */
@@ -303,9 +327,8 @@ static void history_append_wf(History *p, const gdouble *amp, gsize len)
        	int w, h;
 	int rs, nc;
 
-	gdouble min, max;
-
-	static gdouble th_lo, th_hi;
+	gdouble min = DBL_MAX;
+	gdouble max = DBL_MIN;
 
 	guchar *wf;
 	guchar *pix;
@@ -362,8 +385,6 @@ static void history_append_wf(History *p, const gdouble *amp, gsize len)
 	}
 
 
-	min = DBL_MAX;
-	max = DBL_MIN;
 	for (i = 0; i < len; i++) {
 		if (amp[i] < min)
 			min = amp[i];
@@ -372,25 +393,12 @@ static void history_append_wf(History *p, const gdouble *amp, gsize len)
 			max = amp[i];
 	}
 
-
-	/* prime thresholds and update slowly for a nicer graph
-	 * until we have sliders to adjust the cuts
-	 */
-	if (th_lo == 0.0)
-		th_lo = min;
-	else
-		th_lo = (th_lo + min) * 0.5;
-
-	if (th_hi == 0.0)
-		th_hi = max;
-	else
-		th_hi = (th_hi + max) * 0.5;
-
 	pix = wf;
+
 	/* add new line */
 	for (i = 0; i < len; i++) {
-		history_wf_get_rgb((amp[i] - th_lo) / (th_hi - th_lo),
-				   0.01, 0.99,
+		history_wf_get_rgb((amp[i] - min) / (max - min),
+				   p->cfg->th_lo, p->cfg->th_hi,
 				   &pix[0], &pix[1], &pix[2]);
 		pix += nc;
 	}
@@ -607,6 +615,7 @@ static void gui_create_history_controls(History *p)
 	GtkWidget *w;
 
 	GtkWidget *hbox;
+	GtkWidget *vbox;
 
 
 	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 12);
@@ -624,12 +633,47 @@ static void gui_create_history_controls(History *p)
 	gtk_box_pack_start(GTK_BOX(p), hbox, TRUE, TRUE, 0);
 
 
+	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 12);
+	gtk_box_pack_start(GTK_BOX(p), hbox, TRUE, TRUE, 0);
+
 	w = gtk_frame_new("Spectral Waterfall");
 	g_object_set(w, "margin", 6, NULL);
-	gtk_box_pack_start(GTK_BOX(p), w, TRUE, TRUE, 6);
 
 	g_object_set(GTK_WIDGET(p->cfg->wf_da), "margin", 12, NULL);
 	gtk_container_add(GTK_CONTAINER(w), GTK_WIDGET(p->cfg->wf_da));
+
+	gtk_box_pack_start(GTK_BOX(hbox), w, TRUE, TRUE, 6);
+
+
+
+	vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+	gtk_box_pack_start(GTK_BOX(hbox), vbox, FALSE, TRUE, 6);
+	w = gtk_scale_new_with_range(GTK_ORIENTATION_VERTICAL, 0., 1., 0.01);
+	gtk_range_set_value(GTK_RANGE(w), p->cfg->th_lo);
+	gtk_range_set_inverted(GTK_RANGE(w), TRUE);
+	p->cfg->s_lo = GTK_SCALE(w);
+	g_signal_connect(G_OBJECT(w), "value-changed",
+			 G_CALLBACK(history_wf_slide_lo_value_changed), p);
+	gtk_box_pack_start(GTK_BOX(vbox), w, TRUE, TRUE, 0);
+	w = gtk_label_new("Lo");
+	gtk_style_context_add_class(gtk_widget_get_style_context(w),
+				    "dim-label");
+	gtk_box_pack_start(GTK_BOX(vbox), w, FALSE, TRUE, 0);
+
+
+	vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+	gtk_box_pack_start(GTK_BOX(hbox), vbox, FALSE, TRUE, 6);
+	w = gtk_scale_new_with_range(GTK_ORIENTATION_VERTICAL, 0., 1., 0.01);
+	gtk_range_set_value(GTK_RANGE(w), p->cfg->th_hi);
+	gtk_range_set_inverted(GTK_RANGE(w), TRUE);
+	p->cfg->s_hi = GTK_SCALE(w);
+	g_signal_connect(G_OBJECT(w), "value-changed",
+			 G_CALLBACK(history_wf_slide_hi_value_changed), p);
+	gtk_box_pack_start(GTK_BOX(vbox), w, TRUE, TRUE, 0);
+	w = gtk_label_new("Hi");
+	gtk_style_context_add_class(gtk_widget_get_style_context(w),
+				    "dim-label");
+	gtk_box_pack_start(GTK_BOX(vbox), w, FALSE, TRUE, 0);
 }
 
 
@@ -687,6 +731,9 @@ static void history_init(History *p)
 
 	p->cfg->wf_pb = NULL;
 	p->cfg->wf_da = GTK_DRAWING_AREA(gtk_drawing_area_new());
+
+	p->cfg->th_lo = 0.01;
+	p->cfg->th_hi = 0.99;
 
 
 	gtk_orientable_set_orientation(GTK_ORIENTABLE(p),

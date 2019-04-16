@@ -37,6 +37,12 @@ struct _HistoryConfig {
 	GdkPixbuf	       *wf_pb;
 	GtkDrawingArea	       *wf_da;
 
+	GtkScale               *s_lo;
+	GtkScale               *s_hi;
+
+	gdouble th_lo;
+	gdouble th_hi;
+
 	guint id_spd;
 };
 
