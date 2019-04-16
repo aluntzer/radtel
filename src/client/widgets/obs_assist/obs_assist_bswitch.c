@@ -15,7 +15,9 @@
  * @brief a scan a rectangle in azimuth and elevation
  *
  *
- * XXX this really needs some refactoring. for now, it works
+ * XXX This really needs some refactoring and investigation for leaks.
+ *     The logic appears to be implemented correctly now, but the code is
+ *     horrible :)
  *
  */
 
@@ -35,12 +37,18 @@
 
 static void bswitch_free(ObsAssist *p)
 {
+	/* meh...*/
+
 	g_free(p->cfg->bswitch.pos1.x);
 	g_free(p->cfg->bswitch.pos1.y);
 	g_free(p->cfg->bswitch.pos2.x);
 	g_free(p->cfg->bswitch.pos2.y);
 	g_free(p->cfg->bswitch.tgt.x);
 	g_free(p->cfg->bswitch.tgt.y);
+
+
+
+
 
 	p->cfg->bswitch.pos1.x = NULL;
 	p->cfg->bswitch.pos1.y = NULL;
@@ -51,6 +59,7 @@ static void bswitch_free(ObsAssist *p)
 	p->cfg->bswitch.tgt.x  = NULL;
 	p->cfg->bswitch.tgt.y  = NULL;
 	p->cfg->bswitch.tgt.n  = 0;
+
 }
 
 
@@ -96,7 +105,7 @@ static void bswitch_update_pbar_rpt(ObsAssist *p)
 	frac = (gdouble) p->cfg->bswitch.rpt_cur /
 	       (gdouble) p->cfg->bswitch.n_rpt;
 
-	str = g_strdup_printf("Cycle: %d of %d complete",
+	str = g_strdup_printf("Cycle %d of %d complete",
 			      p->cfg->bswitch.rpt_cur,
 			      p->cfg->bswitch.n_rpt);
 
@@ -113,7 +122,7 @@ static void bswitch_update_pbar_rpt(ObsAssist *p)
  * @brief clear and draw the continuum plot
  */
 
-static void cross_draw_continuum(ObsAssist *p)
+static void bswitch_draw_continuum(ObsAssist *p)
 {
 	gsize i;
 
@@ -179,6 +188,39 @@ static void bswitch_add_graph(GtkWidget *plt, struct spectrum *sp)
 
 
 /**
+ * @brief add a new sample to graph
+ */
+
+static void bswitch_draw_avg_graph(GtkWidget *plt, struct bswitch_pos *pos)
+{
+	gdouble *x;
+	gdouble *y;
+
+	gsize i;
+
+
+	/* update graph */
+	xyplot_drop_graph(plt, pos->ref);
+	x = g_memdup(pos->sp.x, pos->sp.n * sizeof(gdouble));
+	y = g_memdup(pos->sp.y, pos->sp.n * sizeof(gdouble));
+
+
+	for (i = 0; i < pos->sp.n; i++)
+		y[i] /= (gdouble) pos->n;
+
+	pos->ref = xyplot_add_graph(plt, x, y, NULL, pos->sp.n,
+				    g_strdup_printf("Average"));
+
+	xyplot_set_graph_style(plt, pos->ref, STAIRS);
+	xyplot_set_graph_rgba(plt, pos->ref, COLOR_WHITE);
+
+	xyplot_redraw(plt);
+}
+
+
+
+
+/**
  * @brief verify position and issue move command if necessary
  *
  * @param az the actual target Azimuth
@@ -195,6 +237,7 @@ static gboolean bswitch_in_position(ObsAssist *p, gdouble az, gdouble el)
 
 	const gdouble az_tol = 2.0 * p->cfg->az_res;
 	const gdouble el_tol = 2.0 * p->cfg->el_res;
+
 
 
 	d_az = fabs(az - p->cfg->az);
@@ -236,6 +279,8 @@ static gboolean bswitch_measure(ObsAssist *p)
 	GtkWidget *plt;
 
 	struct spectrum *obs;
+	struct bswitch_pos *pos;
+
 
 	static struct spectrum *sp;
 
@@ -280,14 +325,20 @@ static gboolean bswitch_measure(ObsAssist *p)
 
 	switch (p->cfg->bswitch.pos) {
 	case OFF1:
+		pos = &p->cfg->bswitch.p1;
+		pos->n++;
 		obs = &p->cfg->bswitch.pos1;
 		plt = p->cfg->bswitch.plt_pos1;
 		break;
 	case OFF2:
+		pos = &p->cfg->bswitch.p2;
+		pos->n++;
 		obs = &p->cfg->bswitch.pos2;
 		plt = p->cfg->bswitch.plt_pos2;
 		break;
 	case TGT:
+		pos = &p->cfg->bswitch.tg;
+		pos->n++;
 		obs = &p->cfg->bswitch.tgt;
 		plt = p->cfg->bswitch.plt_tgt;
 		break;
@@ -296,24 +347,47 @@ static gboolean bswitch_measure(ObsAssist *p)
 		goto cleanup;
 	}
 
-	/* initialize if necessary */
+
+	/* set current */
 	if (!obs->n) {
 		obs->x = g_memdup(p->cfg->spec.x,
 				 p->cfg->spec.n * sizeof(gdouble));
 		obs->y = g_memdup(p->cfg->spec.y,
 				 p->cfg->spec.n * sizeof(gdouble));
 		obs->n = p->cfg->spec.n;
+	} else {
+		g_warning("%s %d: array alread initialised, obs: %d",
+			  __func__, __LINE__, p->cfg->bswitch.pos);
+	}
+
+	/* initialize if necessary */
+	if (!pos->sp.n) {
+		pos->sp.x = g_memdup(p->cfg->spec.x,
+				     p->cfg->spec.n * sizeof(gdouble));
+		pos->sp.y = g_memdup(p->cfg->spec.y,
+				     p->cfg->spec.n * sizeof(gdouble));
+		pos->sp.n = p->cfg->spec.n;
+	} else {
+
+		/* we currently do not support changes to the number of bins */
+		if ((pos->sp.n != p->cfg->spec.n)) {
+			bswitch_show_abort_msg(p);
+			goto cleanup;
+		}
+
+
+		for (i = 0; i < obs->n; i++)
+			pos->sp.y[i] += sp->y[i];
+
 	}
 
 
-	/* we currently do not support changes to the number of bins */
-	if ((obs->n != p->cfg->spec.n)) {
-		bswitch_show_abort_msg(p);
-		goto cleanup;
-	}
+
 
 
 	bswitch_add_graph(plt, obs);
+
+	bswitch_draw_avg_graph(plt, pos);
 
 cleanup:
 
@@ -341,7 +415,7 @@ static gboolean bswitch_obs_pos(ObsAssist *p)
 
 	gint next;
 
-	static gint prev;
+	static gint prev; /* XXX .... */
 
 	gdouble avg;
 	gdouble tmp;
@@ -349,6 +423,7 @@ static gboolean bswitch_obs_pos(ObsAssist *p)
 	struct coord_equatorial equ;
 	struct coord_horizontal hor;
 
+	struct bswitch_pos *cavg;
 
 
 	equ.ra  = p->cfg->bswitch.ra_cent;
@@ -362,6 +437,7 @@ static gboolean bswitch_obs_pos(ObsAssist *p)
 
 	if (p->cfg->bswitch.pos != TGT)
 		prev = p->cfg->bswitch.pos;
+
 
 	switch (p->cfg->bswitch.pos) {
 	case OFF1:
@@ -387,19 +463,20 @@ static gboolean bswitch_obs_pos(ObsAssist *p)
 
 	}
 
-#if 1
+
 	/* actual pointing is done in horizon system */
 	if (!bswitch_in_position(p, hor.az, hor.el))
 		return TRUE;
-#endif
+
 
 	if (!bswitch_measure(p))
 		return TRUE;
 
+
 	obs_assist_clear_spec(p);
 
 	/* end of cycle, apply background correction */
-	if ((p->cfg->bswitch.pos != TGT) && p->cfg->bswitch.pos1.n
+	if (p->cfg->bswitch.tgt.n && p->cfg->bswitch.pos1.n
 	    && p->cfg->bswitch.pos2.n) {
 
 		tmp = 0.0;
@@ -414,14 +491,44 @@ static gboolean bswitch_obs_pos(ObsAssist *p)
 
 		avg = tmp / (gdouble) p->cfg->bswitch.tgt.n;
 
-		tmp = (gdouble) p->cfg->bswitch.rpt_cur;
+		tmp = (gdouble) p->cfg->bswitch.rpt_cur + 1;
 		g_array_append_val(p->cfg->bswitch.idx, tmp);
 		g_array_append_val(p->cfg->bswitch.amp, avg);
 
 		bswitch_add_graph(p->cfg->bswitch.plt_corr,
 				  &p->cfg->bswitch.tgt);
 
-		cross_draw_continuum(p);
+
+		cavg = &p->cfg->bswitch.co;
+
+		/* initialize if necessary */
+		if (!cavg->sp.n) {
+			cavg->sp.x = g_memdup(p->cfg->bswitch.tgt.x,
+				      p->cfg->bswitch.tgt.n * sizeof(gdouble));
+			cavg->sp.y = g_memdup(p->cfg->bswitch.tgt.y,
+				      p->cfg->bswitch.tgt.n * sizeof(gdouble));
+			cavg->sp.n = p->cfg->bswitch.tgt.n;
+		} else {
+
+			/* we currently do not support changes to the
+			 * number of bins
+			 */
+			if ((cavg->sp.n != p->cfg->bswitch.tgt.n)) {
+				bswitch_show_abort_msg(p);
+				return FALSE;
+			}
+
+
+			for (i = 0; i < p->cfg->bswitch.tgt.n; i++)
+				cavg->sp.y[i] += p->cfg->bswitch.tgt.y[i];
+
+		}
+		cavg->n++;
+
+		bswitch_draw_avg_graph(p->cfg->bswitch.plt_corr, cavg);
+
+
+		bswitch_draw_continuum(p);
 
 		/* clear the next ref position */
 		if (p->cfg->bswitch.pos == OFF1) {
@@ -430,6 +537,8 @@ static gboolean bswitch_obs_pos(ObsAssist *p)
 			p->cfg->bswitch.pos2.x = NULL;
 			p->cfg->bswitch.pos2.y = NULL;
 			p->cfg->bswitch.pos2.n = 0;
+
+
 		}
 
 		if (p->cfg->bswitch.pos == OFF2) {
@@ -440,16 +549,21 @@ static gboolean bswitch_obs_pos(ObsAssist *p)
 			p->cfg->bswitch.pos1.n = 0;
 		}
 
-		bswitch_free(p);
+		g_free(p->cfg->bswitch.tgt.x);
+		g_free(p->cfg->bswitch.tgt.y);
+		p->cfg->bswitch.tgt.x = NULL;
+		p->cfg->bswitch.tgt.y = NULL;
+		p->cfg->bswitch.tgt.n = 0;
+
+
+		p->cfg->bswitch.pos = next;
+		return FALSE; /* cycle complete */
 	}
 
 	/* next position */
 	p->cfg->bswitch.pos = next;
 
-	if (p->cfg->bswitch.pos != OFF1)
-		return TRUE;
-
-	return FALSE;
+	return TRUE;
 }
 
 
@@ -474,13 +588,24 @@ static gboolean bswitch_obs(void *data)
 
 	/* on final, we stay at the current position */
 
-	if (p->cfg->bswitch.rpt_cur <= p->cfg->bswitch.n_rpt) {
-		bswitch_update_pbar_rpt(p);
-		p->cfg->bswitch.rpt_cur++;
+	p->cfg->bswitch.rpt_cur++;
+	bswitch_update_pbar_rpt(p);
+
+	if (p->cfg->bswitch.rpt_cur < p->cfg->bswitch.n_rpt)
 		return G_SOURCE_CONTINUE;
-	}
+
 
 cleanup:
+
+	g_free(p->cfg->bswitch.p1.sp.x);
+	g_free(p->cfg->bswitch.p1.sp.y);
+	g_free(p->cfg->bswitch.p2.sp.x);
+	g_free(p->cfg->bswitch.p2.sp.y);
+	g_free(p->cfg->bswitch.tg.sp.x);
+	g_free(p->cfg->bswitch.tg.sp.y);
+	g_free(p->cfg->bswitch.co.sp.x);
+	g_free(p->cfg->bswitch.co.sp.y);
+
 	bswitch_free(p);
 	g_array_free(p->cfg->bswitch.idx, TRUE);
 	g_array_free(p->cfg->bswitch.amp, TRUE);
@@ -637,6 +762,11 @@ static void obs_assist_on_prepare_bswitch(GtkWidget *as, GtkWidget *pg,
 	p->cfg->bswitch.de_cent = p->cfg->de;
 	p->cfg->bswitch.pos = OFF1;
 
+	p->cfg->bswitch.p1.n = 0;
+	p->cfg->bswitch.p2.n = 0;
+	p->cfg->bswitch.tg.n = 0;
+	p->cfg->bswitch.co.n = 0;
+
 	/* set configuration */
 	sb = p->cfg->bswitch.sb_az_off1_deg;
 	p->cfg->bswitch.az_off1 = gtk_spin_button_get_value(sb);
@@ -657,7 +787,7 @@ static void obs_assist_on_prepare_bswitch(GtkWidget *as, GtkWidget *pg,
 	p->cfg->bswitch.n_rpt = gtk_spin_button_get_value_as_int(sb);
 
 
-	p->cfg->bswitch.rpt_cur = 1;
+	p->cfg->bswitch.rpt_cur = 0;
 
 	bzero(&p->cfg->bswitch.pos1, sizeof(struct spectrum));
 	bzero(&p->cfg->bswitch.pos2, sizeof(struct spectrum));

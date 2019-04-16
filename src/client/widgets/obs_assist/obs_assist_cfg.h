@@ -38,6 +38,14 @@ struct crossax {
 	GtkLabel *fitpar;
 };
 
+
+struct bswitch_pos {
+	struct spectrum sp;
+	gint n;
+	void *ref;
+};
+
+
 struct _ObsAssistConfig {
 
 	gdouble az;
@@ -244,6 +252,12 @@ struct _ObsAssistConfig {
 		struct spectrum pos2;
 		struct spectrum tgt;
 
+		struct bswitch_pos p1;
+		struct bswitch_pos p2;
+		struct bswitch_pos tg;
+		struct bswitch_pos co;
+
+
 		GArray *idx;
 		GArray *amp;
 
@@ -257,10 +271,10 @@ struct _ObsAssistConfig {
 
 
 	} bswitch;
-
-
-
 };
+
+
+
 
 
 #endif /* _WIDGETS_OBS_ASSIST_CFG_H_ */
