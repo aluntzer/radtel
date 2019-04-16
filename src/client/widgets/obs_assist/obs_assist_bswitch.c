@@ -96,7 +96,7 @@ static void bswitch_update_pbar_rpt(ObsAssist *p)
 	frac = (gdouble) p->cfg->bswitch.rpt_cur /
 	       (gdouble) p->cfg->bswitch.n_rpt;
 
-	str = g_strdup_printf("Cycle: %d of %d",
+	str = g_strdup_printf("Cycle: %d of %d complete",
 			      p->cfg->bswitch.rpt_cur,
 			      p->cfg->bswitch.n_rpt);
 
@@ -474,10 +474,9 @@ static gboolean bswitch_obs(void *data)
 
 	/* on final, we stay at the current position */
 
-	/* on repeat, TODO: set pos to 1 */
-	if (p->cfg->bswitch.rpt_cur < p->cfg->bswitch.n_rpt) {
-		p->cfg->bswitch.rpt_cur++;
+	if (p->cfg->bswitch.rpt_cur <= p->cfg->bswitch.n_rpt) {
 		bswitch_update_pbar_rpt(p);
+		p->cfg->bswitch.rpt_cur++;
 		return G_SOURCE_CONTINUE;
 	}
 
@@ -517,33 +516,37 @@ static void on_assistant_apply(GtkWidget *as, ObsAssist *p)
 
 	w = xyplot_new();
 	xyplot_set_xlabel(w, "Frequency [MHz]");
-	xyplot_set_ylabel(w, "Offset 1 Flux [K]");
+	xyplot_set_ylabel(w, "Flux [K]");
+	xyplot_set_title(w, "Offset 1 Spectrum");
 
 	gtk_widget_set_hexpand(w, TRUE);
 	gtk_widget_set_vexpand(w, TRUE);
-	gtk_widget_set_size_request(w, -1, 100);
+	gtk_widget_set_size_request(w, -1, 300);
 	gtk_box_pack_start(GTK_BOX(box), w, TRUE, TRUE, 0);
 	p->cfg->bswitch.plt_pos1 = w;
 
 
 	w = xyplot_new();
 	xyplot_set_xlabel(w, "Frequency [MHz]");
-	xyplot_set_ylabel(w, "Target Flux [K]");
+	xyplot_set_ylabel(w, "Flux [K]");
+	xyplot_set_title(w, "Target Spectrum");
+
 
 	gtk_widget_set_hexpand(w, TRUE);
 	gtk_widget_set_vexpand(w, TRUE);
-	gtk_widget_set_size_request(w, -1, 100);
+	gtk_widget_set_size_request(w, -1, 300);
 	gtk_box_pack_start(GTK_BOX(box), w, TRUE, TRUE, 0);
 	p->cfg->bswitch.plt_tgt = w;
 
 
 	w = xyplot_new();
 	xyplot_set_xlabel(w, "Frequency [MHz]");
-	xyplot_set_ylabel(w, "Offset 2 Flux [K]");
+	xyplot_set_ylabel(w, "Flux [K]");
+	xyplot_set_title(w, "Offset 2 Spectrum");
 
 	gtk_widget_set_hexpand(w, TRUE);
 	gtk_widget_set_vexpand(w, TRUE);
-	gtk_widget_set_size_request(w, -1, 100);
+	gtk_widget_set_size_request(w, -1, 300);
 	gtk_box_pack_start(GTK_BOX(box), w, TRUE, TRUE, 0);
 	p->cfg->bswitch.plt_pos2 = w;
 
@@ -556,10 +559,11 @@ static void on_assistant_apply(GtkWidget *as, ObsAssist *p)
 	w = xyplot_new();
 	xyplot_set_xlabel(w, "Frequency [MHz]");
 	xyplot_set_ylabel(w, "Corrected Flux [K]");
+	xyplot_set_title(w, "Offset-Corrected Spectrum");
 
 	gtk_widget_set_hexpand(w, TRUE);
 	gtk_widget_set_vexpand(w, TRUE);
-	gtk_widget_set_size_request(w, -1, 100);
+	gtk_widget_set_size_request(w, -1, 300);
 	gtk_box_pack_start(GTK_BOX(box), w, TRUE, TRUE, 0);
 	p->cfg->bswitch.plt_corr = w;
 
@@ -567,10 +571,11 @@ static void on_assistant_apply(GtkWidget *as, ObsAssist *p)
 	w = xyplot_new();
 	xyplot_set_xlabel(w, "Sample");
 	xyplot_set_ylabel(w, "Average Flux / Bin [K]");
+	xyplot_set_title(w, "Average Flux per Sampling Cycle");
 
 	gtk_widget_set_hexpand(w, TRUE);
 	gtk_widget_set_vexpand(w, TRUE);
-	gtk_widget_set_size_request(w, -1, 100);
+	gtk_widget_set_size_request(w, -1, 300);
 	gtk_box_pack_start(GTK_BOX(box), w, TRUE, TRUE, 0);
 	p->cfg->bswitch.plt_cont = w;
 
