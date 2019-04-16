@@ -36,6 +36,16 @@ G_DEFINE_TYPE_WITH_PRIVATE(Spectrum, spectrum, GTK_TYPE_BOX)
 #define SPECTRUM_DEFAULT_PER_LEN 10
 
 
+static gdouble spectrum_convert_x2(gdouble x, gpointer data)
+{
+	Spectrum *p;
+
+
+	p = SPECTRUM(data);
+
+
+	return -(vlsr(p->cfg->pos_equ, 0.0) + doppler_vel(x, p->cfg->freq_ref_mhz));
+}
 
 /**
  * @brief handle connected
@@ -44,6 +54,8 @@ G_DEFINE_TYPE_WITH_PRIVATE(Spectrum, spectrum, GTK_TYPE_BOX)
 static void spectrum_connected(gpointer instance, gpointer data)
 {
 	/* fetch the config */
+	cmd_capabilities(PKT_TRANS_ID_UNDEF);
+	cmd_getpos_azel(PKT_TRANS_ID_UNDEF);
 	cmd_spec_acq_cfg_get(PKT_TRANS_ID_UNDEF);
 }
 
@@ -170,6 +182,56 @@ static void spectrum_handle_pr_spec_acq_cfg(gpointer instance,
 
 	p->cfg->acq = (*acq);
 }
+
+
+/**
+ * @brief handle capabilities data
+ */
+
+static void spectrum_handle_pr_capabilities(gpointer instance,
+					    const struct capabilities *c,
+					    gpointer data)
+{
+	Spectrum *p;
+
+
+	p = SPECTRUM(data);
+
+
+	p->cfg->lat = (gdouble) c->lat_arcsec / 3600.0;
+	p->cfg->lon = (gdouble) c->lon_arcsec / 3600.0;
+}
+
+
+/**
+ * @brief handle position data
+ */
+
+static gboolean spectrum_handle_getpos_azel_cb(gpointer instance,
+					       struct getpos *pos,
+					       gpointer data)
+{
+	struct coord_horizontal hor;
+
+	Spectrum *p;
+
+
+	p = SPECTRUM(data);
+
+
+	hor.az = (double) pos->az_arcsec / 3600.0;
+	hor.el = (double) pos->el_arcsec / 3600.0;
+
+
+	p->cfg->pos_equ = horizontal_to_equatorial(hor,
+						   p->cfg->lat, p->cfg->lon,
+						   0.0);
+
+	return TRUE;
+}
+
+
+
 
 
 /**
@@ -309,11 +371,16 @@ static gboolean spectrum_plt_fitbox_selected(GtkWidget *w, gpointer data)
 
 	struct fitdata *fit;
 
+	Spectrum *p;
 
-	if (!data)
+
+	p = SPECTRUM(data);
+
+
+	if (!p)
 		return TRUE;
 
-	fit = (struct fitdata *) data;
+	fit = &p->cfg->fit;
 
 	n = xyplot_get_selection_data(w, &x, &y, NULL);
 	if (!n) {
@@ -321,6 +388,7 @@ static gboolean spectrum_plt_fitbox_selected(GtkWidget *w, gpointer data)
 		xyplot_drop_graph(w, fit->plt_ref_out);
 		return TRUE;
 	}
+
 
 	gaussian_guess_param(par, x, y, n);
 
@@ -336,20 +404,26 @@ static gboolean spectrum_plt_fitbox_selected(GtkWidget *w, gpointer data)
 	lbl = g_strdup_printf("Last Fit Results:\n\n"
 			      "<tt>"
 			      "Peak:\n"
-			      "<b>%8.2f [MHz]</b>\n\n"
+			      "<b>%8.2f [MHz]</b>\n"
+			      "<b>%8.2f [km/s]</b>\n\n"
 			      "Height:\n"
 			      "<b>%8.2f [K]</b>\n\n"
 			      "FWHM:\n"
-			      "<b>%8.2f [deg]</b>\n\n"
+			      "<b>%8.2f [MHz]</b>\n"
+			      "<b>%8.2f [km/s]</b>\n\n"
 			      "</tt>",
-			      par[2], par[0],
-			      fabs(par[1]) * 2.0 * sqrt(log(2.0)));
+			      gaussian_peak(par),
+			      spectrum_convert_x2(gaussian_peak(par), p),
+			      gaussian_height(par),
+			      gaussian_fwhm(par),
+			      fabs(doppler_vel_relative(gaussian_fwhm(par),
+							p->cfg->freq_ref_mhz)));
 
 	gtk_label_set_markup(fit->fitpar, lbl);
 	g_free(lbl);
 
-	/* XXX plot a fixed 100 points for now */
-	spectrum_plot_gaussian(w, par, 100, fit);
+	/* XXX plot a fixed 200 points for now */
+	spectrum_plot_gaussian(w, par, 200, fit);
 
 	return TRUE;
 }
@@ -812,6 +886,184 @@ exit:
 }
 
 
+
+
+static void spectrum_vrest_entry_changed_cb(GtkEditable *ed, gpointer data)
+{
+	gdouble vrest;
+
+	Spectrum *p;
+
+
+	p = SPECTRUM(data);
+
+
+	if (!gtk_entry_get_text_length(GTK_ENTRY(ed)))
+		return;
+
+	vrest = g_strtod(gtk_entry_get_text(GTK_ENTRY(ed)), NULL);
+
+	p->cfg->freq_ref_mhz = vrest;
+
+	xyplot_redraw(p->cfg->plot);
+}
+
+
+static void spectrum_vrest_entry_insert_text_cb(GtkEditable *ed, gchar *new_text,
+					  gint new_text_len, gpointer pos,
+					  gpointer data)
+{
+	gint i;
+
+
+	/* allow digits and decimal separators only */
+	for (i = 0; i < new_text_len; i++) {
+		if (!g_ascii_isdigit(new_text[i])
+		    && new_text[i] != ','
+		    && new_text[i] != '.') {
+			g_signal_stop_emission_by_name(ed, "insert-text");
+			break;
+		}
+	}
+
+}
+
+
+static void spectrum_vrest_sel_changed(GtkComboBox *cb, gpointer data)
+{
+	GtkListStore *ls;
+
+	GtkTreeIter iter;
+
+	Spectrum *p;
+
+	gdouble vrest;
+
+
+	p = SPECTRUM(data);
+
+	if (!p)
+		return;
+
+	if (!gtk_combo_box_get_active_iter(cb, &iter))
+		return;
+
+	ls = GTK_LIST_STORE(gtk_combo_box_get_model(cb));
+
+	gtk_tree_model_get(GTK_TREE_MODEL(ls), &iter, 2, &vrest, -1);
+
+	p->cfg->freq_ref_mhz = vrest;
+
+
+	xyplot_redraw(p->cfg->plot);
+}
+
+
+/**
+ * @brief create reference rest frequency controls
+ *
+ * @note here we configure the spectral resolution. The remote device
+ *	 would typically support either 2^n (SRT: n_max=2) or linear dividers
+ *	 based on a given acquisition bandwidth (500 kHz for the SRT) and a
+ *	 range of bins (SRT: 64) with equally either 2^n or linear
+ *	 dividiers (SRT: none) for which we must generate the proper selections
+ *	 below
+ */
+
+GtkWidget *spectrum_vrest_ctrl_new(Spectrum *p)
+{
+	GtkWidget *w;
+	GtkWidget *cb;
+
+	GtkListStore *ls;
+	GtkCellRenderer *col;
+
+
+	/* note: for easier selection, always give J (total electronic angular
+	 * momentum quantum number) and F (transitions between hyperfine
+	 * levels)
+	 *
+	 * note on OH: the ground rotational state splits into a lambda-doublet
+	 * sub-levels due to the interaction between the rotational and
+	 * electronic angular momenta of the molecule. The sub-levels further
+	 * split into two hyperfine levels as a result of the interaction
+	 * between the electron and nuclear spins of the hydrogen atom.
+	 * The transitions that connect sub-levels with the same F-values are
+	 * called the main lines, whereas the transitions between sub-levels of
+	 * different F-values are called the satellite lines.
+	 * (See DICKE'S SUPERRADIANCE IN ASTROPHYSICS. II. THE OH 1612 MHz LINE,
+	 * F. Rajabi and M. Houde,The Astrophysical Journal, Volume 828,
+	 * Number 1.)
+	 * The main lines are stronger than the satellite lines. In star
+	 * forming regions, the 1665 MHz line exceeds the 1667 MHz line in
+	 * intensity, while in equilibirium conditions, it is generally weaker.
+	 * In late-type starts, the 1612 MHz line may sometimes be equal or
+	 * even exceed the intensity of the main lines.
+	 */
+
+
+	ls = gtk_list_store_new(3, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_DOUBLE);
+
+	/* printf to get locale decimal style */
+	gtk_list_store_insert_with_values(ls, NULL, -1,
+					  0, "(HI) J=1/2 F=1-0",
+					  1, g_strdup_printf("%7.3f", 1420.406),
+					  2, 1420.406, -1);
+
+	gtk_list_store_insert_with_values(ls, NULL, -1,
+					  0, "(OH) J=3/2 F=1-2",
+					  1, g_strdup_printf("%7.3f", 1612.231),
+					  2, 1612.231, -1);
+
+	gtk_list_store_insert_with_values(ls, NULL, -1,
+					  0, "(OH) J=3/2 F=1-1",
+					  1, g_strdup_printf("%7.3f", 1665.402),
+					  2, 1665.402, -1);
+
+	gtk_list_store_insert_with_values(ls, NULL, -1,
+					  0, "(OH) J=3/2 F=2-2",
+					  1, g_strdup_printf("%7.3f", 1667.359),
+					  2, 1667.359, -1);
+
+	gtk_list_store_insert_with_values(ls, NULL, -1,
+					  0, "(OH) J=3/2 F=2-1",
+					  1, g_strdup_printf("%7.3f", 1720.530),
+					  2, 1720.530, -1);
+
+	cb = gtk_combo_box_new_with_model_and_entry(GTK_TREE_MODEL(ls));
+
+	g_object_unref(ls);
+
+	col = gtk_cell_renderer_text_new();
+	gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(cb), col, TRUE);
+
+	gtk_cell_layout_set_attributes(GTK_CELL_LAYOUT(cb), col, "text", 0, NULL );
+	gtk_combo_box_set_entry_text_column(GTK_COMBO_BOX(cb), 1);
+
+	/* the entry is a child of the box */
+	w = gtk_bin_get_child(GTK_BIN(cb));
+	gtk_entry_set_width_chars(GTK_ENTRY(w), 8);
+
+	g_signal_connect(w, "insert-text",
+			 G_CALLBACK(spectrum_vrest_entry_insert_text_cb), p);
+	g_signal_connect(w, "changed",
+			 G_CALLBACK(spectrum_vrest_entry_changed_cb), p);
+	gtk_entry_set_input_purpose(GTK_ENTRY(w), GTK_INPUT_PURPOSE_DIGITS);
+
+	gtk_combo_box_set_id_column(GTK_COMBO_BOX(cb), 1);
+
+	g_signal_connect(G_OBJECT(cb), "changed",
+			 G_CALLBACK(spectrum_vrest_sel_changed), (gpointer) p);
+
+	gtk_combo_box_set_active(GTK_COMBO_BOX(cb), 0);
+
+
+
+	return cb;
+}
+
+
+
 /**
  * @brief create vertical spectrum control bar
  */
@@ -939,8 +1191,19 @@ static GtkWidget *spectrum_sidebar_new(Spectrum *p)
 	w = gtk_separator_new(GTK_ORIENTATION_HORIZONTAL);
 	gtk_grid_attach(grid, w, 0, 11, 2, 1);
 
-	w = gtk_label_new("");
+	w = gtk_label_new("Ref. Frequency [MHz]");
+	gtk_widget_set_halign(w, GTK_ALIGN_START);
+	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
 	gtk_grid_attach(grid, w, 0, 12, 2, 1);
+
+	w = spectrum_vrest_ctrl_new(p);
+	gtk_grid_attach(grid, w, 0, 13, 2, 1);;
+
+	w = gtk_separator_new(GTK_ORIENTATION_HORIZONTAL);
+	gtk_grid_attach(grid, w, 0, 14, 2, 1);
+
+	w = gtk_label_new("");
+	gtk_grid_attach(grid, w, 0, 15, 2, 1);
 	p->cfg->fit.fitpar = GTK_LABEL(w);
 
 
@@ -960,13 +1223,19 @@ static void gui_create_spectrum_controls(Spectrum *p)
 
 	xyplot_set_xlabel(p->cfg->plot, "Frequency [MHz]");
 	xyplot_set_ylabel(p->cfg->plot, "Amplitude [K]");
+
+	xyplot_set_x2_conversion(p->cfg->plot, spectrum_convert_x2, (void *) p);
+	xyplot_set_x2label(p->cfg->plot, "VLSR [km/s]");
+
+
 	g_signal_connect(p->cfg->plot, "xyplot-fit-selection",
 			 G_CALLBACK(spectrum_plt_fitbox_selected),
-			 &p->cfg->fit);
+			 p);
 
 	g_signal_connect(p->cfg->plot, "xyplot-clicked-xy-coord",
 			 G_CALLBACK(spectrum_plt_clicked_coord),
 			 p);
+
 
 	w = spectrum_sidebar_new(p);
 	gtk_box_pack_start(GTK_BOX(p), w, FALSE, FALSE, 0);
@@ -990,6 +1259,8 @@ static gboolean spectrum_destroy(GtkWidget *w, void *data)
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_ena);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_dis);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_cfg);
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_cap);
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_pos);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_con);
 
 	return TRUE;
@@ -1035,6 +1306,8 @@ static void spectrum_init(Spectrum *p)
 	p->cfg->s_per = CIRCLES;
 	p->cfg->c_per = COLOR_YELLOW_PHOS;
 
+	p->cfg->freq_ref_mhz = 1420.406;
+
 	gtk_orientable_set_orientation(GTK_ORIENTABLE(p),
 				       GTK_ORIENTATION_HORIZONTAL);
 
@@ -1062,6 +1335,14 @@ static void spectrum_init(Spectrum *p)
 
 	p->cfg->id_cfg = g_signal_connect(sig_get_instance(), "pr-spec-acq-cfg",
 			 G_CALLBACK(spectrum_handle_pr_spec_acq_cfg),
+			 (gpointer) p);
+
+	p->cfg->id_cap = g_signal_connect(sig_get_instance(), "pr-capabilities",
+			 G_CALLBACK(spectrum_handle_pr_capabilities),
+			 (gpointer) p);
+
+	p->cfg->id_pos = g_signal_connect(sig_get_instance(), "pr-getpos-azel",
+			 G_CALLBACK(spectrum_handle_getpos_azel_cb),
 			 (gpointer) p);
 
 	p->cfg->id_con = g_signal_connect(sig_get_instance(), "connected",

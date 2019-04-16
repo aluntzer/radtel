@@ -17,10 +17,14 @@
 #ifndef _WIDGETS_SPECTRUM_CFG_H_
 #define _WIDGETS_SPECTRUM_CFG_H_
 
+
+#include <coordinates.h>
+
 #include <spectrum.h>
 #include <cmd.h>
 #include <xyplot.h>
 #include <gio/gio.h>
+
 
 struct spectrum {
 	gdouble *x;
@@ -60,11 +64,20 @@ struct _SpectrumConfig {
 	struct fitdata fit;
 	struct spec_acq_cfg acq;
 
+	gdouble lat;
+	gdouble lon;
+	struct coord_equatorial	pos_equ;
+
+	gdouble freq_ref_mhz;
+
+
 	guint id_spd;
 	guint id_acq;
 	guint id_ena;
 	guint id_dis;
 	guint id_cfg;
+	guint id_cap;
+	guint id_pos;
 	guint id_con;
 };
 
