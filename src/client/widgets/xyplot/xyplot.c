@@ -1344,7 +1344,7 @@ static void xyplot_draw_plot_frame(XYPlot *p, cairo_t *cr,
 	if (p->ylabel)
 		xyplot_write_text_centered(cr,
 					   te_y.height,
-					   x + 0.5 * h - 4.0 * te_y.height,
+					   x + 0.5 * h - 0.25 * te_y.width,
 					   p->ylabel,
 					   -90.0 * M_PI / 180.0);
 
@@ -1360,7 +1360,7 @@ static void xyplot_draw_plot_frame(XYPlot *p, cairo_t *cr,
 	if (p->y2label)
 		xyplot_write_text_centered(cr,
 					   width - 2.0 * te_y2.height,
-					   x + 0.5 * h - 4.0 * te_y2.height,
+					   x + 0.5 * h - 0.25 * te_y2.width,
 					   p->y2label,
 					   90.0 * M_PI / 180.0);
 
