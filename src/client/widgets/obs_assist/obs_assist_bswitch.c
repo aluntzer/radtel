@@ -641,7 +641,7 @@ static void on_assistant_apply(GtkWidget *as, ObsAssist *p)
 
 	w = xyplot_new();
 	xyplot_set_xlabel(w, "Frequency [MHz]");
-	xyplot_set_ylabel(w, "Flux [K]");
+	xyplot_set_ylabel(w, "Temperature [K]");
 	xyplot_set_title(w, "Offset 1 Spectrum");
 
 	gtk_widget_set_hexpand(w, TRUE);
@@ -653,7 +653,6 @@ static void on_assistant_apply(GtkWidget *as, ObsAssist *p)
 
 	w = xyplot_new();
 	xyplot_set_xlabel(w, "Frequency [MHz]");
-	xyplot_set_ylabel(w, "Flux [K]");
 	xyplot_set_title(w, "Target Spectrum");
 
 
@@ -666,7 +665,6 @@ static void on_assistant_apply(GtkWidget *as, ObsAssist *p)
 
 	w = xyplot_new();
 	xyplot_set_xlabel(w, "Frequency [MHz]");
-	xyplot_set_ylabel(w, "Flux [K]");
 	xyplot_set_title(w, "Offset 2 Spectrum");
 
 	gtk_widget_set_hexpand(w, TRUE);
@@ -683,7 +681,7 @@ static void on_assistant_apply(GtkWidget *as, ObsAssist *p)
 
 	w = xyplot_new();
 	xyplot_set_xlabel(w, "Frequency [MHz]");
-	xyplot_set_ylabel(w, "Corrected Flux [K]");
+	xyplot_set_ylabel(w, "Corrected Temperature [K]");
 	xyplot_set_title(w, "Offset-Corrected Spectrum");
 
 	gtk_widget_set_hexpand(w, TRUE);
@@ -695,8 +693,8 @@ static void on_assistant_apply(GtkWidget *as, ObsAssist *p)
 
 	w = xyplot_new();
 	xyplot_set_xlabel(w, "Sample");
-	xyplot_set_ylabel(w, "Average Flux / Bin [K]");
-	xyplot_set_title(w, "Average Flux per Sampling Cycle");
+	xyplot_set_ylabel(w, "Average Temperature / Bin [K]");
+	xyplot_set_title(w, "Average Bin Temperature per Sampling Cycle");
 
 	gtk_widget_set_hexpand(w, TRUE);
 	gtk_widget_set_vexpand(w, TRUE);
