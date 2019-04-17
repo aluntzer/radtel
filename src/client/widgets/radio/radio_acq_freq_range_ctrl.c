@@ -119,10 +119,10 @@ static void radio_show_input_fields(Radio *p)
 
 	if (p->cfg->mode_lohi) {
 
-		lbl = "Low [km/s]";
+		lbl = "Red [km/s]";
 		gtk_label_set_text(p->cfg->sb_frq_lo_center_lbl, lbl);
 
-		lbl = "High [km/s]";
+		lbl = "Blue [km/s]";
 		gtk_label_set_text(p->cfg->sb_frq_hi_bw_lbl, lbl);
 
 		gtk_widget_show(GTK_WIDGET(p->cfg->sb_vel_lo));
@@ -200,23 +200,24 @@ static gint radio_vel_value_changed(GtkSpinButton *sb, Radio *p)
 	gtk_spin_button_set_value(p->cfg->sb_frq_lo, f0);
 	gtk_spin_button_set_value(p->cfg->sb_frq_hi, f1);
 
+
 	radio_input_unblock_signals(p);
 
-	if (v0 < v1)
+	if (v0 > v1)
 		return TRUE;
 
 
 	/* underflow, push down */
 	if (sb == p->cfg->sb_vel_lo) {
-		gtk_spin_button_set_value(p->cfg->sb_vel_hi, v0);
+		gtk_spin_button_set_value(p->cfg->sb_vel_hi, v1);
 		gtk_spin_button_spin(p->cfg->sb_vel_hi,
-				     GTK_SPIN_STEP_FORWARD, 0);
+				     GTK_SPIN_STEP_BACKWARD, 0);
 	}
 
 	if (sb == p->cfg->sb_vel_hi) {
-		gtk_spin_button_set_value(p->cfg->sb_vel_lo, v1);
+		gtk_spin_button_set_value(p->cfg->sb_vel_lo, v0);
 		gtk_spin_button_spin(p->cfg->sb_vel_lo,
-				     GTK_SPIN_STEP_BACKWARD, 0);
+				     GTK_SPIN_STEP_FORWARD, 0);
 	}
 
 	return TRUE;
@@ -294,13 +295,13 @@ static gint radio_freq_value_changed(GtkSpinButton *sb, Radio *p)
 	f0 = gtk_spin_button_get_value(p->cfg->sb_frq_lo);
 	f1 = gtk_spin_button_get_value(p->cfg->sb_frq_hi);
 
-	v0 = doppler_vel(f0, p->cfg->freq_ref_mhz);
-	v1 = doppler_vel(f1, p->cfg->freq_ref_mhz);
+	v0 = -doppler_vel(f0, p->cfg->freq_ref_mhz);
+	v1 = -doppler_vel(f1, p->cfg->freq_ref_mhz);
 
 	fcent = (f1 + f0) * 0.5;
 	fspan = fabs(f1 - f0);
 
-	vcent = doppler_vel(fcent, p->cfg->freq_ref_mhz);
+	vcent = -doppler_vel(fcent, p->cfg->freq_ref_mhz);
 	vspan = doppler_vel_relative(fspan, p->cfg->freq_ref_mhz);
 
 	/* must block handler or we'll enter a update loop */
@@ -377,10 +378,10 @@ static gint radio_center_freq_value_changed(GtkSpinButton *sb, Radio *p)
 	gtk_spin_button_set_value(p->cfg->sb_frq_lo, fc - bw2);
 	gtk_spin_button_set_value(p->cfg->sb_frq_hi, fc + bw2);
 
-	v0 = doppler_vel(fc - bw2, p->cfg->freq_ref_mhz);
-	v1 = doppler_vel(fc + bw2, p->cfg->freq_ref_mhz);
+	v0 = -doppler_vel(fc + bw2, p->cfg->freq_ref_mhz);
+	v1 = -doppler_vel(fc - bw2, p->cfg->freq_ref_mhz);
 
-	vcent = doppler_vel(fc, p->cfg->freq_ref_mhz);
+	vcent = -doppler_vel(fc, p->cfg->freq_ref_mhz);
 	vspan = doppler_vel_relative(bw2 * 2.0, p->cfg->freq_ref_mhz);
 
 	gtk_spin_button_set_value(p->cfg->sb_vel_ce, vcent);
