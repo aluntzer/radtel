@@ -666,7 +666,7 @@ static void gui_create_history_controls(History *p)
 	p->cfg->plot = w;
 
 	xyplot_set_xlabel(p->cfg->plot, "Relative Sample Time [s]");
-	xyplot_set_ylabel(p->cfg->plot, "Average Flux / Bin [K]");
+	xyplot_set_ylabel(p->cfg->plot, "Average Temperature / Bin [K]");
 
 	w = history_sidebar_new(p);
 	gtk_box_pack_start(GTK_BOX(hbox), w, FALSE, FALSE, 0);
