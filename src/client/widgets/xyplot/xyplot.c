@@ -3673,8 +3673,10 @@ static void xyplot_init(XYPlot *p)
 	g_return_if_fail(IS_XYPLOT(p));
 
 	/* initialisation of plotting internals */
-	p->xlabel = "X-Axis";
-	p->ylabel = "Y-Axis";
+	p->xlabel = NULL;
+	p->ylabel = NULL;
+	p->x2label = NULL;
+	p->y2label = NULL;
 	p->pad    = 20.0;
 
 	p->graphs = NULL;
