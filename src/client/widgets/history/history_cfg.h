@@ -40,8 +40,18 @@ struct _HistoryConfig {
 	GtkScale               *s_lo;
 	GtkScale               *s_hi;
 
+	GtkScale               *s_min;
+
 	gdouble th_lo;
 	gdouble th_hi;
+
+	gint wf_n;
+	gint wf_n_max;
+
+	gdouble wf_min;
+
+	gdouble wf_av_min;
+	gdouble wf_av_max;
 
 	guint id_spd;
 };

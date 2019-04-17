@@ -76,6 +76,19 @@ static void history_wf_slide_hi_value_changed(GtkRange *range,
 }
 
 
+static void history_wf_slide_min_value_changed(GtkRange *range,
+					      gpointer  data)
+{
+	History *p;
+
+
+	p = HISTORY(data);
+
+	p->cfg->wf_min = gtk_range_get_value(range);
+}
+
+
+
 /**
  * @brief average colour set callback
  */
@@ -329,6 +342,7 @@ static void history_append_wf(History *p, const gdouble *amp, gsize len)
 
 	gdouble min = DBL_MAX;
 	gdouble max = DBL_MIN;
+	gdouble n, n1;
 
 	guchar *wf;
 	guchar *pix;
@@ -342,9 +356,21 @@ static void history_append_wf(History *p, const gdouble *amp, gsize len)
 		}
 	}
 
+	if (p->cfg->wf_pb) {
+		if (p->cfg->wf_n_max != gdk_pixbuf_get_height(p->cfg->wf_pb)) {
+			g_object_unref(p->cfg->wf_pb);
+			p->cfg->wf_pb = NULL;
+		}
+	}
+
+
 	if (!p->cfg->wf_pb) {
 		p->cfg->wf_pb = gdk_pixbuf_new(GDK_COLORSPACE_RGB, FALSE, 8,
-					       len, 100);
+					       len, p->cfg->wf_n_max);
+
+		p->cfg->wf_n      = 0;
+		p->cfg->wf_av_min = 0.0;
+		p->cfg->wf_av_max = 0.0;
 
 		if (!p->cfg->wf_pb) {
 			g_warning("Could not create pixbuf: out of memory");
@@ -393,11 +419,24 @@ static void history_append_wf(History *p, const gdouble *amp, gsize len)
 			max = amp[i];
 	}
 
+	/* update moving average */
+	if (p->cfg->wf_n < p->cfg->wf_n_max)
+		p->cfg->wf_n++;
+
+	n  = (gdouble) p->cfg->wf_n;
+	n1 = (gdouble) (p->cfg->wf_n - 1);
+
+	p->cfg->wf_av_min = (n1 * p->cfg->wf_av_min + min) / n;
+	p->cfg->wf_av_max = (n1 * p->cfg->wf_av_max + max) / n;
+
+	gtk_range_set_range(GTK_RANGE(p->cfg->s_min),
+			    p->cfg->wf_av_min, p->cfg->wf_av_max);
+
 	pix = wf;
 
 	/* add new line */
 	for (i = 0; i < len; i++) {
-		history_wf_get_rgb((amp[i] - min) / (max - min),
+		history_wf_get_rgb((amp[i] - p->cfg->wf_min) / (max - min),
 				   p->cfg->th_lo, p->cfg->th_hi,
 				   &pix[0], &pix[1], &pix[2]);
 		pix += nc;
@@ -416,7 +455,6 @@ static void history_handle_pr_spec_data(gpointer instance,
 					 const struct spec_data *s,
 					 gpointer data)
 {
-
 	uint64_t i;
 	uint64_t f;
 
@@ -474,6 +512,9 @@ static gboolean history_hst_value_changed_cb(GtkSpinButton *sb, History *p)
 
 
 	p->cfg->n_hst = gtk_spin_button_get_value_as_int(sb);
+
+	/* XXX for now, use the same spb to set the height of the waterfall */
+	p->cfg->wf_n_max = p->cfg->n_hst;
 
 	if (!p->cfg->n_hst) {
 		history_clear_hst(p);
@@ -633,7 +674,7 @@ static void gui_create_history_controls(History *p)
 	gtk_box_pack_start(GTK_BOX(p), hbox, TRUE, TRUE, 0);
 
 
-	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 12);
+	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
 	gtk_box_pack_start(GTK_BOX(p), hbox, TRUE, TRUE, 0);
 
 	w = gtk_frame_new("Spectral Waterfall");
@@ -642,10 +683,9 @@ static void gui_create_history_controls(History *p)
 	g_object_set(GTK_WIDGET(p->cfg->wf_da), "margin", 12, NULL);
 	gtk_container_add(GTK_CONTAINER(w), GTK_WIDGET(p->cfg->wf_da));
 
-	gtk_box_pack_start(GTK_BOX(hbox), w, TRUE, TRUE, 6);
+	gtk_box_pack_start(GTK_BOX(hbox), w, TRUE, TRUE, 0);
 
-
-
+if (0) {
 	vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
 	gtk_box_pack_start(GTK_BOX(hbox), vbox, FALSE, TRUE, 6);
 	w = gtk_scale_new_with_range(GTK_ORIENTATION_VERTICAL, 0., 1., 0.01);
@@ -671,6 +711,22 @@ static void gui_create_history_controls(History *p)
 			 G_CALLBACK(history_wf_slide_hi_value_changed), p);
 	gtk_box_pack_start(GTK_BOX(vbox), w, TRUE, TRUE, 0);
 	w = gtk_label_new("Hi");
+	gtk_style_context_add_class(gtk_widget_get_style_context(w),
+				    "dim-label");
+	gtk_box_pack_start(GTK_BOX(vbox), w, FALSE, TRUE, 0);
+}
+
+
+	vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+	gtk_box_pack_start(GTK_BOX(hbox), vbox, FALSE, TRUE, 6);
+	w = gtk_scale_new(GTK_ORIENTATION_VERTICAL, NULL);
+	gtk_range_set_inverted(GTK_RANGE(w), TRUE);
+	p->cfg->s_min = GTK_SCALE(w);
+	gtk_scale_set_draw_value(GTK_SCALE(w), FALSE);
+	g_signal_connect(G_OBJECT(w), "value-changed",
+			 G_CALLBACK(history_wf_slide_min_value_changed), p);
+	gtk_box_pack_start(GTK_BOX(vbox), w, TRUE, TRUE, 0);
+	w = gtk_label_new("Lvl");
 	gtk_style_context_add_class(gtk_widget_get_style_context(w),
 				    "dim-label");
 	gtk_box_pack_start(GTK_BOX(vbox), w, FALSE, TRUE, 0);
@@ -734,6 +790,8 @@ static void history_init(History *p)
 
 	p->cfg->th_lo = 0.01;
 	p->cfg->th_hi = 0.99;
+
+	p->cfg->wf_n_max = HISTORY_DEFAULT_HST_LEN;
 
 
 	gtk_orientable_set_orientation(GTK_ORIENTABLE(p),
