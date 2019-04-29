@@ -1444,6 +1444,8 @@ static gpointer srt_acquisition_update(gpointer data)
 		g_mutex_unlock(&acq_lock);
 	}
 
+	/* push current configuration to clients */
+	ack_spec_acq_cfg(PKT_TRANS_ID_UNDEF, &g_obs.acq);
 
 	g_free(data);
 }

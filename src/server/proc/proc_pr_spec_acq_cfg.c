@@ -40,7 +40,5 @@ void proc_pr_spec_acq_cfg(struct packet *pkt)
 	if(be_spec_acq_cfg(acq))
 		ack_fail(pkt->trans_id);
 
-	/* reply current configuration */
-	if (be_spec_acq_cfg_get(acq))
-		ack_spec_acq_cfg(pkt->trans_id, acq);
+	 ack_success(pkt->trans_id);
 }

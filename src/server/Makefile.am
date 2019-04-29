@@ -23,6 +23,7 @@ AM_LDFLAGS += -lm
 AM_LDFLAGS += -u ack_spec_data
 AM_LDFLAGS += -u ack_spec_acq_disable
 AM_LDFLAGS += -u ack_spec_acq_enable
+AM_LDFLAGS += -u ack_spec_acq_cfg
 AM_LDFLAGS += -u ack_status_acq
 AM_LDFLAGS += -u ack_status_slew
 AM_LDFLAGS += -u ack_status_move
