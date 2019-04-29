@@ -32,14 +32,23 @@ G_DEFINE_TYPE_WITH_PRIVATE(SysStatus, sys_status, GTK_TYPE_BOX)
 
 
 /**
+ * @brief fetch needed configuration data
+ */
+
+static void sys_status_fetch_config(void)
+{
+	cmd_capabilities(PKT_TRANS_ID_UNDEF);
+	cmd_getpos_azel(PKT_TRANS_ID_UNDEF);
+}
+
+
+/**
  * @brief handle connected
  */
 
 static void sys_status_connected(gpointer instance, gpointer data)
 {
-	/* fetch configuration */
-	cmd_capabilities(PKT_TRANS_ID_UNDEF);
-	cmd_getpos_azel(PKT_TRANS_ID_UNDEF);
+	sys_status_fetch_config();
 }
 
 
@@ -406,6 +415,8 @@ static void sys_status_init(SysStatus *p)
 				 (void *) p);
 
 	g_signal_connect(p, "destroy", G_CALLBACK(sys_status_destroy), NULL);
+
+	sys_status_fetch_config();
 }
 
 
