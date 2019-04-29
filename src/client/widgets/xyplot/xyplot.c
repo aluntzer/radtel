@@ -331,7 +331,7 @@ static void xyplot_import_graph_xy_asc(const gchar *fname, XYPlot *p)
 
 	while (fgets(line, 1024, f)) {
 
-		t = strtok(line, "\t ");
+		t = strtok(line, "\n\t ");
 
 		n = 0;
 		while (t) {
