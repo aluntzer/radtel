@@ -132,8 +132,11 @@ static void telescope_set_pos_cb(GtkWidget *w, Telescope *p)
 	p->cfg->track_de = equ.dec;
 
 	/* if tracking is on, let the tracker do the move */
-	if (p->cfg->tracking)
+	if (p->cfg->tracking) {
+		/* signal tracked position to other components */
+		sig_tracking(TRUE, equ.ra, equ.dec);
 		return;
+	}
 
 	/* otherwise go to azel */
 	cmd_moveto_azel(PKT_TRANS_ID_UNDEF, hor.az, hor.el);
