@@ -148,8 +148,9 @@ static gboolean cross_plt_fitbox_selected(GtkWidget *w, gpointer data)
 			      "Height over base: <b>%6.2fK</b>\n"
 			      "FWHM:             <b>%5.2f°</b>\n\n"
 			      "</tt>",
-			      par[2], par[0],
-			      fabs(par[1]) * 2.0 * sqrt(log(2.0)));
+			      gaussian_peak(par), gaussian_height(par),
+			      gaussian_fwhm(par));
+
 
 	gtk_label_set_markup(ax->fitpar, lbl);
 	g_free(lbl);
