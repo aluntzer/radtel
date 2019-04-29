@@ -39,7 +39,8 @@ sysconf_radtel_DATA = config/server.cfg
 sysconf_radtel_backendsdir = $(sysconfdir)/radtel/backends
 sysconf_radtel_backends_DATA = config/backends/srt_spectrometer.cfg \
 			       config/backends/srt_drive.cfg \
-			       config/backends/srt_comlink.cfg
+			       config/backends/srt_comlink.cfg \
+			       config/backends/rt_sim.cfg
 
 # cal to /etc
 sysconf_radtel_calibrationdir = $(sysconfdir)/radtel/backends/calibration
@@ -50,6 +51,16 @@ lib_radtelplug_srtdir = $(plugdir)/SRT
 lib_radtelplug_srt_DATA = backends/SRT/srt_comlink.so \
 			  backends/SRT/srt_drive.so \
 			  backends/SRT/srt_spectrometer.so
+# plugins to /lib
+lib_radtelplug_srtdir = $(plugdir)/SRT
+lib_radtelplug_srt_DATA = backends/SRT/srt_comlink.so \
+			  backends/SRT/srt_drive.so \
+			  backends/SRT/srt_spectrometer.so
+			  backends/SRT/srt_spectrometer.so
+lib_radtelplug_simdir = $(plugdir)/SIM
+lib_radtelplug_sim_DATA = backends/SIM/rt_sim.so
+
+
 
 
 bin_PROGRAMS = radtelsrv
