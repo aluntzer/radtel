@@ -68,8 +68,11 @@ static void sky_handle_tracking(gpointer instance, gboolean state,
 	GList *l;
 
 
-	if (state)
-		return;
+	if (state && p->cfg->sel) {
+		if (az == p->cfg->sel->hor.az &&
+		    el == p->cfg->sel->hor.el)
+			return;
+	}
 
 	/* deselect all */
 	p->cfg->sel = NULL;
@@ -1854,8 +1857,8 @@ static void sky_selection(GtkWidget *widget, GdkEventButton *event)
 	/* if something was selected, it was tracked. signal disable */
 	if (p->cfg->sel)
 		sig_tracking(FALSE, p->cfg->sel->hor.az, p->cfg->sel->hor.el);
-	/* deselect all */
 
+	/* deselect all */
 	p->cfg->sel = NULL;
 
 	for (l = p->cfg->obj; l; l = l->next) {
@@ -1889,6 +1892,9 @@ static void sky_selection(GtkWidget *widget, GdkEventButton *event)
 
 		obj->selected = TRUE;
 		p->cfg->sel = obj;
+
+		sig_tracking(TRUE, p->cfg->sel->hor.az, p->cfg->sel->hor.el);
+
 		break;
 	}
 
