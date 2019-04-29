@@ -330,7 +330,7 @@ GtkWidget *obs_assist_create_default(GtkWidget *w)
 
 	gtk_window_set_transient_for(GTK_WINDOW(as),
 				     GTK_WINDOW(top));
-	gtk_window_set_modal(GTK_WINDOW(as), TRUE);
+	gtk_window_set_modal(GTK_WINDOW(as), FALSE);
 	gtk_window_set_position(GTK_WINDOW(as), GTK_WIN_POS_CENTER_ON_PARENT);
 
 	gtk_window_set_attached_to(GTK_WINDOW(as), top);
