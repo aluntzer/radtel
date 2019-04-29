@@ -334,6 +334,45 @@ gint net_send(const char *pkt, size_t nbytes)
 	return ret;
 }
 
+void net_connected(GObject *obj,
+                        GAsyncResult *res,
+                        gpointer user_data)
+{
+	GError *error = NULL;
+	GSocketConnection *con;
+
+	con =  g_socket_client_connect_to_host_finish(G_SOCKET_CLIENT(obj),
+						      res, &error);
+
+	if (error) {
+		const GSourceFunc sf = net_reconnect_cb;
+		gchar *msg;
+
+		msg = g_strdup_printf("%s; Attempting reconnect in 10s",
+				      error->message);
+
+		sig_status_push(msg);
+		g_free(msg);
+		g_timeout_add_seconds(10, sf, NULL);
+
+		g_warning("%s", error->message);
+		g_clear_error(&error);
+
+
+		return;
+	};
+
+
+
+	net_setup_recv(con);
+
+	sig_connected();
+
+
+	g_debug("Client started");
+
+	sig_status_push("Connected to server");
+}
 
 
 /**
@@ -345,11 +384,9 @@ gint net_send(const char *pkt, size_t nbytes)
 int net_client_init(void)
 {
 	GSocketClient *client;
-	GSocketConnection *con;
 
 	GSettings *s;
 
-	GError *error = NULL;
 
 	gchar *host;
 
@@ -369,37 +406,11 @@ int net_client_init(void)
 
 	port = (guint16) g_settings_get_uint(s, "server-port");
 
-
 	client = g_socket_client_new();
-	con = g_socket_client_connect_to_host(client, host, port, NULL, &error);
 
-	if (error) {
-		const GSourceFunc sf = net_reconnect_cb;
-		gchar *msg;
-
-		msg = g_strdup_printf("%s; Attempting reconnect in 10s",
-				      error->message);
-
-		sig_status_push(msg);
-		g_free(msg);
-		g_timeout_add_seconds(10, sf, NULL);
-
-		g_warning("%s", error->message);
-		g_clear_error(&error);
-
-
-		return -1;
-	}
-
-	net_setup_recv(con);
-
-	sig_connected();
-
-
-	g_debug("Client started");
-
-	sig_status_push("Connected to server");
-
+	g_socket_client_set_timeout(client, 10);
+	g_socket_client_connect_to_host_async(client, host, port, NULL,
+					      net_connected, NULL);
 
 	return 0;
 }
