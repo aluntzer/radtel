@@ -151,7 +151,6 @@ static gboolean cross_plt_fitbox_selected(GtkWidget *w, gpointer data)
 			      gaussian_peak(par), gaussian_height(par),
 			      gaussian_fwhm(par));
 
-
 	gtk_label_set_markup(ax->fitpar, lbl);
 	g_free(lbl);
 
@@ -492,9 +491,14 @@ static gboolean cross_obs_az(ObsAssist *p)
 	gdouble az_lim;
 
 
+	/* no scan in this direction? */
+	if (!p->cfg->cross.az_pt)
+		return FALSE;
+
 	/* is azimuth done?  */
 	az_lim = p->cfg->cross.az_max + p->cfg->cross.az_stp;
-	if (p->cfg->cross.az_cur >= az_lim)
+
+	if ((p->cfg->cross.az_cur + p->cfg->cross.az_stp) > az_lim)
 		return FALSE;
 
 	cross_update_pbar_az(p);
@@ -533,9 +537,13 @@ static gboolean cross_obs_el(ObsAssist *p)
 	gdouble el_lim;
 
 
+	/* no scan in this direction? */
+	if (!p->cfg->cross.el_pt)
+		return FALSE;
+
 	/* is elevation done?  */
 	el_lim = p->cfg->cross.el_max + p->cfg->cross.el_stp;
-	if (p->cfg->cross.el_cur >= el_lim)
+	if ((p->cfg->cross.el_cur + p->cfg->cross.el_stp) > el_lim)
 		return FALSE;
 
 	cross_update_pbar_el(p);
