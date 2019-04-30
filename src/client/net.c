@@ -267,6 +267,8 @@ static void net_setup_recv(GSocketConnection *con)
 	 * the server will tell us the maximum packet size on connect
 	 */
 
+	g_socket_set_timeout(g_socket_connection_get_socket(con), 0);
+
 	istream = g_io_stream_get_input_stream(G_IO_STREAM(con));
 	istream = g_buffered_input_stream_new(istream);
 
