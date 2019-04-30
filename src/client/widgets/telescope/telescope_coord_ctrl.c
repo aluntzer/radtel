@@ -25,6 +25,17 @@
 
 
 /**
+ * @brief hide label on realization, it is only shown if coordinates are
+ *	  not observable from the telescope's location
+ */
+
+static void telescope_coord_not_vis_lbl_realize(GtkWidget *w, gpointer user_data)
+{
+	gtk_widget_hide(w);
+}
+
+
+/**
  * @brief update the horizontal reference if any other coordinate input mode
  *        is selected
  */
@@ -278,7 +289,6 @@ static void telescope_create_ref_selector(GtkGrid *grid, Telescope *p)
 }
 
 
-
 static void telescope_create_coord_input(GtkGrid *grid, Telescope *p)
 {
 	GtkWidget *w;
@@ -356,6 +366,8 @@ static void telescope_create_coord_input(GtkGrid *grid, Telescope *p)
 
 	gtk_label_set_xalign(GTK_LABEL(tmp), 0.0);
 	gtk_grid_attach(grid, tmp, 2, 7, 2, 1);
+	g_signal_connect(tmp, "realize",
+			 G_CALLBACK(telescope_coord_not_vis_lbl_realize), NULL);
 	p->cfg->not_vis_lbl = GTK_LABEL(tmp);
 }
 
