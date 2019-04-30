@@ -1594,7 +1594,6 @@ int be_get_capabilities_spec(struct capabilities *c)
 	c->bw_max_bins		= (uint32_t) srt.bins;
 	c->bw_max_bin_div_lin	= 0;
 	c->bw_max_bin_div_rad2	= 0;
-	c->bw_max_bin_div_rad2	= 0;
 	c->n_stack_max		= 0; /* stacking not implemented */
 
 	return 0;
