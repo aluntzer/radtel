@@ -2006,7 +2006,8 @@ static void xyplot_draw_stairs(XYPlot *p, cairo_t *cr, struct graph *g)
 
 	for (i = 1; i < g->data_len; i++) {
 		cairo_rel_line_to(cr, 0.0, (y[i] - y[i - 1]) * sy);
-		cairo_rel_line_to(cr, (x[i] - x[i - 1]) * sx, 0.0);
+		cairo_line_to(cr, (x[i] - p->x_ax.min) * sx,
+			          (y[i] - p->y_ax.min) * sy);
 	}
 
 	cairo_rel_line_to(cr, 0.0, - (y[i - 1] - p->y_ax.min) * sy);
@@ -2247,9 +2248,8 @@ static void xyplot_draw_dashes(XYPlot *p, cairo_t *cr, struct graph *g)
 		      (y[0] - p->y_ax.min) * sy);
 
 	for (i = 1; i < g->data_len; i++) {
-		cairo_rel_line_to(cr,
-				  (x[i] - x[i - 1]) * sx,
-				  (y[i] - y[i - 1]) * sy);
+		cairo_line_to(cr, (x[i] - p->x_ax.min) * sx,
+				  (y[i] - p->y_ax.min) * sy);
 	}
 
 	cairo_stroke(cr);
@@ -2293,9 +2293,8 @@ static void xyplot_draw_lines(XYPlot *p, cairo_t *cr, struct graph *g)
 		          (y[0] - p->y_ax.min) * sy);
 
 	for (i = 1; i < g->data_len; i++) {
-		cairo_rel_line_to(cr,
-				  (x[i] - x[i - 1]) * sx,
-				  (y[i] - y[i - 1]) * sy);
+		cairo_line_to(cr, (x[i] - p->x_ax.min) * sx,
+				  (y[i] - p->y_ax.min) * sy);
 
 	}
 
@@ -2360,13 +2359,13 @@ static void xyplot_draw_nan_lines(XYPlot *p, cairo_t *cr, struct graph *g)
 			cairo_move_to(cr, (x[i] - p->x_ax.min) * sx,
 				          (y[i] - p->y_ax.min) * sy);
 
-			restart =FALSE;
+			restart = FALSE;
 
 		}
 
 
-		cairo_rel_line_to(cr, (x[i] - x[i - 1]) * sx,
-				      (y[i] - y[i - 1]) * sy);
+		cairo_line_to(cr, (x[i] - p->x_ax.min) * sx,
+				  (y[i] - p->y_ax.min) * sy);
 
 	}
 
