@@ -2,7 +2,7 @@ SUBDIRS = ../util ../net backends api
 
 #paths set at make time
 confdir = ${sysconfdir}/radtel/
-plugdir = $(libdir)/radtel/
+plugdir = $(libdir)/radtel
 
 AM_CPPFLAGS := \-DCONFDIR=\"$(confdir)\" \
 	       \-DPLUGDIR=\"$(plugdir)\"
@@ -52,11 +52,6 @@ lib_radtelplug_srt_DATA = backends/SRT/srt_comlink.so \
 			  backends/SRT/srt_drive.so \
 			  backends/SRT/srt_spectrometer.so
 # plugins to /lib
-lib_radtelplug_srtdir = $(plugdir)/SRT
-lib_radtelplug_srt_DATA = backends/SRT/srt_comlink.so \
-			  backends/SRT/srt_drive.so \
-			  backends/SRT/srt_spectrometer.so
-			  backends/SRT/srt_spectrometer.so
 lib_radtelplug_simdir = $(plugdir)/SIM
 lib_radtelplug_sim_DATA = backends/SIM/rt_sim.so
 
