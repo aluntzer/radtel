@@ -2,7 +2,7 @@ SUBDIRS = ../util ../net backends api
 
 #paths set at make time
 confdir = ${sysconfdir}/radtel/
-plugdir = $(libdir)/radtel
+plugdir = $(libdir)/radtel/
 
 AM_CPPFLAGS := \-DCONFDIR=\"$(confdir)\" \
 	       \-DPLUGDIR=\"$(plugdir)\"
@@ -29,6 +29,9 @@ AM_LDFLAGS += -u ack_status_slew
 AM_LDFLAGS += -u ack_status_move
 AM_LDFLAGS += -u ack_status_rec
 AM_LDFLAGS += -u ack_moveto_azel
+AM_LDFLAGS += -u horizontal_to_galactic
+AM_LDFLAGS += -u galactic_to_equatorial
+AM_LDFLAGS += -u vlsr
 
 
 
@@ -78,4 +81,6 @@ radtelsrv_SOURCES = main.c \
 
 radtelsrv_LDADD = $(server_LIBS) \
 		  $(top_builddir)/src/net/libproto.a \
+		  $(top_builddir)/src/util/libutil.a \
 		  $(top_builddir)/src/server/api/libbackend.a
+
