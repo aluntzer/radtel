@@ -141,7 +141,7 @@ static void gal_plane_draw_graph(ObsAssist *p, gdouble glon, struct spectrum *s)
 	}
 
 	xyplot_add_graph(p->cfg->gal_plane.plt, lon, s->x, s->y, s->n,
-			 g_strdup_printf("GLON %g", lon));
+			 g_strdup_printf("GLON %g", glon));
 
 	xyplot_redraw(p->cfg->gal_plane.plt);
 }
@@ -402,10 +402,10 @@ static void on_assistant_apply(GtkWidget *as, ObsAssist *p)
 	/* set initial */
 	gal_plane_update_pbar_rpt(p);
 
-	/* the actual work is done asynchronously, .5 seconds calls
+	/* the actual work is done asynchronously, .1 seconds calls
 	 * per should be fine
 	 */
-	g_timeout_add(500, gal_plane_obs, p);
+	g_timeout_add(100, gal_plane_obs, p);
 }
 
 
