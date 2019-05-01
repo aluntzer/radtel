@@ -166,7 +166,7 @@ pending:
 
 
 	if (pkt_size > nbytes) {
-		g_message("Packet (%ld bytes) incomplete, %ld bytes in stream",
+		g_debug("Packet (%ld bytes) incomplete, %ld bytes in stream",
 			  pkt_size, nbytes);
 		goto exit;
 	}
@@ -290,7 +290,7 @@ static void net_setup_recv(GSocketConnection *con)
  * @brief send a packet to the server
  */
 
-gint net_send(const char *pkt, size_t nbytes)
+gint net_send(const char *pkt, gsize nbytes)
 {
 	gssize ret;
 

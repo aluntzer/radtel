@@ -65,6 +65,16 @@ static void drop_connection(struct con_data *c)
 }
 
 
+static gboolean net_write_timeout_cb(gpointer data)
+{
+	g_warning("Write operation timed out, cancelling.");
+	g_cancellable_cancel(G_CANCELLABLE(data));
+
+	return G_SOURCE_REMOVE;
+}
+
+
+
 /**
  * @brief send a packet on a connection
  */
@@ -73,14 +83,23 @@ static gint net_send_internal(struct con_data *c, const char *pkt, gsize nbytes)
 {
 	gssize ret;
 
+	guint to;
+
 	GError *error = NULL;
 
 	GIOStream *stream;
 	GOutputStream *ostream;
 
+	GCancellable *ca;
 
+
+	ca = g_cancellable_new();
 
 	stream = G_IO_STREAM(c->con);
+
+	if (!G_IS_IO_STREAM(stream))
+		return -1;
+
 	ostream = g_io_stream_get_output_stream(stream);
 
 
@@ -95,7 +114,14 @@ static gint net_send_internal(struct con_data *c, const char *pkt, gsize nbytes)
 		return -1;
 	}
 
-	ret = g_output_stream_write_all(ostream, pkt, nbytes, NULL, NULL, &error);
+
+	to = g_timeout_add_seconds(10, net_write_timeout_cb, ca);
+	ret = g_output_stream_write_all(ostream, pkt, nbytes, NULL, ca, &error);
+
+	if (!g_cancellable_is_cancelled(ca))
+		g_source_remove(to);
+
+	g_object_unref(ca);
 
 	if (ret < 0) {
 		if (error) {
