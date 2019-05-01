@@ -25,6 +25,7 @@ struct _HistoryConfig {
 
 	GtkWidget *plot;
 
+	GTimer		       *timer;
 
 	GArray		       *hst_idx;
 	GArray		       *hst_pwr;

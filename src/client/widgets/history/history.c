@@ -51,6 +51,25 @@ G_DEFINE_TYPE_WITH_PRIVATE(History, history, GTK_TYPE_BOX)
 #define HISTORY_B_H		0
 
 
+#define HISTORY_REFRESH_HZ	30.
+
+
+/**
+ * @brief redraw the plot if the configured time has expired
+ */
+
+static void history_plot_try_refresh(GtkWidget *w, History *p)
+{
+	g_timer_stop(p->cfg->timer);
+
+	if (g_timer_elapsed(p->cfg->timer, NULL) > (1. / HISTORY_REFRESH_HZ)) {
+		xyplot_redraw(w);
+		g_timer_start(p->cfg->timer);
+	} else {
+		g_timer_continue(p->cfg->timer);
+	}
+}
+
 
 static void history_wf_slide_lo_value_changed(GtkRange *range,
 					      gpointer  data)
@@ -164,11 +183,11 @@ static void history_append_hst(History *p, const gdouble *amp, gsize len)
 	gdouble *x;
 	gdouble *y;
 
-	time_t *prv;
-	time_t now;
+	gint64 *prv;
+	gint64 now;
 
 
-	now = UT_seconds();
+	now = g_get_monotonic_time(); //UT_seconds();
 
 	/* remove the old graph */
 	xyplot_drop_graph(p->cfg->plot, p->cfg->r_hst);
@@ -202,10 +221,9 @@ static void history_append_hst(History *p, const gdouble *amp, gsize len)
 	y = (gdouble *) g_memdup(p->cfg->hst_pwr->data,
 				 p->cfg->hst_pwr->len * sizeof(gdouble));
 
-	prv = (time_t *) p->cfg->hst_idx->data;
+	prv = (gint64 *) p->cfg->hst_idx->data;
 	for (i = 0; i < p->cfg->hst_idx->len; i++)
-		x[i] = prv[i] - now;
-
+		x[i] = (gdouble) (prv[i] - now) / G_USEC_PER_SEC;
 
 	p->cfg->r_hst = xyplot_add_graph(p->cfg->plot, x, y, NULL,
 					 p->cfg->hst_idx->len,
@@ -227,9 +245,7 @@ static void history_append_hst(History *p, const gdouble *amp, gsize len)
 	xyplot_set_graph_style(p->cfg->plot, p->cfg->r_lst, CIRCLES);
 	xyplot_set_graph_rgba(p->cfg->plot, p->cfg->r_lst, red);
 
-
-
-	xyplot_redraw(p->cfg->plot);
+	history_plot_try_refresh(p->cfg->plot, p);
 }
 
 
@@ -365,6 +381,10 @@ static void history_append_wf(History *p, const gdouble *amp, gsize len)
 
 
 	if (!p->cfg->wf_pb) {
+
+		if (!p->cfg->wf_n_max)
+			return;
+
 		p->cfg->wf_pb = gdk_pixbuf_new(GDK_COLORSPACE_RGB, FALSE, 8,
 					       len, p->cfg->wf_n_max);
 
@@ -495,6 +515,8 @@ static void history_reset_hst_cb(GtkWidget *w, History *p)
 
 	xyplot_drop_graph(p->cfg->plot, p->cfg->r_lst);
 	p->cfg->r_lst = NULL;
+
+	xyplot_redraw(p->cfg->plot);
 }
 
 
@@ -559,7 +581,7 @@ static gboolean history_wf_draw(GtkWidget *w, cairo_t *cr, gpointer data)
 {
 	History *p;
 
-	GdkPixbuf *pbuf;
+	GdkPixbuf *pbuf = NULL;
 
 	GtkAllocation allocation;
 
@@ -577,7 +599,9 @@ static gboolean history_wf_draw(GtkWidget *w, cairo_t *cr, gpointer data)
 				       GDK_INTERP_NEAREST);
 
 	gdk_cairo_set_source_pixbuf(cr, pbuf, 0, 0);
-	cairo_paint (cr);
+	cairo_paint(cr);
+
+	g_object_unref(pbuf);
 
 	return FALSE;
 }
@@ -746,6 +770,8 @@ static gboolean history_destroy(GtkWidget *w, void *data)
 
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_spd);
 
+	g_timer_destroy(p->cfg->timer);
+
 	return TRUE;
 }
 
@@ -777,7 +803,8 @@ static void history_init(History *p)
 
 	p->cfg = history_get_instance_private(p);
 
-	p->cfg->hst_idx = g_array_new(FALSE, FALSE, sizeof(time_t));
+	p->cfg->timer   = g_timer_new();
+	p->cfg->hst_idx = g_array_new(FALSE, FALSE, sizeof(gint64));
 	p->cfg->hst_pwr = g_array_new(FALSE, FALSE, sizeof(gdouble));
 
 	p->cfg->n_hst = HISTORY_DEFAULT_HST_LEN;
@@ -809,6 +836,8 @@ static void history_init(History *p)
 
 	g_signal_connect(G_OBJECT(p->cfg->wf_da), "draw",
 			 G_CALLBACK(history_wf_draw), (gpointer) p);
+
+	g_timer_start(p->cfg->timer);
 }
 
 
