@@ -4037,8 +4037,6 @@ void xyplot_drop_all_graphs(GtkWidget *widget)
 	plot->graphs = NULL;
 
 	plot->sel.active = FALSE;
-
-	xyplot_plot(plot);
 }
 
 
@@ -4098,7 +4096,6 @@ static void xyplot_drop_all_graphs_cleanup(GtkWidget *widget)
  *
  */
 
-
 void xyplot_drop_graph(GtkWidget *widget, void *ref)
 {
 	XYPlot *plot;
@@ -4128,7 +4125,7 @@ void xyplot_drop_graph(GtkWidget *widget, void *ref)
 
 	plot->graphs = g_list_remove_link(plot->graphs, elem);
 
-	if (plot->menu && !gtk_widget_get_visible(plot->menu)) {
+	if (!GTK_IS_WIDGET(plot->menu) || !gtk_widget_get_visible(plot->menu)) {
 
 		/* free the current graph and the cleanup list */
 
@@ -4144,7 +4141,7 @@ void xyplot_drop_graph(GtkWidget *widget, void *ref)
 		plot->graphs_cleanup = g_list_append(plot->graphs_cleanup, g);
 	}
 
-#if 1
+#if 0
 	xyplot_auto_range(plot);
 	xyplot_auto_axes(plot);
 
