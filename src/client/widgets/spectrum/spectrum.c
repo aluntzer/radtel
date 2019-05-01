@@ -35,6 +35,26 @@ G_DEFINE_TYPE_WITH_PRIVATE(Spectrum, spectrum, GTK_TYPE_BOX)
 #define SPECTRUM_DEFAULT_AVG_LEN 10
 #define SPECTRUM_DEFAULT_PER_LEN 10
 
+#define SPECTRUM_REFRESH_HZ	 40.
+
+
+/**
+ * @brief redraw the plot if the configured time has expired
+ */
+
+static void spectrum_plot_try_refresh(GtkWidget *w, Spectrum *p)
+{
+	g_timer_stop(p->cfg->timer);
+
+	if (g_timer_elapsed(p->cfg->timer, NULL) > (1. / SPECTRUM_REFRESH_HZ)) {
+		xyplot_redraw(w);
+		g_timer_start(p->cfg->timer);
+	} else {
+		g_timer_continue(p->cfg->timer);
+	}
+}
+
+
 
 static gdouble spectrum_convert_x2(gdouble x, gpointer data)
 {
@@ -239,7 +259,7 @@ static gboolean spectrum_handle_getpos_azel_cb(gpointer instance,
  */
 
 static void spectrum_plot_gaussian(GtkWidget *w, gdouble par[4], size_t n,
-				   struct fitdata *fit)
+				   struct fitdata *fit, Spectrum *p)
 {
 	size_t i;
 
@@ -297,7 +317,7 @@ static void spectrum_plot_gaussian(GtkWidget *w, gdouble par[4], size_t n,
 	xyplot_set_graph_style(w, fit->plt_ref_out, NAN_LINES);
 	xyplot_set_graph_rgba(w, fit->plt_ref_out, red);
 
-	xyplot_redraw(w);
+	spectrum_plot_try_refresh(w, p);
 }
 
 
@@ -423,7 +443,7 @@ static gboolean spectrum_plt_fitbox_selected(GtkWidget *w, gpointer data)
 	g_free(lbl);
 
 	/* XXX plot a fixed 200 points for now */
-	spectrum_plot_gaussian(w, par, 200, fit);
+	spectrum_plot_gaussian(w, par, 200, fit, p);
 
 	return TRUE;
 }
@@ -546,6 +566,8 @@ static void spectrum_drop_data(Spectrum *p)
 
 	g_list_free(p->cfg->per);
 	p->cfg->per = NULL;
+
+	spectrum_plot_try_refresh(p->cfg->plot, p);
 }
 
 
@@ -566,9 +588,12 @@ static void spectrum_append_data(Spectrum *p, struct spectrum *sp)
 	GList *tmp;
 
 
+	/* disable for persistence == 0 -> infinite */
+#if 1
+	if (!p->cfg->n_per)
+		return;
+#endif
 
-
-	/* persistence == 0 -> infinite */
 	if (p->cfg->n_per) {
 
 		/* drop the oldest */
@@ -607,13 +632,12 @@ static void spectrum_append_data(Spectrum *p, struct spectrum *sp)
 		}
 	}
 
-
 	ref = xyplot_add_graph(p->cfg->plot, sp->x, sp->y, NULL, sp->n,
 			       g_strdup_printf("SPECTRUM"));
-
 	xyplot_set_graph_style(p->cfg->plot, ref, p->cfg->s_per);
 	xyplot_set_graph_rgba(p->cfg->plot, ref, p->cfg->c_per);
-	xyplot_redraw(p->cfg->plot);
+
+	spectrum_plot_try_refresh(p->cfg->plot, p);
 
 	p->cfg->per = g_list_append(p->cfg->per, ref);
 }
@@ -632,6 +656,8 @@ static void spectrum_drop_avg(Spectrum *p)
 
 	g_list_free(p->cfg->avg);
 	p->cfg->avg  = NULL;
+
+	spectrum_plot_try_refresh(p->cfg->plot, p);
 }
 
 
@@ -718,7 +744,8 @@ static void spectrum_append_avg(Spectrum *p, struct spectrum *sp)
 					 g_strdup_printf("AVERAGE"));
 	xyplot_set_graph_style(p->cfg->plot, p->cfg->r_avg, p->cfg->s_avg);
 	xyplot_set_graph_rgba(p->cfg->plot, p->cfg->r_avg, p->cfg->c_avg);
-	xyplot_redraw(p->cfg->plot);
+
+	spectrum_plot_try_refresh(p->cfg->plot, p);
 }
 
 
@@ -803,9 +830,8 @@ static gboolean spectrum_avg_value_changed_cb(GtkSpinButton *sb, Spectrum *p)
 	p->cfg->n_avg = gtk_spin_button_get_value_as_int(sb);
 
 	if (!p->cfg->n_avg) {
-		spectrum_drop_avg(p);
-
 		xyplot_drop_graph(p->cfg->plot, p->cfg->r_avg);
+		spectrum_drop_avg(p);
 		p->cfg->r_avg = NULL;
 		goto exit;
 	}
@@ -1263,6 +1289,8 @@ static gboolean spectrum_destroy(GtkWidget *w, void *data)
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_pos);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_con);
 
+	g_timer_destroy(p->cfg->timer);
+
 	return TRUE;
 }
 
@@ -1294,6 +1322,7 @@ static void spectrum_init(Spectrum *p)
 
 	p->cfg = spectrum_get_instance_private(p);
 
+	p->cfg->timer = g_timer_new();
 	p->cfg->avg   = NULL;
 	p->cfg->n_avg = SPECTRUM_DEFAULT_AVG_LEN;
 	p->cfg->r_avg = NULL;
@@ -1351,6 +1380,7 @@ static void spectrum_init(Spectrum *p)
 
 	g_signal_connect(p, "destroy", G_CALLBACK(spectrum_destroy), NULL);
 
+	g_timer_start(p->cfg->timer);
 }
 
 

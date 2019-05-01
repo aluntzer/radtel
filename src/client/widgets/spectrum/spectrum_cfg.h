@@ -47,6 +47,8 @@ struct _SpectrumConfig {
 
 	GtkWidget *plot;
 
+	GTimer *timer;
+
 	GList                    *per;
 	void                   *r_per;
 	gsize                   n_per;
