@@ -2004,13 +2004,18 @@ static void xyplot_draw_stairs(XYPlot *p, cairo_t *cr, struct graph *g)
 	cairo_rel_line_to(cr, 0.0, (y[0] - p->y_ax.min) * sy);
 	cairo_rel_line_to(cr, (x[1] - x[0]) * sx, 0.0);
 
-	for (i = 1; i < g->data_len; i++) {
+	for (i = 1; i < g->data_len - 1; i++) {
 		cairo_rel_line_to(cr, 0.0, (y[i] - y[i - 1]) * sy);
-		cairo_line_to(cr, (x[i] - p->x_ax.min) * sx,
+		cairo_line_to(cr, (0.5 * (x[i] + x[i + 1])- p->x_ax.min) * sx,
 			          (y[i] - p->y_ax.min) * sy);
 	}
 
-	cairo_rel_line_to(cr, 0.0, - (y[i - 1] - p->y_ax.min) * sy);
+	cairo_rel_line_to(cr, 0.0, (y[i] - y[i - 1]) * sy);
+
+	cairo_line_to(cr, (x[i] + (x[i] - x[i -1]) * 0.5  - p->x_ax.min) * sx,
+		          (y[i] - p->y_ax.min) * sy);
+
+	cairo_rel_line_to(cr, 0.0, - (y[i] - p->y_ax.min) * sy);
 
 	cairo_stroke(cr);
 
