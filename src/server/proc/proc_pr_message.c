@@ -1,5 +1,5 @@
 /**
- * @file    net/acks/ack_fail.c
+ * @file    server/proc/proc_pr_message.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -17,30 +17,23 @@
 #include <glib.h>
 
 #include <ack.h>
+#include <backend.h>
+#include <cfg.h>
+#include <net.h>
 
 
-void ack_fail(uint16_t trans_id, gpointer ref)
+
+void proc_pr_message(struct packet *pkt, gpointer ref)
 {
-	gsize pkt_size;
-
-	struct packet *pkt;
+	struct message *c;
 
 
-	pkt_size = sizeof(struct packet);
 
-	pkt = g_malloc(pkt_size);
+	c = (struct message *) pkt->data;
 
-	pkt->service   = PR_FAIL;
-	pkt->trans_id  = trans_id;
-	pkt->data_size = 0;
 
-	pkt_set_data_crc16(pkt);
+	if (strlen(c->message) != c->len)
+		return;
 
-	pkt_hdr_to_net_order(pkt);
-
-	g_debug("Signalling failed operation");
-	net_send_single(ref, (void *) pkt, pkt_size);
-
-	/* clean up */
-	g_free(pkt);
+	net_server_broadcast_message((const gchar *) c->message, ref);
 }

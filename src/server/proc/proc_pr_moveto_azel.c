@@ -24,7 +24,7 @@
  * @brief process command moveto AZEL
  */
 
-void proc_pr_moveto_azel(struct packet *pkt)
+void proc_pr_moveto_azel(struct packet *pkt, gpointer ref)
 {
 	double az;
 	double el;
@@ -50,9 +50,9 @@ void proc_pr_moveto_azel(struct packet *pkt)
 
 
 	if(be_moveto_azel(az, el))
-		ack_fail(pkt->trans_id);
+		ack_fail(pkt->trans_id, ref);
 	else
-		ack_success(pkt->trans_id);
+		ack_success(pkt->trans_id, ref);
 
 	return;
 }

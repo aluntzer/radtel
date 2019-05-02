@@ -17,12 +17,14 @@
  * @note we typically don't check for NULL pointers since we rely on glib to
  *	 work properly...
  *
- * @todo master/slave
+ * @todo some cleanup, the logic is pretty confusing
+ *
  */
 
 #include <net.h>
 #include <cfg.h>
 #include <cmd.h>
+#include <ack.h>
 #include <pkt_proc.h>
 
 #include <gio/gio.h>
@@ -33,13 +35,15 @@
 struct con_data {
 	GSocketConnection *con;
 	gsize nbytes;
-	gboolean master;
+	gboolean priv;
+	gchar *nick;
+	gboolean new;
 };
 
 /* tracks client connections */
 static GList *con_list;
 
-
+static GMutex netlock;
 
 
 /**
@@ -54,15 +58,7 @@ static gsize get_pkt_size_peek(struct packet *pkt)
 }
 
 
-/**
- * @brief drop a connection
- */
 
-static void drop_connection(struct con_data *c)
-{
-	g_object_unref(c->con);
-	con_list = g_list_remove(con_list, c);
-}
 
 
 static gboolean net_write_timeout_cb(gpointer data)
@@ -73,6 +69,81 @@ static gboolean net_write_timeout_cb(gpointer data)
 	return G_SOURCE_REMOVE;
 }
 
+
+static gboolean net_push_userlist_cb(gpointer data)
+{
+	GList *elem;
+
+	struct con_data *c;
+
+	gchar *buf;
+	gchar *tmp;
+
+	gchar *msg = NULL;
+
+
+
+	for (elem = con_list; elem; elem = elem->next) {
+
+		c = (struct con_data *) elem->data;
+
+		tmp = msg;
+
+		if (c->priv)
+			buf = g_strdup_printf("<tt><span foreground='#FF0000'>"
+					      "%s</span></tt>\n", c->nick);
+		else
+			buf = g_strdup_printf("<tt><span foreground='#7F9F7F'>"
+					      "%s</span></tt>\n", c->nick);
+
+		msg = g_strconcat(buf, tmp, NULL);
+
+		g_free(buf);
+		g_free(tmp);
+
+		if (c->new) {
+			c->new = FALSE;
+
+			buf = g_strdup_printf("<tt><span foreground='#F1C40F'>"
+					      "%s</span></tt> joined",
+					      c->nick);
+
+			net_server_broadcast_message(buf, NULL);
+			g_free(buf);
+		}
+	}
+
+
+	if (msg) {
+		ack_userlist(PKT_TRANS_ID_UNDEF, msg, strlen(msg));
+		g_free(msg);
+	}
+
+	return G_SOURCE_REMOVE;
+}
+
+
+/**
+ * @brief drop a connection
+ */
+
+static void drop_connection(struct con_data *c)
+{
+	gchar *buf;
+
+	buf = g_strdup_printf("<tt><span foreground='#F1C40F'>"
+			      "%s</span></tt> disconnected",
+			      c->nick);
+
+	net_server_broadcast_message(buf, NULL);
+	g_free(buf);
+
+	g_object_unref(c->con);
+	con_list = g_list_remove(con_list, c);
+
+
+	net_push_userlist_cb(NULL);
+}
 
 
 /**
@@ -177,6 +248,7 @@ static void net_buffer_ready(GObject *source_object, GAsyncResult *res,
 	istream  = G_INPUT_STREAM(source_object);
 	bistream = G_BUFFERED_INPUT_STREAM(source_object);
 
+
 pending:
 	buf = g_buffered_input_stream_peek_buffer(bistream, &nbytes);
 
@@ -243,7 +315,7 @@ pending:
 
 	/* verify packet payload */
 	if (CRC16(pkt->data, pkt->data_size) == pkt->data_crc16)  {
-		if (process_pkt(pkt))
+		if (process_pkt(pkt, c->priv, c))
 			goto drop_pkt;
 
 		/* valid packets were free'd */
@@ -316,16 +388,35 @@ static gboolean net_incoming(GSocketService    *service,
 {
 	gsize bufsize;
 
+	GSocketAddress *addr;
+	GInetAddress   *iaddr;
+
 	GInputStream *istream;
 	GBufferedInputStream *bistream;
 
+	GList *elem;
+
 	struct con_data *c;
+	struct con_data *item;
 
+	gboolean has_priv = FALSE;
 
-	g_message("received incoming connection");
+	gchar *str;
 
 
 	c = g_malloc0(sizeof(struct con_data));
+
+	addr = g_socket_connection_get_remote_address(connection, NULL);
+	iaddr = g_inet_socket_address_get_address(G_INET_SOCKET_ADDRESS(addr));
+	str = g_inet_address_to_string(iaddr);
+
+	g_message("Received incoming connection from %s", str);
+
+	c->nick = g_strdup_printf("UserUnknown (%s)", str);
+	c->new = TRUE;
+
+	g_free(str);
+
 
 	/* set up as buffered input stream */
 	istream = g_io_stream_get_input_stream(G_IO_STREAM(connection));
@@ -343,11 +434,95 @@ static gboolean net_incoming(GSocketService    *service,
 	/* add to list of connections */
 	con_list = g_list_append(con_list, c);
 
+	/* see if anyone has control, if not, assign  to current connection */
+	for (elem = con_list; elem; elem = elem->next) {
+		item = (struct con_data *) elem->data;
+		if (item->priv)
+			has_priv = TRUE;
+	}
+
+	if (!has_priv)
+		c->priv = TRUE;
+
+
+	/* push new username after 1 seconds, so they have time to configure
+	 * theirs
+	 */
+	g_timeout_add_seconds(1, net_push_userlist_cb, NULL);
+
 	g_buffered_input_stream_fill_async(bistream, bufsize,
 					   G_PRIORITY_DEFAULT, NULL,
 					   net_buffer_ready, c);
 
+
 	return FALSE;
+}
+
+
+
+void net_server_reassign_control(gpointer ref)
+{
+	GSocketAddress *addr;
+	GInetAddress   *iaddr;
+
+	GList *elem;
+
+	struct con_data *c;
+	struct con_data *item;
+
+	gchar *msg;
+	gchar *str;
+
+	c = (struct con_data *) ref;
+
+	for (elem = con_list; elem; elem = elem->next) {
+		item = (struct con_data *) elem->data;
+		item->priv = FALSE;
+	}
+
+	c->priv = TRUE;
+
+	addr = g_socket_connection_get_remote_address(c->con, NULL);
+	iaddr = g_inet_socket_address_get_address(G_INET_SOCKET_ADDRESS(addr));
+	str = g_inet_address_to_string(iaddr);
+	msg = g_strdup_printf("Reassigned control to %s (connected from %s)",
+			      c->nick, str);
+
+	net_server_broadcast_message(msg, NULL);
+	net_push_userlist_cb(NULL);
+
+	g_free(msg);
+	g_free(str);
+}
+
+
+
+/**
+ * @brief send a packet to single client
+ *
+ * @returns <0 on error
+ */
+
+gint net_send_single(gpointer ref, const char *pkt, gsize nbytes)
+{
+	gint ret;
+
+	GList *elem;
+
+	struct con_data *c;
+
+
+	c = (struct con_data *) ref;
+
+	g_debug("Sending packet of %d bytes", nbytes);
+
+	g_mutex_lock(&netlock);
+
+	ret = net_send_internal(c, pkt, nbytes);
+
+	g_mutex_unlock(&netlock);
+
+	return ret;
 }
 
 
@@ -359,29 +534,84 @@ static gboolean net_incoming(GSocketService    *service,
 
 gint net_send(const char *pkt, gsize nbytes)
 {
-	gint ret;
-
 	GList *elem;
 
 	struct con_data *item;
-
-	static GMutex lock;
 
 
 
 	g_debug("Broadcasting packet of %d bytes", nbytes);
 
-	g_mutex_lock(&lock);
-
 	for (elem = con_list; elem; elem = elem->next) {
-		item = elem->data;
-		ret = net_send_internal(item, pkt, nbytes);
+		item = (struct con_data *) elem->data;
+		net_send_single(item, pkt, nbytes);
 	}
 
-	g_mutex_unlock(&lock);
 
-	return ret;
+	return 0;
 }
+
+
+void net_server_set_nickname(const gchar *nick, gpointer ref)
+{
+	gchar *old;
+	gchar *buf;
+
+	struct con_data *c;
+
+
+	c = (struct con_data *) ref;
+
+
+	old = c->nick;
+
+	c->nick = g_strdup(nick);
+
+	if (!c->new) {
+		buf = g_strdup_printf("<tt><span foreground='#F1C40F'>%s</span></tt> "
+				      "is now known as "
+				      "<tt><span foreground='#F1C40F'>%s</span></tt> ",
+				      old, c->nick);
+
+		net_server_broadcast_message(buf, NULL);
+
+		g_free(buf);
+	}
+
+	net_push_userlist_cb(NULL);
+
+	g_free(old);
+}
+
+
+void net_server_broadcast_message(const gchar *msg, gpointer ref)
+{
+	gchar *buf;
+	gchar *user;
+
+
+	struct con_data *c;
+
+
+	c = (struct con_data *) ref;
+
+
+	if (!c) {
+		buf = g_strdup_printf("<tt><span foreground='#FF0000'>"
+				      "A hollow voice says:</span></tt> %s\n",
+				      msg);
+	} else {
+		buf = g_strdup_printf("<tt><span foreground='#7F9F7F'>"
+				      "%s:</span></tt> %s\n",
+				      c->nick, msg);
+	}
+
+
+	cmd_message(PKT_TRANS_ID_UNDEF, buf, strlen(buf));
+
+	g_free(buf);
+}
+
 
 
 /**

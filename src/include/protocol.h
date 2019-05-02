@@ -35,6 +35,10 @@
 #include <payload/pr_spec_data.h>
 #include <payload/pr_getpos.h>
 #include <payload/pr_status.h>
+#include <payload/pr_control.h>
+#include <payload/pr_message.h>
+#include <payload/pr_userlist.h>
+#include <payload/pr_nick.h>
 
 
 #define DEFAULT_PORT 1420
@@ -47,7 +51,7 @@
 #define PR_INVALID_PKT		0xa001	/* invalid packet signal */
 #define PR_CAPABILITIES		0xa002	/* capabilities of the telescope */
 #define PR_STATIONNAME		0xa003	/* name of station */
-#define PR_UNDEFINED		0xa004
+#define PR_CONTROL		0xa004	/* request control of the telescope */
 #define PR_MOVETO_AZEL		0xa005	/* move to azimuth/elevation */
 #define PR_SUCCESS		0xa006  /* last command succeded */
 #define PR_FAIL			0xa007	/* last command failed */
@@ -63,6 +67,10 @@
 #define PR_STATUS_SLEW		0xa011	/* drive slew status */
 #define PR_STATUS_MOVE		0xa012	/* drive move (to target) status */
 #define PR_STATUS_REC		0xa013	/* (full) spectrum record status */
+#define PR_NOPRIV		0xa014	/* lack of priviledge */
+#define PR_MESSAGE		0xa015	/* an arbitrary message */
+#define PR_USERLIST		0xa016	/* a list of connected users */
+#define PR_NICK			0xa017	/* to set the user's nickname */
 
 
 

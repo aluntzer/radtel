@@ -1,5 +1,5 @@
 /**
- * @file    net/acks/ack_fail.c
+ * @file    net/acks/ack_nopriv.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -19,7 +19,7 @@
 #include <ack.h>
 
 
-void ack_fail(uint16_t trans_id, gpointer ref)
+void ack_nopriv(uint16_t trans_id, gpointer ref)
 {
 	gsize pkt_size;
 
@@ -30,7 +30,7 @@ void ack_fail(uint16_t trans_id, gpointer ref)
 
 	pkt = g_malloc(pkt_size);
 
-	pkt->service   = PR_FAIL;
+	pkt->service   = PR_NOPRIV;
 	pkt->trans_id  = trans_id;
 	pkt->data_size = 0;
 
@@ -38,7 +38,7 @@ void ack_fail(uint16_t trans_id, gpointer ref)
 
 	pkt_hdr_to_net_order(pkt);
 
-	g_debug("Signalling failed operation");
+	g_debug("Signalling lack of priviledge");
 	net_send_single(ref, (void *) pkt, pkt_size);
 
 	/* clean up */

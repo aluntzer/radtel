@@ -181,6 +181,30 @@ static void setup_sig_pr_moveto_azel(void)
 		     G_TYPE_NONE, 2, G_TYPE_DOUBLE, G_TYPE_DOUBLE);
 }
 
+static void setup_sig_pr_nopriv(void)
+{
+	g_signal_new("pr-nopriv",
+		     G_TYPE_OBJECT, G_SIGNAL_RUN_FIRST,
+		     0, NULL, NULL, NULL,
+		     G_TYPE_NONE, 1, G_TYPE_UINT);
+}
+
+static void setup_sig_pr_message(void)
+{
+	g_signal_new("pr-message",
+		     G_TYPE_OBJECT, G_SIGNAL_RUN_FIRST,
+		     0, NULL, NULL, NULL,
+		     G_TYPE_NONE, 1, G_TYPE_POINTER);
+}
+
+static void setup_sig_pr_userlist(void)
+{
+	g_signal_new("pr-userlist",
+		     G_TYPE_OBJECT, G_SIGNAL_RUN_FIRST,
+		     0, NULL, NULL, NULL,
+		     G_TYPE_NONE, 1, G_TYPE_POINTER);
+}
+
 
 gpointer *sig_get_instance(void)
 {
@@ -211,4 +235,7 @@ void sig_init(void)
 	setup_sig_pr_status_move();
 	setup_sig_pr_status_rec();
 	setup_sig_pr_moveto_azel();
+	setup_sig_pr_nopriv();
+	setup_sig_pr_message();
+	setup_sig_pr_userlist();
 }

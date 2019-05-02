@@ -26,6 +26,7 @@
 #include <default_grid.h>
 #include <cmd.h>
 #include <math.h>
+#include <net.h>
 
 
 G_DEFINE_TYPE_WITH_PRIVATE(SysStatus, sys_status, GTK_TYPE_BOX)
@@ -416,7 +417,8 @@ static void sys_status_init(SysStatus *p)
 
 	g_signal_connect(p, "destroy", G_CALLBACK(sys_status_destroy), NULL);
 
-	sys_status_fetch_config();
+	if (net_is_connected())
+		sys_status_fetch_config();
 }
 
 

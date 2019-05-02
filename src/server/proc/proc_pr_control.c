@@ -1,5 +1,5 @@
 /**
- * @file    server/proc/proc_pr_spec_acq_cfg.c
+ * @file    server/proc/proc_pr_control.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -18,27 +18,38 @@
 
 #include <ack.h>
 #include <backend.h>
+#include <cfg.h>
+#include <net.h>
 
-void proc_pr_spec_acq_cfg(struct packet *pkt, gpointer ref)
+
+
+void proc_pr_control(struct packet *pkt, gpointer ref)
 {
-	gsize pkt_size;
+	gchar *digest;
 
-	struct spec_acq_cfg *acq;
+	struct control *c;
 
 
-	g_message("Client sent spectrum readout configuration");
 
-	if (pkt->data_size != sizeof(struct spec_acq_cfg)) {
-		ack_invalid_pkt(pkt->trans_id);
+	c = (struct control *) pkt->data;
+
+
+	if (strlen(c->digest) != c->len)
 		return;
+
+	digest = g_compute_hmac_for_string(G_CHECKSUM_SHA256,
+					   (guint8*)"radtel", 6,
+					   "thisishardcoed", 13);
+
+
+
+	if (!strcmp(digest, c->digest)) {
+		g_message("Client telescope control reassigned");
+		net_server_reassign_control(ref);
+	} else {
+		g_message("Client telescope control NOT reassigned, digest "
+			  "mismatch %s %s", digest, c->digest);
 	}
 
-
-	acq = (struct spec_acq_cfg *) pkt->data;
-
-
-	if(be_spec_acq_cfg(acq))
-		ack_fail(pkt->trans_id, ref);
-
-	 ack_success(pkt->trans_id, ref);
+	g_free(digest);
 }

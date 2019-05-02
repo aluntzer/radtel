@@ -19,7 +19,7 @@
 #include <ack.h>
 
 
-void ack_success(uint16_t trans_id)
+void ack_success(uint16_t trans_id, gpointer ref)
 {
 	gsize pkt_size;
 

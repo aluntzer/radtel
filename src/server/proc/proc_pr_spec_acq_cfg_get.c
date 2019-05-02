@@ -20,7 +20,7 @@
 #include <backend.h>
 
 
-void proc_pr_spec_acq_cfg_get(struct packet *pkt)
+void proc_pr_spec_acq_cfg_get(struct packet *pkt, gpointer ref)
 {
 	struct spec_acq_cfg acq;
 
@@ -28,7 +28,7 @@ void proc_pr_spec_acq_cfg_get(struct packet *pkt)
 	g_message("Client requested spectrometer configuration, acknowledging");
 
 	if (be_spec_acq_cfg_get(&acq)) {
-		ack_fail(pkt->trans_id);
+		ack_fail(pkt->trans_id, ref);
 		return;
 	}
 

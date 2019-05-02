@@ -29,6 +29,11 @@
 #include <obs_assist.h>
 #include <chatlog.h>
 #include <default_grid.h>
+#include <cmd.h>
+#include <net.h>
+
+
+
 
 
 static void gui_net_cmd_failed(gpointer instance, guint16 trans_id,
@@ -36,7 +41,20 @@ static void gui_net_cmd_failed(gpointer instance, guint16 trans_id,
 {
 	gchar *msg;
 
-	msg = g_strdup_printf("Server rejected command packet (tr_id: %d)",
+	msg = g_strdup_printf("Server command failed (tr_id: %d)",
+			      trans_id);
+	sig_status_push(msg);
+	g_free(msg);
+}
+
+
+static void gui_net_cmd_nopriv(gpointer instance, guint16 trans_id,
+			    gpointer data)
+{
+	gchar *msg;
+
+	msg = g_strdup_printf("Server rejected command packet for lack of "
+			      "priviledge (tr_id: %d)",
 			      trans_id);
 	sig_status_push(msg);
 	g_free(msg);
@@ -136,6 +154,69 @@ static void gui_port_entry_insert_text_cb(GtkEditable *ed, gchar *new_text,
 }
 
 
+static void gui_nick_entry_changed_cb(GtkEditable *ed, gpointer data)
+{
+	GSettings *s;
+
+	const gchar *nick;
+
+
+	s = g_settings_new("org.uvie.radtel.config");
+	if (!s)
+		return;
+
+	if (!gtk_entry_get_text_length(GTK_ENTRY(ed)))
+		return;
+
+	nick = gtk_entry_get_text(GTK_ENTRY(ed));
+	g_settings_set_string(s, "nickname", nick);
+}
+
+
+static void gui_update_nick(GtkEditable *ed, ChatLog *p)
+{
+	GSettings *s;
+
+	const gchar *nick;
+
+
+	s = g_settings_new("org.uvie.radtel.config");
+	if (!s)
+		return;
+
+	if (!gtk_entry_get_text_length(GTK_ENTRY(ed)))
+		return;
+
+	nick = gtk_entry_get_text(GTK_ENTRY(ed));
+	g_settings_set_string(s, "nickname", nick);
+
+	cmd_nick(PKT_TRANS_ID_UNDEF, nick, strlen(nick));
+}
+
+
+
+static void gui_request_control(GtkWidget *w, gpointer data)
+{
+
+	gchar *digest;
+
+	digest = g_compute_hmac_for_string(G_CHECKSUM_SHA256,
+					   (guint8*)"radtel", 6,
+					   "thisishardcoed", 13);
+
+
+	g_message("Requesting control with digest %s", digest);
+	cmd_control(PKT_TRANS_ID_UNDEF, digest, strlen(digest));
+	g_free(digest);
+}
+
+
+static void gui_reconnect_net(GtkWidget *w, gpointer data)
+{
+	net_reconnect();
+}
+
+
 static GtkWidget *gui_create_popover_menu(GtkWidget *widget)
 {
 	GtkGrid *grid;
@@ -216,6 +297,73 @@ static GtkWidget *gui_create_popover_menu(GtkWidget *widget)
 	g_free(name);
 
 	gtk_grid_attach(GTK_GRID(grid), w, 1, 2, 1, 1);
+
+
+	w = gtk_label_new("Name");
+	gtk_widget_set_halign(w, GTK_ALIGN_END);
+	gtk_widget_set_valign(w, GTK_ALIGN_BASELINE);
+	gtk_style_context_add_class(gtk_widget_get_style_context(w),
+				    "dim-label");
+	gtk_grid_attach(GTK_GRID(grid), w, 0, 3, 1, 1);
+
+	w = gtk_entry_new();
+	name = g_settings_get_string(s, "nickname");
+	gtk_entry_set_text(GTK_ENTRY(w), name);
+	g_free(name);
+
+	gtk_entry_set_alignment(GTK_ENTRY(w), 1.0);
+	g_signal_connect(w, "changed", G_CALLBACK(gui_nick_entry_changed_cb),
+			 NULL);
+
+	g_signal_connect(G_OBJECT(w), "activate",
+			 G_CALLBACK(gui_update_nick), NULL);
+
+	gtk_grid_attach(GTK_GRID(grid), w, 1, 3, 1, 1);
+
+
+	w = gtk_label_new("Request Control");
+	gtk_widget_set_halign(w, GTK_ALIGN_END);
+	gtk_widget_set_valign(w, GTK_ALIGN_BASELINE);
+	gtk_style_context_add_class(gtk_widget_get_style_context(w),
+				    "dim-label");
+	gtk_grid_attach(GTK_GRID(grid), w, 0, 4, 1, 1);
+
+
+
+	w = gtk_button_new();
+	gtk_button_set_always_show_image(GTK_BUTTON(w), TRUE);
+	gtk_button_set_image(GTK_BUTTON(w),
+		     gtk_image_new_from_icon_name("system-reboot-symbolic",
+						  GTK_ICON_SIZE_BUTTON));
+	gtk_widget_set_tooltip_text(w, "Request Control");
+
+	g_signal_connect(G_OBJECT(w), "clicked",
+			 G_CALLBACK(gui_request_control), NULL);
+
+	gtk_grid_attach(GTK_GRID(grid), w, 1, 4, 1, 1);
+
+
+
+	w = gtk_label_new("Reconnect");
+	gtk_widget_set_halign(w, GTK_ALIGN_END);
+	gtk_widget_set_valign(w, GTK_ALIGN_BASELINE);
+	gtk_style_context_add_class(gtk_widget_get_style_context(w),
+				    "dim-label");
+	gtk_grid_attach(GTK_GRID(grid), w, 0, 5, 1, 1);
+
+	w = gtk_button_new();
+	gtk_button_set_always_show_image(GTK_BUTTON(w), TRUE);
+	gtk_button_set_image(GTK_BUTTON(w),
+		     gtk_image_new_from_icon_name("emblem-synchronizing-symbolic",
+						  GTK_ICON_SIZE_BUTTON));
+	gtk_widget_set_tooltip_text(w, "Reconnect");
+
+	g_signal_connect(G_OBJECT(w), "clicked",
+			 G_CALLBACK(gui_reconnect_net), NULL);
+
+	gtk_grid_attach(GTK_GRID(grid), w, 1, 5, 1, 1);
+
+
 
 
 
@@ -381,7 +529,7 @@ static GtkWidget *gui_create_stack_switcher(void)
 }
 
 
-
+#include <cmd.h>
 
 
 int gui_client(int argc, char *argv[])
@@ -423,6 +571,9 @@ int gui_client(int argc, char *argv[])
 				  (GCallback) gui_net_cmd_failed,
 				  NULL);
 
+	g_signal_connect(sig_get_instance(), "pr-nopriv",
+				  (GCallback) gui_net_cmd_nopriv,
+				  NULL);
 	return 0;
 }
 

@@ -22,6 +22,7 @@
 #include <glib.h>
 
 gint net_send(const char *pkt, gsize nbytes);
+gint net_send_single(gpointer ref, const char *pkt, gsize nbytes);
 
 #endif /* _INCLUDE_NET_COMMON_H_ */
 

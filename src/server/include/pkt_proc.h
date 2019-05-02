@@ -18,20 +18,24 @@
 #define _SERVER_INCLUDE_PKT_PROC_H_
 
 #include <protocol.h>
+#include <glib.h>
 
-int process_pkt(struct packet *pkt);
+int process_pkt(struct packet *pkt, gboolean priv, gpointer ref);
 
 /* command processing functions */
-void proc_pr_invalid_pkt(struct packet *pkt);
+void proc_pr_invalid_pkt(struct packet *pkt, gpointer ref);
 void proc_pr_capabilities(struct packet *pkt);
-void proc_pr_moveto_azel(struct packet *pkt);
-void proc_pr_recalibrate_pointing(struct packet *pkt);
-void proc_pr_park_telescope(struct packet *pkt);
-void proc_pr_spec_acq_cfg(struct packet *pkt);
-void proc_pr_getpos_azel(struct packet *pkt);
-void proc_pr_spec_acq_enable(struct packet *pkt);
-void proc_pr_spec_acq_disable(struct packet *pkt);
-void proc_pr_spec_acq_cfg_get(struct packet *pkt);
+void proc_pr_moveto_azel(struct packet *pkt, gpointer ref);
+void proc_pr_recalibrate_pointing(struct packet *pkt, gpointer ref);
+void proc_pr_park_telescope(struct packet *pkt, gpointer ref);
+void proc_pr_spec_acq_cfg(struct packet *pkt, gpointer ref);
+void proc_pr_getpos_azel(struct packet *pkt, gpointer ref);
+void proc_pr_spec_acq_enable(struct packet *pkt, gpointer ref);
+void proc_pr_spec_acq_disable(struct packet *pkt, gpointer ref);
+void proc_pr_spec_acq_cfg_get(struct packet *pkt, gpointer ref);
+void proc_pr_control(struct packet *pkt, gpointer ref);
+void proc_pr_message(struct packet *pkt, gpointer ref);
+void proc_pr_nick(struct packet *pkt, gpointer ref);
 
 #endif /* _SERVER_INCLUDE_PKT_PROC_H_ */
 

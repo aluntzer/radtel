@@ -91,6 +91,17 @@ void process_pkt(struct packet *pkt)
 		proc_pr_moveto_azel(pkt);
 		break;
 
+	case PR_NOPRIV:
+		proc_pr_nopriv(pkt);
+		break;
+
+	case PR_MESSAGE:
+		proc_pr_message(pkt);
+		break;
+
+	case PR_USERLIST:
+		proc_pr_userlist(pkt);
+		break;
 
 
 	default:

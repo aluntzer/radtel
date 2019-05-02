@@ -1,5 +1,5 @@
 /**
- * @file    net/acks/ack_fail.c
+ * @file    client/sig/sig_pr_nopriv.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -15,32 +15,17 @@
  */
 
 #include <glib.h>
+#include <glib-object.h>
+#include <signals.h>
 
-#include <ack.h>
 
+/**
+ * @brief emit pr-nopriv signal
+ */
 
-void ack_fail(uint16_t trans_id, gpointer ref)
+void sig_pr_nopriv(const uint16_t trans_id)
 {
-	gsize pkt_size;
+	g_debug("Emit signal \"pr-nopriv\"");
 
-	struct packet *pkt;
-
-
-	pkt_size = sizeof(struct packet);
-
-	pkt = g_malloc(pkt_size);
-
-	pkt->service   = PR_FAIL;
-	pkt->trans_id  = trans_id;
-	pkt->data_size = 0;
-
-	pkt_set_data_crc16(pkt);
-
-	pkt_hdr_to_net_order(pkt);
-
-	g_debug("Signalling failed operation");
-	net_send_single(ref, (void *) pkt, pkt_size);
-
-	/* clean up */
-	g_free(pkt);
+	g_signal_emit_by_name(sig_get_instance(), "pr-nopriv", trans_id);
 }

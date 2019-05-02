@@ -28,14 +28,16 @@ void ack_getpos_azel(uint16_t trans_id, struct getpos *pos);
 void ack_spec_data(uint16_t trans_id, struct spec_data *s);
 void ack_spec_acq_enable(uint16_t trans_id);
 void ack_spec_acq_disable(uint16_t trans_id);
-void ack_fail(uint16_t trans_id);
-void ack_success(uint16_t trans_id);
+void ack_fail(uint16_t trans_id, gpointer ref);
+void ack_success(uint16_t trans_id, gpointer ref);
 void ack_spec_acq_cfg(uint16_t trans_id, struct spec_acq_cfg *acq);
 void ack_status_acq(uint16_t trans_id, struct status *s);
 void ack_status_slew(uint16_t trans_id, struct status *s);
 void ack_status_move(uint16_t trans_id, struct status *s);
 void ack_status_rec(uint16_t trans_id, struct status *s);
 void ack_moveto_azel(uint16_t trans_id, double az, double el);
+void ack_nopriv(uint16_t trans_id, gpointer ref);
+void ack_userlist(uint16_t trans_id, const uint8_t *users, uint16_t len);
 
 #endif /* _INCLUDE_ACK_H_ */
 

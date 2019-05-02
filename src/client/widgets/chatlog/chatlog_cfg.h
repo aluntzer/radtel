@@ -22,9 +22,16 @@
 
 struct _ChatLogConfig {
 
+	GtkWidget *chat;
+	GtkWidget *input;
+	GtkWidget *ulist;
+
+
 	guint id_log;
 
 	guint id_con;
+	guint id_msg;
+	guint id_uli;
 };
 
 

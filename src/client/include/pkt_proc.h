@@ -35,6 +35,9 @@ void proc_pr_status_slew(struct packet *pkt);
 void proc_pr_status_move(struct packet *pkt);
 void proc_pr_status_rec(struct packet *pkt);
 void proc_pr_moveto_azel(struct packet *pkt);
+void proc_pr_nopriv(struct packet *pkt);
+void proc_pr_message(struct packet *pkt);
+void proc_pr_userlist(struct packet *pkt);
 
 
 #endif /* _CLIENT_INCLUDE_PKT_PROC_H_ */

@@ -22,7 +22,9 @@
 
 
 int net_server(void);
-
+void net_server_reassign_control(gpointer ref);
+void net_server_broadcast_message(const gchar *msg, gpointer ref);
+void net_server_set_nickname(const gchar *nick, gpointer ref);
 
 
 #endif /* _SERVER_INCLUDE_NET_H_ */

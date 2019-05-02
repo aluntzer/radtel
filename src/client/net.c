@@ -302,11 +302,16 @@ gint net_send(const char *pkt, gsize nbytes)
 
 	g_debug("Sending packet of %d bytes", nbytes);
 
+
+
+
 	stream = G_IO_STREAM(server_con.con);
 
 	if (!stream) {
+		struct packet *pp = (struct packet *) pkt;
 		sig_status_push("Remote not connected, failed to send packet");
-		g_warning("Remote not connected, cannot send packet");
+		g_warning("Remote not connected, cannot send packet request "
+			  "for serivce %x", pp->service);
 		return -1;
 	}
 
@@ -335,6 +340,17 @@ gint net_send(const char *pkt, gsize nbytes)
 
 	return ret;
 }
+
+
+/**
+ * @note required implementation
+ */
+
+gint net_send_single(gpointer ref, const char *pkt, gsize nbytes)
+{
+	net_send(pkt, nbytes);
+}
+
 
 void net_connected(GObject *obj,
                         GAsyncResult *res,
@@ -376,6 +392,13 @@ void net_connected(GObject *obj,
 	sig_status_push("Connected to server");
 }
 
+gboolean net_is_connected(void)
+{
+	if (!G_IS_SOCKET_CONNECTION(server_con.con))
+		return FALSE;
+
+	return g_socket_connection_is_connected(server_con.con);
+}
 
 /**
  * initialise client networking
@@ -415,4 +438,23 @@ int net_client_init(void)
 					      net_connected, NULL);
 
 	return 0;
+}
+
+
+void net_reconnect(void)
+{
+	gboolean ret;
+
+	GError *error = NULL;
+
+
+	ret = g_socket_close(g_socket_connection_get_socket(server_con.con),
+			     &error);
+
+	if (!ret) {
+		if (error) {
+			g_warning("%s", error->message);
+			g_clear_error(&error);
+		}
+	}
 }

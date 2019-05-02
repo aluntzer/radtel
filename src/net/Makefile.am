@@ -18,6 +18,9 @@ libproto_a_SOURCES = protocol.c \
 		     cmds/cmd_spec_acq_enable.c \
 		     cmds/cmd_spec_acq_disable.c \
 		     cmds/cmd_spec_acq_cfg_get.c \
+		     cmds/cmd_control.c \
+		     cmds/cmd_message.c \
+		     cmds/cmd_nick.c \
 		     acks/ack_capabilities.c \
 		     acks/ack_getpos_azel.c \
 		     acks/ack_spec_data.c \
@@ -31,5 +34,6 @@ libproto_a_SOURCES = protocol.c \
 		     acks/ack_status_slew.c \
 		     acks/ack_status_move.c \
 		     acks/ack_status_rec.c \
-		     acks/ack_moveto_azel.c
-
+		     acks/ack_moveto_azel.c \
+		     acks/ack_nopriv.c \
+		     acks/ack_userlist.c

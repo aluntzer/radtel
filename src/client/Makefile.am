@@ -85,7 +85,10 @@ radtel_SOURCES += pkt_proc.c \
 		  proc/proc_pr_status_slew.c \
 		  proc/proc_pr_status_move.c \
 		  proc/proc_pr_status_rec.c \
-		  proc/proc_pr_moveto_azel.c
+		  proc/proc_pr_moveto_azel.c \
+		  proc/proc_pr_nopriv.c \
+		  proc/proc_pr_message.c \
+		  proc/proc_pr_userlist.c
 
 
 radtel_SOURCES += sig/sig_pr_success.c \
@@ -101,6 +104,9 @@ radtel_SOURCES += sig/sig_pr_success.c \
 		  sig/sig_pr_status_move.c \
 		  sig/sig_pr_status_rec.c \
 		  sig/sig_pr_moveto_azel.c \
+		  sig/sig_pr_nopriv.c \
+		  sig/sig_pr_message.c \
+		  sig/sig_pr_userlist.c \
 		  sig/sig_status_push.c \
 		  sig/sig_tracking.c \
 		  sig/sig_shutdown.c \

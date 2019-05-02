@@ -21,7 +21,8 @@
 #include <net_common.h>
 
 int net_client_init(void);
-
+gboolean net_is_connected(void);
+void net_reconnect(void);
 
 
 #endif /* _CLIENT_INCLUDE_NET_H_ */

@@ -20,7 +20,7 @@
 #include <backend.h>
 
 
-void proc_pr_getpos_azel(struct packet *pkt)
+void proc_pr_getpos_azel(struct packet *pkt, gpointer ref)
 {
 	double az;
 	double el;
@@ -32,7 +32,7 @@ void proc_pr_getpos_azel(struct packet *pkt)
 
 
 	if (be_getpos_azel(&az, &el)) {
-		ack_fail(pkt->trans_id);
+		ack_fail(pkt->trans_id, ref);
 		return;
 	}
 

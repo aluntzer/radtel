@@ -1,5 +1,5 @@
 /**
- * @file    net/acks/ack_fail.c
+ * @file    include/payload/pr_control.h
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -12,35 +12,18 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
+ * @brief payload structure for PR_CONTROL
+ *
  */
 
-#include <glib.h>
-
-#include <ack.h>
-
-
-void ack_fail(uint16_t trans_id, gpointer ref)
-{
-	gsize pkt_size;
-
-	struct packet *pkt;
+#ifndef _INCLUDE_PAYLOAD_PR_CONTROL_H_
+#define _INCLUDE_PAYLOAD_PR_CONTROL_H_
 
 
-	pkt_size = sizeof(struct packet);
+struct control {
+	uint16_t len;		/* the number of bytes in the digest */
+	uint8_t  digest[];	/* a hmac-256 digest */
+};
 
-	pkt = g_malloc(pkt_size);
 
-	pkt->service   = PR_FAIL;
-	pkt->trans_id  = trans_id;
-	pkt->data_size = 0;
-
-	pkt_set_data_crc16(pkt);
-
-	pkt_hdr_to_net_order(pkt);
-
-	g_debug("Signalling failed operation");
-	net_send_single(ref, (void *) pkt, pkt_size);
-
-	/* clean up */
-	g_free(pkt);
-}
+#endif /* _INCLUDE_PAYLOAD_PR_CONTROL_H_ */

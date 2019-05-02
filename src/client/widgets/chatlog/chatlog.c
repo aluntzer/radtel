@@ -28,16 +28,6 @@
 G_DEFINE_TYPE_WITH_PRIVATE(ChatLog, chatlog, GTK_TYPE_BOX)
 
 
-/**
- * @brief fetch needed configuration data
- */
-
-static void chatlog_fetch_config(void)
-{
-	cmd_capabilities(PKT_TRANS_ID_UNDEF);
-	cmd_getpos_azel(PKT_TRANS_ID_UNDEF);
-}
-
 
 /**
  * @brief handle connected
@@ -45,9 +35,22 @@ static void chatlog_fetch_config(void)
 
 static void chatlog_connected(gpointer instance, gpointer data)
 {
-	chatlog_fetch_config();
-}
 
+
+	GSettings *s;
+
+	const gchar *nick;
+
+
+	s = g_settings_new("org.uvie.radtel.config");
+	if (!s)
+		return;
+
+	nick = g_settings_get_string(s, "nickname");
+
+	cmd_nick(PKT_TRANS_ID_UNDEF, nick, strlen(nick));
+
+}
 
 
 
@@ -95,6 +98,94 @@ static void chatlog_log_output(const gchar *logdomain, GLogLevelFlags loglevel,
 	g_free(stmp);
 }
 
+static void chatlog_userlist(gpointer instance, const gchar *msg,
+			     gpointer data)
+{
+	GtkTextBuffer *b;
+
+	GtkTextIter start;
+	GtkTextIter end;
+
+	ChatLog *p;
+
+
+	p = CHATLOG(data);
+
+
+	b = gtk_text_view_get_buffer(GTK_TEXT_VIEW(p->cfg->ulist));
+
+	gtk_text_buffer_get_start_iter(b, &start);
+	gtk_text_buffer_get_end_iter(b, &end);
+	gtk_text_buffer_delete(b, &start, &end);
+	gtk_text_buffer_insert_markup(b, &start, msg, -1);
+}
+
+
+
+static void chatlog_msg_output(gpointer instance, const gchar *msg,
+			       gpointer data)
+{
+	GtkTextBuffer *b;
+
+	GtkTextIter iter;
+	GtkTextMark *mark;
+
+	/* timestamp */
+	gint64 now;
+	time_t now_secs;
+	struct tm *now_tm;
+	char time_buf[128];
+	char *stmp;
+
+	ChatLog *p;
+
+
+	p = CHATLOG(data);
+
+
+	b = gtk_text_view_get_buffer(GTK_TEXT_VIEW(p->cfg->chat));
+
+
+	/* Timestamp */
+	now = g_get_real_time();
+	now_secs = (time_t) (now / 1000000);
+	now_tm = localtime(&now_secs);
+
+	strftime(time_buf, sizeof(time_buf), "%H:%M:%S", now_tm);
+
+	stmp = g_strdup_printf("<tt>"
+			       "<span foreground='#004F96'>%s.%03d </span>"
+			       "%s</tt>",
+			       time_buf, (gint) ((now / 1000) % 1000),
+			       msg);
+
+
+	mark = gtk_text_buffer_get_mark(b, "end");
+
+	gtk_text_buffer_get_iter_at_mark(b, &iter, mark);
+
+	gtk_text_buffer_insert_markup(b, &iter, stmp, -1);
+
+	gtk_text_view_scroll_mark_onscreen(GTK_TEXT_VIEW(p->cfg->chat), mark);
+
+	g_free(stmp);
+}
+
+
+static void chatlog_send_msg(GtkWidget *w, ChatLog *p)
+{
+	const gchar *buf;
+
+
+	buf = gtk_entry_get_text(GTK_ENTRY(p->cfg->input));
+
+	cmd_message(PKT_TRANS_ID_UNDEF, buf, strlen(buf));
+
+	gtk_entry_set_text(GTK_ENTRY(p->cfg->input), "");
+}
+
+
+
 
 static GtkWidget *chatlog_create_chat(ChatLog *p)
 {
@@ -112,6 +203,10 @@ static GtkWidget *chatlog_create_chat(ChatLog *p)
 	GtkStyleContext *context;
 
 
+	GtkTextBuffer *b;
+	GtkTextIter iter;
+
+
 	/** TODO general signals AND: send chat text on enter */
 
 	/* vbox for chat output and input */
@@ -123,6 +218,18 @@ static GtkWidget *chatlog_create_chat(ChatLog *p)
 	textview = gtk_text_view_new();
 	gtk_container_add(GTK_CONTAINER(w), textview);
 
+
+	b = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textview));
+	gtk_text_buffer_get_end_iter(b, &iter);
+	/* create right gravity mark on empty buffer, will always stay
+	 * on the right of newly-inserted text
+	 */
+	gtk_text_buffer_create_mark(b, "end", &iter, FALSE);
+	gtk_text_view_set_editable(GTK_TEXT_VIEW(textview), FALSE);
+
+	p->cfg->chat = textview;
+
+
 	/* chat input */
 	tmp = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
 	context = gtk_widget_get_style_context(GTK_WIDGET(tmp));
@@ -131,15 +238,26 @@ static GtkWidget *chatlog_create_chat(ChatLog *p)
 
 	w = gtk_entry_new();
 	gtk_box_pack_start(GTK_BOX(tmp), w, TRUE, TRUE, 0);
+	g_object_set(w, "enable-emoji-completion", TRUE, NULL);
+	g_object_set(w, "show-emoji-icon", TRUE, NULL);
+	g_signal_connect(G_OBJECT(w), "activate",
+			 G_CALLBACK(chatlog_send_msg), p);
+
+	p->cfg->input = w;
 	w = gtk_button_new_with_label("Send");
 	gtk_box_pack_start(GTK_BOX(tmp), w, FALSE, TRUE, 0);
-
+	g_signal_connect(G_OBJECT(w), "clicked",
+			 G_CALLBACK(chatlog_send_msg), p);
 
 	/* user list */
 	frame = gtk_frame_new("Users");
 	gtk_frame_set_shadow_type(GTK_FRAME(frame), GTK_SHADOW_NONE);
 	w = gtk_scrolled_window_new(NULL, NULL);
 	textview = gtk_text_view_new();
+	p->cfg->ulist = textview;
+	gtk_text_view_set_editable(GTK_TEXT_VIEW(textview), FALSE);
+
+
 	gtk_container_add(GTK_CONTAINER(w), textview);
 	gtk_container_add(GTK_CONTAINER(frame), w);
 	w = frame;
@@ -196,6 +314,7 @@ static GtkWidget *chatlog_create_log(ChatLog *p)
 
 	p->cfg->id_log = g_log_set_handler(NULL, flags, chatlog_log_output,
 					   (gpointer) textview);
+	gtk_text_view_set_editable(GTK_TEXT_VIEW(textview), FALSE);
 
 	return frame;
 }
@@ -232,6 +351,8 @@ static gboolean chatlog_destroy(GtkWidget *w, void *data)
 
 	g_log_remove_handler(NULL, p->cfg->id_log);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_con);
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_msg);
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_uli);
 
 	return TRUE;
 }
@@ -274,9 +395,16 @@ static void chatlog_init(ChatLog *p)
 				 G_CALLBACK(chatlog_connected),
 				 (void *) p);
 
-	g_signal_connect(p, "destroy", G_CALLBACK(chatlog_destroy), NULL);
+	p->cfg->id_msg = g_signal_connect(sig_get_instance(), "pr-message",
+				 G_CALLBACK(chatlog_msg_output),
+				 (void *) p);
 
-	chatlog_fetch_config();
+	p->cfg->id_uli = g_signal_connect(sig_get_instance(), "pr-userlist",
+				 G_CALLBACK(chatlog_userlist),
+				 (void *) p);
+
+
+	g_signal_connect(p, "destroy", G_CALLBACK(chatlog_destroy), NULL);
 }
 
 

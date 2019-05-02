@@ -18,8 +18,8 @@
 #include <ack.h>
 
 
-void proc_pr_invalid_pkt(struct packet *pkt)
+void proc_pr_invalid_pkt(struct packet *pkt, gpointer ref)
 {
 	g_message("Client signalled invalid packet.");
-	ack_success(pkt->trans_id);
+	ack_success(pkt->trans_id, ref);
 }

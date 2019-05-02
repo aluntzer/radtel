@@ -77,7 +77,10 @@ radtelsrv_SOURCES = main.c \
 		    proc/proc_pr_getpos_azel.c \
 		    proc/proc_pr_spec_acq_enable.c \
 		    proc/proc_pr_spec_acq_disable.c \
-		    proc/proc_pr_spec_acq_cfg_get.c
+		    proc/proc_pr_spec_acq_cfg_get.c \
+		    proc/proc_pr_control.c \
+		    proc/proc_pr_message.c \
+		    proc/proc_pr_nick.c
 
 radtelsrv_LDADD = $(server_LIBS) \
 		  $(top_builddir)/src/net/libproto.a \

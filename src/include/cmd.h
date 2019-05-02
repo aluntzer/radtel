@@ -36,7 +36,9 @@ void cmd_getpos_azel(uint16_t trans_id);
 void cmd_spec_acq_enable(uint16_t trans_id);
 void cmd_spec_acq_disable(uint16_t trans_id);
 void cmd_spec_acq_cfg_get(uint16_t trans_id);
-
+void cmd_control(uint16_t trans_id, const uint8_t *digest, uint16_t len);
+void cmd_message(uint16_t trans_id, const uint8_t *message, uint16_t len);
+void cmd_nick(uint16_t trans_id, const uint8_t *nick, uint16_t len);
 
 
 #endif /* _INCLUDE_CMD_H_ */
