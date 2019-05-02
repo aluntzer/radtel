@@ -84,6 +84,14 @@ static void setup_sig_pr_success(void)
 		     G_TYPE_NONE, 0);
 }
 
+static void setup_sig_pr_fail(void)
+{
+	g_signal_new("pr-fail",
+		     G_TYPE_OBJECT, G_SIGNAL_RUN_FIRST,
+		     0, NULL, NULL, NULL,
+		     G_TYPE_NONE, 1, G_TYPE_UINT);
+}
+
 
 static void setup_sig_pr_capabilities(void)
 {
@@ -191,6 +199,7 @@ void sig_init(void)
 	setup_sig_status_push();
 
 	setup_sig_pr_success();
+	setup_sig_pr_fail();
 	setup_sig_pr_capabilities();
 	setup_sig_pr_spec_data();
 	setup_sig_pr_getpos_azel();

@@ -15,6 +15,7 @@ AM_CPPFLAGS += -Iwidgets/history
 AM_CPPFLAGS += -Iwidgets/sys_status
 AM_CPPFLAGS += -Iwidgets/obs_assist
 AM_CPPFLAGS += -Iwidgets/sky
+AM_CPPFLAGS += -Iwidgets/chatlog
 
 AM_CFLAGS := $(GTK3_CFLAGS) -Wunused
 AM_CFLAGS += $(GTHREAD_CFLAGS)
@@ -88,6 +89,7 @@ radtel_SOURCES += pkt_proc.c \
 
 
 radtel_SOURCES += sig/sig_pr_success.c \
+		  sig/sig_pr_fail.c \
 		  sig/sig_pr_capabilities.c \
 		  sig/sig_pr_spec_data.c \
 		  sig/sig_pr_getpos_azel.c \
@@ -136,6 +138,9 @@ radtel_SOURCES += widgets/obs_assist/obs_assist.c \
 		  widgets/obs_assist/obs_assist_bswitch.c \
 		  widgets/obs_assist/obs_assist_spectral_axis.c \
 		  widgets/obs_assist/obs_assist_gal_plane.c
+
+
+radtel_SOURCES += widgets/chatlog/chatlog.c
 
 
 

@@ -27,181 +27,23 @@
 #include <history.h>
 #include <sys_status.h>
 #include <obs_assist.h>
+#include <chatlog.h>
 #include <default_grid.h>
 
 
-
-static GtkWidget *gui_create_chat(void)
+static void gui_net_cmd_failed(gpointer instance, guint16 trans_id,
+			       gpointer data)
 {
-	GtkWidget *vbox;
-	GtkWidget *textview;
+	gchar *msg;
 
-	GtkWidget *w;
-	GtkWidget *tmp;
-
-	GtkWidget *paned;
-
-	GtkWidget *frame;
-
-	GtkStyleContext *context;
-
-
-	/** TODO general signals AND: send chat text on enter */
-
-	/* vbox for chat output and input */
-	vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
-
-	/* chat output */
-	w = gtk_scrolled_window_new(NULL, NULL);
-	gtk_box_pack_start(GTK_BOX(vbox), w, TRUE, TRUE, 0);
-	textview = gtk_text_view_new();
-	gtk_container_add(GTK_CONTAINER(w), textview);
-
-	/* chat input */
-	tmp = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-	context = gtk_widget_get_style_context(GTK_WIDGET(tmp));
-	gtk_style_context_add_class(context, GTK_STYLE_CLASS_LINKED);
-	gtk_box_pack_start(GTK_BOX(vbox), tmp, FALSE, FALSE, 0);
-
-	w = gtk_entry_new();
-	gtk_box_pack_start(GTK_BOX(tmp), w, TRUE, TRUE, 0);
-	w = gtk_button_new_with_label("Send");
-	gtk_box_pack_start(GTK_BOX(tmp), w, FALSE, TRUE, 0);
-
-
-	/* user list */
-	frame = gtk_frame_new("Users");
-	gtk_frame_set_shadow_type(GTK_FRAME(frame), GTK_SHADOW_NONE);
-	w = gtk_scrolled_window_new(NULL, NULL);
-	textview = gtk_text_view_new();
-	gtk_container_add(GTK_CONTAINER(w), textview);
-	gtk_container_add(GTK_CONTAINER(frame), w);
-	w = frame;
-
-
-	/* GtkPaned for chat output and user list */
-	paned = gtk_paned_new(GTK_ORIENTATION_HORIZONTAL);
-
-	/* pack vbox into left paned */
-	frame = gtk_frame_new("Chat");
-	gtk_frame_set_shadow_type(GTK_FRAME(frame), GTK_SHADOW_NONE);
-	gtk_container_add(GTK_CONTAINER(frame), vbox);
-	gtk_paned_pack1(GTK_PANED(paned), frame, TRUE, TRUE);
-
-	/* pack user list window in right paned */
-	gtk_paned_pack2(GTK_PANED(paned), w, TRUE, TRUE);
-
-	gtk_paned_set_wide_handle(GTK_PANED(paned), TRUE);
-
-
-	return paned;
-}
-
-#include <glib.h>
-__attribute__((unused))
-static void log_output(const gchar *logdomain, GLogLevelFlags loglevel,
-		       const gchar *message, gpointer userdata)
-{
-	GtkTextBuffer *b;
-
-	GtkTextIter iter;
-	GtkTextMark *mark;
-
-	/* timestamp */
-	gint64 now;
-	time_t now_secs;
-	struct tm *now_tm;
-	char time_buf[128];
-	char *stmp;
-
-
-	b = gtk_text_view_get_buffer(GTK_TEXT_VIEW(userdata));
-
-
-	/* Timestamp */
-	now = g_get_real_time();
-	now_secs = (time_t) (now / 1000000);
-	now_tm = localtime(&now_secs);
-
-	strftime(time_buf, sizeof(time_buf), "%H:%M:%S", now_tm);
-
-	stmp = g_strdup_printf("<tt>"
-			       "<span foreground='#004F96'>%s.%03d </span>"
-			       "%s</tt>\n",
-			       time_buf, (gint) ((now / 1000) % 1000),
-			       message);
-
-
-	mark = gtk_text_buffer_get_mark(b, "end");
-
-	gtk_text_buffer_get_iter_at_mark(b, &iter, mark);
-
-	gtk_text_buffer_insert_markup(b, &iter, stmp, -1);
-
-	gtk_text_view_scroll_mark_onscreen(GTK_TEXT_VIEW(userdata), mark);
-
-	g_free(stmp);
-}
-
-static GtkWidget *gui_create_log(void)
-{
-	GtkWidget *frame;
-
-	GtkWidget *w;
-	GtkWidget *textview;
-
-
-
-
-	frame = gtk_frame_new("Log");
-	gtk_frame_set_shadow_type(GTK_FRAME(frame), GTK_SHADOW_NONE);
-
-	/* add event log to vbox */
-	w = gtk_scrolled_window_new(NULL, NULL);
-	gtk_container_add(GTK_CONTAINER(frame), w);
-
-	textview = gtk_text_view_new();
-	gtk_text_view_set_left_margin(GTK_TEXT_VIEW(textview), 3);
-	gtk_container_add(GTK_CONTAINER(w), textview);
-
-	{
-		GtkTextBuffer *b;
-		GtkTextIter iter;
-		b = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textview));
-		gtk_text_buffer_get_end_iter(b, &iter);
-		/* create right gravity mark on empty buffer, will always stay
-		 * on the right of newly-inserted text
-		 */
-		gtk_text_buffer_create_mark(b, "end", &iter, FALSE);
-	}
-/**** XXX console for now... ****/
-#if 0
-	 g_log_set_handler(NULL, G_LOG_LEVEL_MESSAGE, log_output, (gpointer) textview);
-#endif
-	/* TODO add callbacks, right-click menu */
-
-	return frame;
-}
-
-static GtkWidget *gui_create_chatlog(void)
-{
-	GtkWidget *w;
-	GtkWidget *paned;
-
-
-	paned = gtk_paned_new(GTK_ORIENTATION_VERTICAL);
-	gtk_paned_set_wide_handle(GTK_PANED(paned), TRUE);
-
-	w = gui_create_chat();
-	gtk_paned_pack1(GTK_PANED(paned), w, TRUE, TRUE);
-	w = gui_create_log();
-	gtk_paned_pack2(GTK_PANED(paned), w, TRUE, TRUE);
-
-	return paned;
+	msg = g_strdup_printf("Server rejected command packet (tr_id: %d)",
+			      trans_id);
+	sig_status_push(msg);
+	g_free(msg);
 }
 
 
-void static gui_font_set_cb(GtkFontButton *w, gpointer data)
+static void gui_font_set_cb(GtkFontButton *w, gpointer data)
 {
 	GSettings *s;
 
@@ -318,7 +160,8 @@ static GtkWidget *gui_create_popover_menu(GtkWidget *widget)
 	w = gtk_label_new("Host");
 	gtk_widget_set_halign(w, GTK_ALIGN_END);
 	gtk_widget_set_valign(w, GTK_ALIGN_BASELINE);
-	gtk_style_context_add_class(gtk_widget_get_style_context(w), "dim-label");
+	gtk_style_context_add_class(gtk_widget_get_style_context(w),
+				    "dim-label");
 	gtk_grid_attach(GTK_GRID(grid), w, 0, 0, 1, 1);
 
 	w = gtk_entry_new();
@@ -327,7 +170,8 @@ static GtkWidget *gui_create_popover_menu(GtkWidget *widget)
 	g_free(name);
 
 	gtk_entry_set_alignment(GTK_ENTRY(w), 1.0);
-	g_signal_connect(w, "changed", G_CALLBACK(gui_host_entry_changed_cb), NULL);
+	g_signal_connect(w, "changed", G_CALLBACK(gui_host_entry_changed_cb),
+			 NULL);
 	gtk_grid_attach(GTK_GRID(grid), w, 1, 0, 1, 1);
 
 
@@ -335,7 +179,8 @@ static GtkWidget *gui_create_popover_menu(GtkWidget *widget)
 	w = gtk_label_new("Port");
 	gtk_widget_set_halign(w, GTK_ALIGN_END);
 	gtk_widget_set_valign(w, GTK_ALIGN_BASELINE);
-	gtk_style_context_add_class(gtk_widget_get_style_context(w), "dim-label");
+	gtk_style_context_add_class(gtk_widget_get_style_context(w),
+				    "dim-label");
 	gtk_grid_attach(GTK_GRID(grid), w, 0, 1, 1, 1);
 
 	w = gtk_entry_new();
@@ -346,8 +191,10 @@ static GtkWidget *gui_create_popover_menu(GtkWidget *widget)
 	g_free(name);
 
 	gtk_entry_set_alignment(GTK_ENTRY(w), 1.0);
-	g_signal_connect(w, "insert-text", G_CALLBACK(gui_port_entry_insert_text_cb), NULL);
-	g_signal_connect(w, "changed", G_CALLBACK(gui_port_entry_changed_cb), NULL);
+	g_signal_connect(w, "insert-text",
+			 G_CALLBACK(gui_port_entry_insert_text_cb), NULL);
+	g_signal_connect(w, "changed", G_CALLBACK(gui_port_entry_changed_cb),
+			 NULL);
 	gtk_entry_set_input_purpose(GTK_ENTRY(w), GTK_INPUT_PURPOSE_DIGITS);
 	gtk_grid_attach(GTK_GRID(grid), w, 1, 1, 1, 1);
 
@@ -358,7 +205,8 @@ static GtkWidget *gui_create_popover_menu(GtkWidget *widget)
 	w = gtk_label_new("Font");
 	gtk_widget_set_halign(w, GTK_ALIGN_END);
 	gtk_widget_set_valign(w, GTK_ALIGN_BASELINE);
-	gtk_style_context_add_class(gtk_widget_get_style_context(w), "dim-label");
+	gtk_style_context_add_class(gtk_widget_get_style_context(w),
+				    "dim-label");
 	gtk_grid_attach(GTK_GRID(grid), w, 0, 2, 1, 1);
 
 	w = gtk_font_button_new();
@@ -409,6 +257,7 @@ static GtkWidget *gui_create_default_window(void)
 	return win;
 }
 
+
 static void gui_create_window_with_widget(GtkWidget *p, GtkWidget **win,
 					  GtkWidget *sswdnd, gpointer data)
 {
@@ -443,18 +292,19 @@ static void gui_create_window_with_widget(GtkWidget *p, GtkWidget **win,
 
 	sswdnd_add_header_buttons(sswdnd, header);
 
-	{
-	w = gtk_menu_button_new();
-	gtk_style_context_add_class(gtk_widget_get_style_context(w), "circular");
-	gtk_button_set_always_show_image(GTK_BUTTON(w), TRUE);
-	gtk_button_set_image(GTK_BUTTON(w), gtk_image_new_from_icon_name("emblem-system-symbolic", GTK_ICON_SIZE_BUTTON));
-	gtk_widget_set_tooltip_text(w, "Settings");
-	gtk_menu_button_set_popover(GTK_MENU_BUTTON(w), gui_create_popover_menu(w));
-	gtk_header_bar_pack_end(GTK_HEADER_BAR(header), w);
-	}
 
-{
-}
+	w = gtk_menu_button_new();
+	gtk_style_context_add_class(gtk_widget_get_style_context(w),
+				    "circular");
+	gtk_button_set_always_show_image(GTK_BUTTON(w), TRUE);
+	gtk_button_set_image(GTK_BUTTON(w),
+		     gtk_image_new_from_icon_name("emblem-system-symbolic",
+						  GTK_ICON_SIZE_BUTTON));
+	gtk_widget_set_tooltip_text(w, "Settings");
+	gtk_menu_button_set_popover(GTK_MENU_BUTTON(w),
+				    gui_create_popover_menu(w));
+	gtk_header_bar_pack_end(GTK_HEADER_BAR(header), w);
+
 
 
 	if (!gtk_widget_get_visible(*win))
@@ -473,14 +323,25 @@ static GtkWidget *gui_create_stack_switcher(void)
 
 	sswdnd = sswdnd_new();
 
+
+	w = gtk_scrolled_window_new(NULL, NULL);
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(w),
+				       GTK_POLICY_AUTOMATIC,
+				       GTK_POLICY_AUTOMATIC);
+	gtk_container_add(GTK_CONTAINER(w), chatlog_new());
+	sswdnd_add_named(sswdnd, w, "Chat & Log");
+
+
+
+	sswdnd_add_named(sswdnd, sky_new(), "Sky View");
+
+
 	w = gtk_scrolled_window_new(NULL, NULL);
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(w),
 				       GTK_POLICY_AUTOMATIC,
 				       GTK_POLICY_AUTOMATIC);
 	gtk_container_add(GTK_CONTAINER(w), spectrum_new());
 	sswdnd_add_named(sswdnd, w, "Spectrum");
-
-
 
 
 	w = gtk_scrolled_window_new(NULL, NULL);
@@ -514,15 +375,6 @@ static GtkWidget *gui_create_stack_switcher(void)
 	gtk_container_add(GTK_CONTAINER(w), obs_assist_new());
 	sswdnd_add_named(sswdnd, w, "Observation");
 
-
-
-
-
-
-
-
-	sswdnd_add_named(sswdnd, gui_create_chatlog(), "Log");
-	sswdnd_add_named(sswdnd, sky_new(), "Sky View");
 
 
 	return sswdnd;
@@ -564,6 +416,12 @@ int gui_client(int argc, char *argv[])
 
 	gui_create_window_with_widget(NULL, &window,
 				      gui_create_stack_switcher(), NULL);
+
+
+	/* setup here until we have a transaction log */
+	g_signal_connect(sig_get_instance(), "pr-fail",
+				  (GCallback) gui_net_cmd_failed,
+				  NULL);
 
 	return 0;
 }

@@ -1,5 +1,5 @@
 /**
- * @file    client/proc/proc_pr_fail.c
+ * @file    widgets/chatlog/chatlog_cfg.h
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -14,15 +14,18 @@
  *
  */
 
-#include <glib.h>
+#ifndef _WIDGETS_CHATLOG_CFG_H_
+#define _WIDGETS_CHATLOG_CFG_H_
 
-#include <protocol.h>
-#include <signals.h>
+#include <chatlog.h>
+#include <cmd.h>
+
+struct _ChatLogConfig {
+
+	guint id_log;
+
+	guint id_con;
+};
 
 
-
-void proc_pr_fail(struct packet *pkt)
-{
-	g_debug("Command with transaction id %d failed", pkt->trans_id);
-	sig_pr_fail(pkt->trans_id);
-}
+#endif /* _WIDGETS_CHATLOG_CFG_H_ */

@@ -1,5 +1,5 @@
 /**
- * @file    client/proc/proc_pr_fail.c
+ * @file    client/sig/sig_pr_fail.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -15,14 +15,17 @@
  */
 
 #include <glib.h>
-
-#include <protocol.h>
+#include <glib-object.h>
 #include <signals.h>
 
 
+/**
+ * @brief emit pr-fail signal
+ */
 
-void proc_pr_fail(struct packet *pkt)
+void sig_pr_fail(const uint16_t trans_id)
 {
-	g_debug("Command with transaction id %d failed", pkt->trans_id);
-	sig_pr_fail(pkt->trans_id);
+	g_debug("Emit signal \"pr-fail\"");
+
+	g_signal_emit_by_name(sig_get_instance(), "pr-fail", trans_id);
 }
