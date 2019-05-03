@@ -38,6 +38,7 @@ struct con_data {
 	gboolean priv;
 	gchar *nick;
 	gboolean new;
+	gboolean kick;
 };
 
 /* tracks client connections */
@@ -55,18 +56,6 @@ static GMutex netlock;
 static gsize get_pkt_size_peek(struct packet *pkt)
 {
 	return (gsize) g_ntohl(pkt->data_size) + sizeof(struct packet);
-}
-
-
-
-
-
-static gboolean net_write_timeout_cb(gpointer data)
-{
-	g_warning("Write operation timed out, cancelling.");
-	g_cancellable_cancel(G_CANCELLABLE(data));
-
-	return G_SOURCE_REMOVE;
 }
 
 
@@ -131,16 +120,24 @@ static void drop_connection(struct con_data *c)
 {
 	gchar *buf;
 
-	buf = g_strdup_printf("<tt><span foreground='#F1C40F'>"
-			      "%s</span></tt> disconnected",
-			      c->nick);
+	if (c->kick) {
+		buf = g_strdup_printf("I kicked <tt><span foreground='#F1C40F'>"
+				      "%s</span></tt> for being a lazy bum",
+				      c->nick);
+	} else {
+		buf = g_strdup_printf("<tt><span foreground='#F1C40F'>"
+				      "%s</span></tt> disconnected",
+				      c->nick);
+	}
 
 	net_server_broadcast_message(buf, NULL);
+
 	g_free(buf);
+	g_free(c->nick);
 
 	g_object_unref(c->con);
-	con_list = g_list_remove(con_list, c);
 
+	con_list = g_list_remove(con_list, c);
 
 	net_push_userlist_cb(NULL);
 }
@@ -152,7 +149,7 @@ static void drop_connection(struct con_data *c)
 
 static gint net_send_internal(struct con_data *c, const char *pkt, gsize nbytes)
 {
-	gssize ret;
+	gssize ret = 0;
 
 	guint to;
 
@@ -161,15 +158,33 @@ static gint net_send_internal(struct con_data *c, const char *pkt, gsize nbytes)
 	GIOStream *stream;
 	GOutputStream *ostream;
 
-	GCancellable *ca;
-
-
-	ca = g_cancellable_new();
 
 	stream = G_IO_STREAM(c->con);
 
 	if (!G_IS_IO_STREAM(stream))
 		return -1;
+
+	if (c->kick) {
+		GSocket *socket;
+
+		socket = g_socket_connection_get_socket(c->con);
+
+		if (!g_socket_is_closed(socket)) {
+			ret = g_socket_close(socket, &error);
+			g_warning("Closed socket on timed out client");
+
+			if (!ret) {
+				if (error) {
+					g_warning("%s", error->message);
+					g_clear_error(&error);
+				}
+			}
+		}
+
+		return -1;
+
+	}
+
 
 	ostream = g_io_stream_get_output_stream(stream);
 
@@ -185,20 +200,20 @@ static gint net_send_internal(struct con_data *c, const char *pkt, gsize nbytes)
 		return -1;
 	}
 
+	/* set a 1 second socket timeout to detect broken connections */
+	g_socket_set_timeout(g_socket_connection_get_socket(c->con), 1);
+	ret = g_output_stream_write_all(ostream, pkt, nbytes, NULL, NULL, &error);
+	/* set back to infinite */
+	g_socket_set_timeout(g_socket_connection_get_socket(c->con), 0);
 
-	to = g_timeout_add_seconds(10, net_write_timeout_cb, ca);
-	ret = g_output_stream_write_all(ostream, pkt, nbytes, NULL, ca, &error);
-
-	if (!g_cancellable_is_cancelled(ca))
-		g_source_remove(to);
-
-	g_object_unref(ca);
-
-	if (ret < 0) {
+	if (!ret) {
 		if (error) {
 			g_warning("%s", error->message);
 			g_clear_error (&error);
 		}
+
+		c->kick = TRUE;
+
 	}
 
 	return ret;
@@ -414,6 +429,7 @@ static gboolean net_incoming(GSocketService    *service,
 
 	c->nick = g_strdup_printf("UserUnknown (%s)", str);
 	c->new = TRUE;
+	c->kick = FALSE;
 
 	g_free(str);
 
