@@ -809,6 +809,8 @@ static void spectrum_reset_avg_cb(GtkWidget *w, Spectrum *p)
 
 	xyplot_drop_graph(p->cfg->plot, p->cfg->r_avg);
 	p->cfg->r_avg = NULL;
+
+	xyplot_redraw(p->cfg->plot);
 }
 
 
@@ -859,6 +861,7 @@ static gboolean spectrum_avg_value_changed_cb(GtkSpinButton *sb, Spectrum *p)
 	}
 
 exit:
+	xyplot_redraw(p->cfg->plot);
 	return TRUE;
 }
 
@@ -870,6 +873,7 @@ exit:
 static void spectrum_reset_per_cb(GtkWidget *w, Spectrum *p)
 {
 	spectrum_drop_data(p);
+	xyplot_redraw(p->cfg->plot);
 }
 
 
@@ -908,6 +912,8 @@ static gboolean spectrum_per_value_changed_cb(GtkSpinButton *sb, Spectrum *p)
 	}
 
 exit:
+	xyplot_redraw(p->cfg->plot);
+
 	return TRUE;
 }
 
