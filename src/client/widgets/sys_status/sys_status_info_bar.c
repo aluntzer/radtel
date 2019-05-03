@@ -87,7 +87,7 @@ void sys_status_handle_status_push(gpointer instance, const gchar *msg,
 
 	showmsg = g_strdup_printf("%s %s",time_buf, msg);
 
-	gtk_label_set_text(p->cfg->info_bar_lbl, showmsg);
+	gtk_label_set_markup(p->cfg->info_bar_lbl, showmsg);
 	gtk_info_bar_set_revealed(GTK_INFO_BAR(p->cfg->info_bar), TRUE);
 
 	g_free(showmsg);
