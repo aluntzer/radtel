@@ -176,13 +176,18 @@ static void chatlog_msg_output(gpointer instance, const gchar *msg,
 static void chatlog_send_msg(GtkWidget *w, ChatLog *p)
 {
 	const gchar *buf;
+	gchar *esc;
 
 
 	buf = gtk_entry_get_text(GTK_ENTRY(p->cfg->input));
 
-	cmd_message(PKT_TRANS_ID_UNDEF, buf, strlen(buf));
+	esc = g_markup_escape_text(buf, strlen(buf));
+
+	cmd_message(PKT_TRANS_ID_UNDEF, esc, strlen(esc));
 
 	gtk_entry_set_text(GTK_ENTRY(p->cfg->input), "");
+
+	g_free(esc);
 }
 
 
