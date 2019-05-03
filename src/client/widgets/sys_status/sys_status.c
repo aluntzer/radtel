@@ -210,11 +210,20 @@ static void gui_create_sys_status_controls(SysStatus *p)
 	GtkWidget *w;
 	GtkWidget *box;
 	GtkWidget *grid;
+	GtkWidget *overlay;
 
 
 
 	box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-	gtk_box_pack_start(GTK_BOX(p), box, FALSE, FALSE, 6);
+
+
+
+	overlay = gtk_overlay_new();
+	gtk_container_add(GTK_CONTAINER(overlay), box);
+	gtk_box_pack_start(GTK_BOX(p), overlay, TRUE, TRUE, 6);
+
+
+
 
 	grid = gtk_grid_new();
 	p->cfg->grid = grid;
@@ -285,12 +294,14 @@ static void gui_create_sys_status_controls(SysStatus *p)
 
 
 	w = sys_status_info_bar_new(p);
-	gtk_box_pack_start(GTK_BOX(p), w, FALSE, TRUE, 0);
 	gtk_widget_set_vexpand(w, FALSE);
 	gtk_widget_set_hexpand(w, TRUE);
 
 	gtk_widget_set_halign(w, GTK_ALIGN_FILL);
 	gtk_widget_set_valign(w, GTK_ALIGN_END);
+
+	gtk_overlay_add_overlay (GTK_OVERLAY (overlay), w);
+	gtk_overlay_set_overlay_pass_through (GTK_OVERLAY (overlay), w, TRUE);
 
 
 
