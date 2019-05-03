@@ -858,14 +858,14 @@ static GtkWidget *xyplot_create_graph_style_menu(struct graph *g)
 	g_signal_connect(w, "toggled",
 			 G_CALLBACK(xyplot_radio_menu_toggled_cb), g);
 	if (g->style == STAIRS)
-		g_object_set(G_OBJECT(w), "active", TRUE);
+		g_object_set(G_OBJECT(w), "active", TRUE, NULL);
 
 	grp = gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(w));
 
 	w = gtk_radio_menu_item_new_with_label(grp, "Circles");
 	gtk_menu_shell_append(GTK_MENU_SHELL(sub), w);
 	if (g->style == CIRCLES)
-		g_object_set(G_OBJECT(w), "active", TRUE);
+		g_object_set(G_OBJECT(w), "active", TRUE, NULL);
 	g_signal_connect(w, "toggled",
 			 G_CALLBACK(xyplot_radio_menu_toggled_cb), g);
 
@@ -874,28 +874,28 @@ static GtkWidget *xyplot_create_graph_style_menu(struct graph *g)
 	g_signal_connect(w, "toggled",
 			 G_CALLBACK(xyplot_radio_menu_toggled_cb), g);
 	if (g->style == LINES)
-		g_object_set(G_OBJECT(w), "active", TRUE);
+		g_object_set(G_OBJECT(w), "active", TRUE, NULL);
 
 	w = gtk_radio_menu_item_new_with_label(grp, "NaN Lines");
 	gtk_menu_shell_append(GTK_MENU_SHELL(sub), w);
 	g_signal_connect(w, "toggled",
 			 G_CALLBACK(xyplot_radio_menu_toggled_cb), g);
 	if (g->style == NAN_LINES)
-		g_object_set(G_OBJECT(w), "active", TRUE);
+		g_object_set(G_OBJECT(w), "active", TRUE, NULL);
 
 	w = gtk_radio_menu_item_new_with_label(grp, "Bézier");
 	gtk_menu_shell_append(GTK_MENU_SHELL(sub), w);
 	g_signal_connect(w, "toggled",
 			 G_CALLBACK(xyplot_radio_menu_toggled_cb), g);
 	if (g->style == CURVES)
-		g_object_set(G_OBJECT(w), "active", TRUE);
+		g_object_set(G_OBJECT(w), "active", TRUE, NULL);
 
 	w = gtk_radio_menu_item_new_with_label(grp, "Dashes");
 	gtk_menu_shell_append(GTK_MENU_SHELL(sub), w);
 	g_signal_connect(w, "toggled",
 			 G_CALLBACK(xyplot_radio_menu_toggled_cb), g);
 	if (g->style == DASHES)
-		g_object_set(G_OBJECT(w), "active", TRUE);
+		g_object_set(G_OBJECT(w), "active", TRUE, NULL);
 
 
 	w = gtk_radio_menu_item_new_with_label(grp, "Squares");
@@ -903,7 +903,7 @@ static GtkWidget *xyplot_create_graph_style_menu(struct graph *g)
 	g_signal_connect(w, "toggled",
 			 G_CALLBACK(xyplot_radio_menu_toggled_cb), g);
 	if (g->style == SQUARES)
-		g_object_set(G_OBJECT(w), "active", TRUE);
+		g_object_set(G_OBJECT(w), "active", TRUE, NULL);
 
 
 
