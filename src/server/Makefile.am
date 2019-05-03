@@ -13,14 +13,9 @@ AM_CFLAGS += $(GLIB_CFLAGS)
 AM_CFLAGS += $(GIO_CFLAGS)
 AM_CFLAGS += -I$(top_srcdir)/src/include -Iinclude
 
-AM_LDFLAGS := $(GMODULE_LIBS)
-AM_LDFLAGS += $(GTHREAD_LIBS)
-AM_LDFLAGS += $(GLIB_LIBS)
-AM_LDFLAGS += $(GIO_LIBS)
-AM_LDFLAGS += -lm
 # force symbols from the .a that we absolutely need (and are unused otherwise)
 # it's a bit hackish, but who cares...
-AM_LDFLAGS += -u ack_spec_data
+AM_LDFLAGS := -u ack_spec_data
 AM_LDFLAGS += -u ack_spec_acq_disable
 AM_LDFLAGS += -u ack_spec_acq_enable
 AM_LDFLAGS += -u ack_spec_acq_cfg
@@ -33,6 +28,16 @@ AM_LDFLAGS += -u horizontal_to_galactic
 AM_LDFLAGS += -u galactic_to_equatorial
 AM_LDFLAGS += -u vlsr
 
+radtelsrv_LDFLAGS = -lm $(radtel_LIBS)
+
+radtelsrv_LDADD := $(GMODULE_LIBS)
+radtelsrv_LDADD += $(GTHREAD_LIBS)
+radtelsrv_LDADD += $(GLIB_LIBS)
+radtelsrv_LDADD += $(GIO_LIBS)
+radtelsrv_LDADD += $(top_builddir)/src/net/libproto.a
+radtelsrv_LDADD += $(top_builddir)/src/util/libutil.a
+radtelsrv_LDADD += $(top_builddir)/src/server/api/libbackend.a
+		  
 
 
 # cfg to /etc
@@ -81,9 +86,4 @@ radtelsrv_SOURCES = main.c \
 		    proc/proc_pr_control.c \
 		    proc/proc_pr_message.c \
 		    proc/proc_pr_nick.c
-
-radtelsrv_LDADD = $(server_LIBS) \
-		  $(top_builddir)/src/net/libproto.a \
-		  $(top_builddir)/src/util/libutil.a \
-		  $(top_builddir)/src/server/api/libbackend.a
 
