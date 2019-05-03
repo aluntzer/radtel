@@ -168,6 +168,7 @@ static void chatlog_msg_output(gpointer instance, const gchar *msg,
 
 	gtk_text_view_scroll_mark_onscreen(GTK_TEXT_VIEW(p->cfg->chat), mark);
 
+	sig_status_push(msg);
 	g_free(stmp);
 }
 
