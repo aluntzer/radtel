@@ -42,7 +42,7 @@ static void setup_sig_shutdown(void)
 
 static void setup_sig_connected(void)
 {
-	g_signal_new("connected",
+	g_signal_new("net-connected",
 		     G_TYPE_OBJECT, G_SIGNAL_RUN_FIRST,
 		     0, NULL, NULL, NULL,
 		     G_TYPE_NONE, 0);

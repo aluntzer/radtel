@@ -1380,7 +1380,7 @@ static void spectrum_init(Spectrum *p)
 			 G_CALLBACK(spectrum_handle_getpos_azel_cb),
 			 (gpointer) p);
 
-	p->cfg->id_con = g_signal_connect(sig_get_instance(), "connected",
+	p->cfg->id_con = g_signal_connect(sig_get_instance(), "net-connected",
 			 G_CALLBACK(spectrum_connected),
 			 (gpointer) p);
 

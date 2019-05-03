@@ -35,6 +35,9 @@
 
 #include <xyplot.h>
 
+#if (G_ENCODE_VERSION(2,58)) > GLIB_VERSION_CUR_STABLE
+#include <fuck_you_ubuntu.h>
+#endif
 
 #define ARRAY_SIZE(x)	(sizeof(x)/sizeof(x[0]))
 

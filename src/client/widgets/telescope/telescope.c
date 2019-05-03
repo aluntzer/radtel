@@ -197,7 +197,7 @@ static void telescope_init(Telescope *p)
 				  G_CALLBACK(telscope_handle_pr_status_move),
 				  (void *) p);
 
-	p->cfg->id_con = g_signal_connect(sig_get_instance(), "connected",
+	p->cfg->id_con = g_signal_connect(sig_get_instance(), "net-connected",
 				  (GCallback) telescope_connected,
 				  (gpointer) p);
 

@@ -22,6 +22,9 @@
 #include <sswdnd_cfg.h>
 #include <signals.h>
 
+#if (G_ENCODE_VERSION(2,58)) > GLIB_VERSION_CUR_STABLE
+#include <fuck_you_ubuntu.h>
+#endif
 
 G_DEFINE_TYPE(SSWDnD, sswdnd, GTK_TYPE_STACK_SWITCHER)
 

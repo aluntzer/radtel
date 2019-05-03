@@ -239,8 +239,10 @@ static GtkWidget *chatlog_create_chat(ChatLog *p)
 
 	w = gtk_entry_new();
 	gtk_box_pack_start(GTK_BOX(tmp), w, TRUE, TRUE, 0);
+#if GTK_CHECK_VERSION(3,24,0) > GTK_CHECK_VERSION(GTK_MAJOR_VERSION, GTK_MINOR_VERSION, GTK_MICRO_VERSION)
 	g_object_set(w, "enable-emoji-completion", TRUE, NULL);
 	g_object_set(w, "show-emoji-icon", TRUE, NULL);
+#endif
 	g_signal_connect(G_OBJECT(w), "activate",
 			 G_CALLBACK(chatlog_send_msg), p);
 
@@ -392,7 +394,7 @@ static void chatlog_init(ChatLog *p)
 	gtk_box_set_spacing(GTK_BOX(p), 0);
 	gui_create_chatlog(p);
 
-	p->cfg->id_con = g_signal_connect(sig_get_instance(), "connected",
+	p->cfg->id_con = g_signal_connect(sig_get_instance(), "net-connected",
 				 G_CALLBACK(chatlog_connected),
 				 (void *) p);
 

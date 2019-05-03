@@ -2213,7 +2213,7 @@ static void sky_init(Sky *p)
 			  G_CALLBACK(sky_handle_tracking),
 			  (gpointer) p);
 
-	p->cfg->id_con = g_signal_connect(sig_get_instance(), "connected",
+	p->cfg->id_con = g_signal_connect(sig_get_instance(), "net-connected",
 			  G_CALLBACK(sky_connected),
 			  (gpointer) p);
 

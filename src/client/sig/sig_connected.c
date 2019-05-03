@@ -27,5 +27,5 @@ void sig_connected(void)
 {
 	g_debug("Emit signal \"connected\"");
 
-	g_signal_emit_by_name(sig_get_instance(), "connected");
+	g_signal_emit_by_name(sig_get_instance(), "net-connected");
 }

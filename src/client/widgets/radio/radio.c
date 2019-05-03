@@ -283,7 +283,7 @@ static void radio_init(Radio *p)
 			 G_CALLBACK(radio_getpos_azel_cb),
 			 (gpointer) p);
 
-	p->cfg->id_con = g_signal_connect(sig_get_instance(), "connected",
+	p->cfg->id_con = g_signal_connect(sig_get_instance(), "net-connected",
 			  G_CALLBACK(radio_connected),
 			  (gpointer) p);
 

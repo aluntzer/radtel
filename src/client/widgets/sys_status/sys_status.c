@@ -411,7 +411,7 @@ static void sys_status_init(SysStatus *p)
 				 G_CALLBACK(sys_status_handle_status_push),
 				 (void *) p);
 
-	p->cfg->id_con = g_signal_connect(sig_get_instance(), "connected",
+	p->cfg->id_con = g_signal_connect(sig_get_instance(), "net-connected",
 				 G_CALLBACK(sys_status_connected),
 				 (void *) p);
 
