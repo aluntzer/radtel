@@ -40,6 +40,7 @@ static void sys_status_fetch_config(void)
 {
 	cmd_capabilities(PKT_TRANS_ID_UNDEF);
 	cmd_getpos_azel(PKT_TRANS_ID_UNDEF);
+	cmd_spec_acq_cfg_get(PKT_TRANS_ID_UNDEF);
 }
 
 
@@ -165,6 +166,35 @@ static void sys_status_handle_pr_capabilities(gpointer instance,
 }
 
 
+/**
+ * @brief handle spectral acquisition configuration data
+ */
+
+static void sys_status_handle_pr_spec_acq_cfg(gpointer instance,
+					      const struct spec_acq_cfg *acq,
+					      gpointer data)
+{
+	SysStatus *p;
+
+
+	p = SYS_STATUS(data);
+
+	p->cfg->frq_lo = (gdouble) acq->freq_start_hz * 1e-6;
+	p->cfg->frq_hi = (gdouble) acq->freq_stop_hz  * 1e-6;
+
+	{
+	/* XXX this gotta go  */
+	gchar *lbl = NULL;
+	lbl = g_strdup_printf("<tt> %06.2f MHz</tt>", p->cfg->frq_lo);
+	gtk_label_set_markup(p->cfg->lbl_frq_lo, lbl);
+	lbl = g_strdup_printf("<tt> %06.2f MHz</tt>", p->cfg->frq_hi);
+	gtk_label_set_markup(p->cfg->lbl_frq_hi, lbl);
+	}
+}
+
+
+
+
 static void sys_status_hide_widgets(GtkWidget *w, gpointer data)
 {
 	SysStatus *p;
@@ -251,6 +281,36 @@ static void gui_create_sys_status_controls(SysStatus *p)
 		gtk_grid_set_column_spacing(GTK_GRID(grid2), 12);
 
 
+		w = gtk_label_new(NULL);
+		gtk_label_set_markup(GTK_LABEL(w), "<span alpha='50%'>F<span size='x-small'>LO</span></span>");
+		gtk_grid_attach(GTK_GRID(grid2), w, 0, 4, 1, 1);
+		w = sys_status_create_align_lbl(NULL, 0.0);
+		gtk_grid_attach(GTK_GRID(grid2), w, 1, 4, 2, 1);
+		p->cfg->lbl_frq_lo = GTK_LABEL(w);
+
+		w = gtk_label_new(NULL);
+		gtk_label_set_markup(GTK_LABEL(w), "<span alpha='50%'>F<span size='x-small'>HI</span></span>");
+		gtk_grid_attach(GTK_GRID(grid2), w, 0, 5, 1, 1);
+		w = sys_status_create_align_lbl(NULL, 0.0);
+		gtk_grid_attach(GTK_GRID(grid2), w, 1, 5, 2, 1);
+		p->cfg->lbl_frq_hi = GTK_LABEL(w);;
+
+
+		gtk_grid_attach(GTK_GRID(grid), grid2, 2, 0, 1, 1);
+	}
+
+	w = gtk_separator_new(GTK_ORIENTATION_VERTICAL);
+	gtk_grid_attach(GTK_GRID(grid), w, 3, 0, 1, 1);
+
+
+	{
+		GtkWidget *grid2;
+
+		grid2 = gtk_grid_new();
+		gtk_grid_set_row_spacing(GTK_GRID(grid2), 6);
+		gtk_grid_set_column_spacing(GTK_GRID(grid2), 12);
+
+
 		w = gtk_label_new("ACQ:");
 		gtk_grid_attach(GTK_GRID(grid2), w, 0, 0, 1, 1);
 		w = gtk_spinner_new();
@@ -289,8 +349,11 @@ static void gui_create_sys_status_controls(SysStatus *p)
 
 
 
-		gtk_grid_attach(GTK_GRID(grid), grid2, 2, 0, 1, 1);
+		gtk_grid_attach(GTK_GRID(grid), grid2, 4, 0, 1, 1);
 	}
+
+
+
 
 
 	w = sys_status_info_bar_new(p);
@@ -354,6 +417,7 @@ static gboolean sys_status_destroy(GtkWidget *w, void *data)
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_slw);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_mov);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_rec);
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_cfg);
 
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_msg);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_con);
@@ -416,6 +480,10 @@ static void sys_status_init(SysStatus *p)
 
 	p->cfg->id_rec = g_signal_connect(sig_get_instance(), "pr-status-rec",
 				 G_CALLBACK(sys_status_handle_pr_status_rec),
+				 (void *) p);
+
+	p->cfg->id_cfg = g_signal_connect(sig_get_instance(), "pr-spec-acq-cfg",
+				 G_CALLBACK(sys_status_handle_pr_spec_acq_cfg),
 				 (void *) p);
 
 	p->cfg->id_msg = g_signal_connect(sig_get_instance(), "status-push",

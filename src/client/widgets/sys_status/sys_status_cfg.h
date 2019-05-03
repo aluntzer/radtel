@@ -51,11 +51,17 @@ struct _SysStatusConfig {
 	GtkLabel  *lbl_eta_move;
 	GtkLabel  *lbl_eta_rec;
 
+	GtkLabel  *lbl_frq_lo;
+	GtkLabel  *lbl_frq_hi;
+
 
 	gdouble eta_acq;
 	gdouble eta_slew;
 	gdouble eta_move;
 	gdouble eta_rec;
+
+	gdouble frq_lo;
+	gdouble frq_hi;
 
 
 	GtkWidget *info_bar;
@@ -70,6 +76,7 @@ struct _SysStatusConfig {
 	guint id_slw;
 	guint id_mov;
 	guint id_rec;
+	guint id_cfg;
 	guint id_msg;
 	guint id_con;
 };

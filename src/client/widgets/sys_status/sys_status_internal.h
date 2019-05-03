@@ -25,5 +25,6 @@ GtkWidget *sys_status_pos_new(SysStatus *p);
 void sys_status_handle_status_push(gpointer instance, const gchar *msg,
 				   gpointer data);
 
+GtkWidget *sys_status_create_align_lbl(const gchar *str, double align);
 
 #endif /* _WIDGETS_SYS_STATUS_INTERNAL_H */

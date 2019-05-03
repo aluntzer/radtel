@@ -202,11 +202,13 @@ static gboolean sys_status_timeout_cb(void *data)
 
 
 
+
+
 	return G_SOURCE_CONTINUE;
 }
 
 
-static GtkWidget *sys_status_create_align_lbl(const gchar *str, double align)
+GtkWidget *sys_status_create_align_lbl(const gchar *str, double align)
 {
 	GtkWidget *w;
 
