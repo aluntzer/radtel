@@ -2027,11 +2027,149 @@ static void xyplot_draw_stairs(XYPlot *p, cairo_t *cr, struct graph *g)
 
 
 
+
 /**
- * @brief draw the plot data as circles
+ * @brief create a circle as source surface
  */
 
-static void xyplot_draw_circles(XYPlot *p, cairo_t *cr, struct graph *g)
+static cairo_surface_t *xyplot_create_circle_surface(cairo_t *cr,
+						     struct graph *g,
+						     gdouble radius,
+						     gboolean fill)
+{
+	double w, h;
+	double xc, yc;
+
+	const double lw = 1.0;	/* fixed for now */
+
+	cairo_t		*ct;
+	cairo_surface_t *cs;
+
+
+
+	xc = radius;
+	yc = radius;
+	w  = 2.0 * radius;
+	h  = 2.0 * radius;
+
+
+	cs = cairo_surface_create_similar(cairo_get_target(cr),
+					  CAIRO_CONTENT_COLOR_ALPHA,
+					  w, h);
+	ct = cairo_create(cs);
+	cairo_set_source_rgba(ct, g->colour.red,  g->colour.green,
+			          g->colour.blue, g->colour.alpha);
+
+	if (!fill) {
+		cairo_set_line_width(cr, lw);
+		radius -= lw;
+	}
+
+	cairo_arc(ct, xc, yc, radius, 0.0, 2.0 * M_PI);
+
+	if (fill)
+		cairo_fill(ct);
+	else
+		cairo_stroke(ct);
+
+
+	cairo_destroy(ct);
+
+	return cs;
+}
+
+
+/**
+ * @brief create a fileld circle as source surface
+ */
+
+static cairo_surface_t *xyplot_create_square_surface(cairo_t *cr,
+						     struct graph *g,
+						     gdouble size)
+{
+	cairo_t		*ct;
+	cairo_surface_t *cs;
+
+
+	cs = cairo_surface_create_similar(cairo_get_target(cr),
+					  CAIRO_CONTENT_COLOR_ALPHA,
+					  size, size);
+	ct = cairo_create(cs);
+	cairo_set_source_rgba(ct, g->colour.red,  g->colour.green,
+			          g->colour.blue, g->colour.alpha);
+
+
+	cairo_rectangle(ct, 0.0, 0.0, size, size);
+	cairo_fill(ct);
+
+	cairo_destroy(ct);
+
+	return cs;
+}
+
+
+/**
+ * @brief use Super Mario as source surface
+ */
+
+static cairo_surface_t *xyplot_create_mario_surface(cairo_t *cr,
+						    struct graph *g,
+						    gdouble scale)
+{
+	double w, h;
+
+	cairo_t *ct;
+	cairo_surface_t *cs;
+	cairo_surface_t *ci;
+	cairo_pattern_t *cp;
+	cairo_matrix_t m;
+
+
+	ci = cairo_image_surface_create_from_png("/tmp/mario.png");
+
+	if (!ci)
+		g_warning("Cannot draw mario, please provide /tmp/mario.png");
+
+	cp = cairo_pattern_create_for_surface(ci);
+	cairo_pattern_set_filter(cp, CAIRO_FILTER_NEAREST);
+
+	w = scale * (double) cairo_image_surface_get_width(ci);
+	h = scale * (double) cairo_image_surface_get_height(ci);
+
+	cs = cairo_surface_create_similar(cairo_get_target(cr),
+					  CAIRO_CONTENT_COLOR_ALPHA,
+					  w, h);
+
+
+	ct = cairo_create(cs);
+
+	/* flip the matrix, plot surface is upside down */
+	cairo_get_matrix(ct, &m);
+	cairo_matrix_translate(&m, 0.0, h);
+	cairo_matrix_scale(&m, 1.0, -1.0);
+	cairo_set_matrix(ct, &m);
+
+
+	cairo_scale(ct, scale, scale);
+
+	cairo_set_source(ct, cp);
+
+	cairo_paint(ct);
+
+	cairo_destroy(ct);
+	cairo_pattern_destroy(cp);
+	cairo_surface_destroy(ci);
+
+	return cs;
+}
+
+
+/**
+ * @brief draw data points using a source surface
+ */
+
+static void xyplot_draw_from_surface(XYPlot *p, cairo_t *cr, struct graph *g,
+				     cairo_surface_t *cs)
 {
 	size_t i;
 
@@ -2045,22 +2183,37 @@ static void xyplot_draw_circles(XYPlot *p, cairo_t *cr, struct graph *g)
 	x  = g->data_x;
 	y  = g->data_y;
 
+
 	cairo_save(cr);
 
 	xyplot_transform_origin(p, cr);
 
-	cairo_set_source_rgba(cr, g->colour.red,  g->colour.green,
-			          g->colour.blue, g->colour.alpha);
-
 	for (i = 0; i < g->data_len; i++) {
-		cairo_arc(cr,
-			  (x[i] - p->x_ax.min) * sx,
-			  (y[i] - p->y_ax.min) * sy,
-			  4.0, 0.0, 2.0 * M_PI);
-		cairo_fill(cr);
+
+		cairo_set_source_surface (cr, cs,
+					  (x[i] - p->x_ax.min) * sx,
+					  (y[i] - p->y_ax.min) * sy);
+		cairo_paint (cr);
 	}
 
 	cairo_restore(cr);
+}
+
+
+/**
+ * @brief draw the plot data as circles
+ */
+
+static void xyplot_draw_circles(XYPlot *p, cairo_t *cr, struct graph *g)
+{
+	cairo_surface_t *cs;
+
+
+	cs = xyplot_create_circle_surface(cr, g, 4.0, TRUE);
+
+	xyplot_draw_from_surface(p, cr, g, cs);
+
+	cairo_surface_destroy(cs);
 }
 
 
@@ -2070,34 +2223,33 @@ static void xyplot_draw_circles(XYPlot *p, cairo_t *cr, struct graph *g)
 
 static void xyplot_draw_squares(XYPlot *p, cairo_t *cr, struct graph *g)
 {
-	size_t i;
+	cairo_surface_t *cs;
 
-	gdouble sx, sy;
 
-	gdouble *x, *y;
+	cs = xyplot_create_square_surface(cr, g, 4.0);
 
-	sx = p->scale_x;
-	sy = p->scale_y;
+	xyplot_draw_from_surface(p, cr, g, cs);
 
-	x  = g->data_x;
-	y  = g->data_y;
-
-	cairo_save(cr);
-
-	xyplot_transform_origin(p, cr);
-
-	cairo_set_source_rgba(cr, g->colour.red,  g->colour.green,
-			          g->colour.blue, g->colour.alpha);
-
-	for (i = 0; i < g->data_len; i++) {
-		cairo_rectangle(cr, (x[i] - p->x_ax.min) * sx - 2.0,
-				    (y[i] - p->y_ax.min) * sy - 2.0,
-				    4.0, 4.0);
-		cairo_fill(cr);
-	}
-
-	cairo_restore(cr);
+	cairo_surface_destroy(cs);
 }
+
+
+/**
+ * @brief draw the plot data as Mario
+ */
+
+static void xyplot_draw_mario(XYPlot *p, cairo_t *cr, struct graph *g)
+{
+	cairo_surface_t *cs;
+
+
+	cs = xyplot_create_mario_surface(cr, g, 2.0);
+
+	xyplot_draw_from_surface(p, cr, g, cs);
+
+	cairo_surface_destroy(cs);
+}
+
 
 
 /**
@@ -2494,6 +2646,9 @@ static void xyplot_draw_graphs(XYPlot *p, cairo_t *cr)
 			break;
 		case SQUARES:
 			xyplot_draw_squares(p, cr, g);
+			break;
+		case MARIO:
+			xyplot_draw_mario(p, cr, g);
 			break;
 		default:
 			break;

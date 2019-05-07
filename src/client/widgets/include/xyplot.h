@@ -147,7 +147,7 @@ struct _XYPlotClass {
 };
 
 enum xyplot_graph_style {STAIRS, CIRCLES, LINES, NAN_LINES,
-			 CURVES, DASHES, SQUARES, IMPULSES};
+			 CURVES, DASHES, SQUARES, IMPULSES, MARIO};
 
 GtkWidget *xyplot_new(void);
 
