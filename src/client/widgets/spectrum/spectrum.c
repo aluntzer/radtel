@@ -35,7 +35,7 @@ G_DEFINE_TYPE_WITH_PRIVATE(Spectrum, spectrum, GTK_TYPE_BOX)
 #define SPECTRUM_DEFAULT_AVG_LEN 10
 #define SPECTRUM_DEFAULT_PER_LEN 10
 
-#define SPECTRUM_REFRESH_HZ	 40.
+#define SPECTRUM_REFRESH_HZ	 30.
 
 
 /**
@@ -508,6 +508,9 @@ static void spectrum_set_plot_style(gint active, enum xyplot_graph_style *s)
 		break;
 	case 5:
 		(*s) = SQUARES;
+		break;
+	case 6:
+		(*s) = MARIO;
 		break;
 	default:
 		break;
@@ -1153,6 +1156,7 @@ static GtkWidget *spectrum_sidebar_new(Spectrum *p)
 	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(w), NULL, "Bézier");
 	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(w), NULL, "Circles");
 	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(w), NULL, "Squares");
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(w), NULL, "Mario");
 	gtk_combo_box_set_active(GTK_COMBO_BOX(w), 0);
 	gtk_combo_box_set_active(GTK_COMBO_BOX(w), 4);	/* default circles */
 	gtk_grid_attach(grid, w, 0, 4, 2, 1);
