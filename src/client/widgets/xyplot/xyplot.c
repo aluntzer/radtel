@@ -2174,13 +2174,12 @@ static cairo_surface_t *xyplot_create_mario_surface(cairo_t *cr,
 	cairo_pattern_t *cp;
 	cairo_matrix_t m;
 
-	const GdkRGBA othr = {0.847, 0.000, 0.004, 1.0};
-	const GdkRGBA boot = {0.443, 0.388, 0.235, 1.0};
-	const GdkRGBA skin = {0.949, 0.816, 0.710, 1.0};
-	const GdkRGBA shrt = {0.439, 0.631, 0.996, 1.0};
-	const GdkRGBA butn = {0.976, 0.671, 0.004, 1.0};
-	const GdkRGBA hair = {0.039, 0.027, 0.000, 1.0};
-
+	const GdkRGBA othr = {0.847, 0.000, 0.004, g->colour.alpha};
+	const GdkRGBA boot = {0.443, 0.388, 0.235, g->colour.alpha};
+	const GdkRGBA skin = {0.949, 0.816, 0.710, g->colour.alpha};
+	const GdkRGBA shrt = {0.439, 0.631, 0.996, g->colour.alpha};
+	const GdkRGBA butn = {0.976, 0.671, 0.004, g->colour.alpha};
+	const GdkRGBA hair = {0.039, 0.027, 0.000, g->colour.alpha};
 
 
 
