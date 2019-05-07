@@ -2109,10 +2109,10 @@ static cairo_surface_t *xyplot_create_square_surface(cairo_t *cr,
 
 
 /**
- * @brief use Super Mario as source surface
+ * @brief use PNG image as custom source surface
  */
-
-static cairo_surface_t *xyplot_create_mario_surface(cairo_t *cr,
+__attribute__((unused))
+static cairo_surface_t *xyplot_create_png_surface(cairo_t *cr,
 						    struct graph *g,
 						    gdouble scale)
 {
@@ -2126,9 +2126,6 @@ static cairo_surface_t *xyplot_create_mario_surface(cairo_t *cr,
 
 
 	ci = cairo_image_surface_create_from_png("/tmp/mario.png");
-
-	if (!ci)
-		g_warning("Cannot draw mario, please provide /tmp/mario.png");
 
 	cp = cairo_pattern_create_for_surface(ci);
 	cairo_pattern_set_filter(cp, CAIRO_FILTER_NEAREST);
@@ -2165,15 +2162,212 @@ static cairo_surface_t *xyplot_create_mario_surface(cairo_t *cr,
 
 
 /**
+ * @brief use Super Mario as source surface
+ */
+
+static cairo_surface_t *xyplot_create_mario_surface(cairo_t *cr,
+						    struct graph *g,
+						    gdouble scale)
+{
+	cairo_t *ct;
+	cairo_surface_t *cs;
+	cairo_pattern_t *cp;
+	cairo_matrix_t m;
+
+	const GdkRGBA othr = {0.847, 0.000, 0.004, 1.0};
+	const GdkRGBA boot = {0.443, 0.388, 0.235, 1.0};
+	const GdkRGBA skin = {0.949, 0.816, 0.710, 1.0};
+	const GdkRGBA shrt = {0.439, 0.631, 0.996, 1.0};
+	const GdkRGBA butn = {0.976, 0.671, 0.004, 1.0};
+	const GdkRGBA hair = {0.039, 0.027, 0.000, 1.0};
+
+
+
+
+	cs = cairo_surface_create_similar(cairo_get_target(cr),
+					  CAIRO_CONTENT_COLOR_ALPHA,
+					  12.0, 16.0);
+	ct = cairo_create(cs);
+
+	/* NOTE: no overdrawing so we can use alpha */
+
+	/* cap */
+	cairo_set_source_rgba(ct, othr.red,  othr.green,
+				  othr.blue, othr.alpha);
+
+	cairo_rectangle(ct,  4,  0,  5, 1);
+	cairo_rectangle(ct,  1,  1,  9, 1);
+
+	cairo_fill(ct);
+
+	/* head skin first */
+	cairo_set_source_rgba(ct, skin.red,  skin.green,
+				  skin.blue, skin.alpha);
+
+	cairo_rectangle(ct,  3,  2,  1, 1);
+	cairo_rectangle(ct,  5,  2,  2, 1);
+
+	cairo_rectangle(ct,  1,  3,  4, 1);
+	cairo_rectangle(ct,  5,  3,  3, 1);
+	cairo_rectangle(ct,  9,  3,  1, 1);
+
+	cairo_rectangle(ct,  0,  4, 3, 1);
+	cairo_rectangle(ct,  4,  4, 3, 1);
+	cairo_rectangle(ct,  9,  4, 1, 1);
+
+	cairo_rectangle(ct,  5,  5,  4, 1);
+
+	cairo_rectangle(ct,  2,  6,  7, 1);
+
+	cairo_fill(ct);
+
+	/* now hair */
+	cairo_set_source_rgba(ct, hair.red,  hair.green,
+				  hair.blue, hair.alpha);
+
+	cairo_rectangle(ct,  4,  2,  1, 1);
+	cairo_rectangle(ct,  7,  2,  3, 1);
+
+	cairo_rectangle(ct,  4,  3,  1, 1);
+	cairo_rectangle(ct,  8,  3,  1, 1);
+	cairo_rectangle(ct, 10,  3,  1, 1);
+
+	cairo_rectangle(ct,  3,  4,  1, 1);
+	cairo_rectangle(ct,  7,  4,  2, 1);
+	cairo_rectangle(ct, 10,  4,  1, 1);
+
+	cairo_rectangle(ct,  1,  5,  4, 1);
+	cairo_rectangle(ct,  9,  5,  2, 1);
+
+	cairo_fill(ct);
+
+	/* blue shirt */
+	cairo_set_source_rgba(ct, shrt.red,  shrt.green,
+				  shrt.blue, shrt.alpha);
+
+	cairo_rectangle(ct,  2,  7,  2, 1);
+	cairo_rectangle(ct,  5,  7,  2, 1);
+	cairo_rectangle(ct,  8,  7,  2, 1);
+
+	cairo_rectangle(ct,  1,  8,  3, 1);
+	cairo_rectangle(ct,  5,  8,  2, 1);
+	cairo_rectangle(ct,  8,  8,  3, 1);
+
+	cairo_rectangle(ct,  0,  9,  4, 1);
+	cairo_rectangle(ct,  8,  9,  4, 1);
+
+	cairo_rectangle(ct,  2, 10,  1, 1);
+	cairo_rectangle(ct,  9, 10,  1, 1);
+
+	cairo_fill(ct);
+
+	/* hands */
+	cairo_set_source_rgba(ct, skin.red,  skin.green,
+				  skin.blue, skin.alpha);
+
+	cairo_rectangle(ct,  0, 10,  2, 1);
+	cairo_rectangle(ct, 10, 10,  2, 1);
+
+	cairo_rectangle(ct,  0, 11,  3, 1);
+	cairo_rectangle(ct,  9, 11,  3, 1);
+
+	cairo_rectangle(ct,  0, 12,  2, 1);
+	cairo_rectangle(ct, 10, 12,  2, 1);
+
+	cairo_fill(ct);
+
+	/* overall */
+	cairo_set_source_rgba(ct, othr.red,  othr.green,
+				  othr.blue, othr.alpha);
+
+	cairo_rectangle(ct,  4,  7,  1, 1);
+	cairo_rectangle(ct,  7,  7,  1, 1);
+
+	cairo_rectangle(ct,  4,  8,  1, 1);
+	cairo_rectangle(ct,  7,  8,  1, 1);
+
+	cairo_rectangle(ct,  4,  9,  4, 1);
+
+	cairo_rectangle(ct,  3, 10,  1, 1);
+	cairo_rectangle(ct,  5, 10,  2, 1);
+	cairo_rectangle(ct,  8, 10,  1, 1);
+
+	cairo_rectangle(ct,  3, 11,  6, 1);
+
+	cairo_rectangle(ct,  2, 12,  8, 1);
+
+	cairo_rectangle(ct,  2, 13,  3, 1);
+	cairo_rectangle(ct,  7, 13,  3, 1);
+
+	cairo_fill(ct);
+
+
+	/* buttons */
+	cairo_set_source_rgba(ct, butn.red,  butn.green,
+				  butn.blue, butn.alpha);
+
+	cairo_rectangle(ct,  4,  10,  1, 1);
+	cairo_rectangle(ct,  7,  10,  1, 1);
+
+	cairo_fill(ct);
+
+	/* boots */
+	cairo_set_source_rgba(ct, boot.red,  boot.green,
+				  boot.blue, boot.alpha);
+
+	cairo_rectangle(ct,  1, 14,  3, 1);
+	cairo_rectangle(ct,  8, 14,  3, 1);
+
+	cairo_rectangle(ct,  0, 15,  4, 1);
+	cairo_rectangle(ct,  8, 15,  4, 1);
+
+	cairo_fill(ct);
+
+
+
+	/* now scale */
+	cp = cairo_pattern_create_for_surface(cs);
+	cairo_pattern_set_filter(cp, CAIRO_FILTER_NEAREST);
+
+	cairo_surface_destroy(cs);
+	cs = cairo_surface_create_similar(cairo_get_target(cr),
+					  CAIRO_CONTENT_COLOR_ALPHA,
+					  12.0 * scale, 16.0 * scale);
+
+	cairo_destroy(ct);
+	ct = cairo_create(cs);
+
+	/* flip the matrix, plot surface is upside down */
+	cairo_get_matrix(ct, &m);
+	cairo_matrix_translate(&m, 0.0, 16.0 * scale);
+	cairo_matrix_scale(&m, 1.0, -1.0);
+	cairo_set_matrix(ct, &m);
+
+
+	cairo_scale(ct, scale, scale);
+
+	cairo_set_source(ct, cp);
+
+	cairo_paint(ct);
+
+	cairo_destroy(ct);
+	cairo_pattern_destroy(cp);
+
+	return cs;
+}
+
+
+/**
  * @brief draw data points using a source surface
  */
 
 static void xyplot_draw_from_surface(XYPlot *p, cairo_t *cr, struct graph *g,
-				     cairo_surface_t *cs)
+				     cairo_surface_t *cs, gdouble w, gdouble h)
 {
 	size_t i;
 
 	gdouble sx, sy;
+	gdouble dx, dy;
 
 	gdouble *x, *y;
 
@@ -2188,11 +2382,28 @@ static void xyplot_draw_from_surface(XYPlot *p, cairo_t *cr, struct graph *g,
 
 	xyplot_transform_origin(p, cr);
 
+	w = 0.5 * w;
+	h = 0.5 * h;
+
 	for (i = 0; i < g->data_len; i++) {
 
-		cairo_set_source_surface (cr, cs,
-					  (x[i] - p->x_ax.min) * sx,
-					  (y[i] - p->y_ax.min) * sy);
+		dx = (x[i] - p->x_ax.min) * sx - w;
+		dy = (y[i] - p->y_ax.min) * sy - h;
+
+		/* do not draw points outside of frame */
+		if (dx < 0.)
+			continue;
+
+		if (dx > p->plot_w)
+			continue;
+
+		if (dy > p->plot_h)
+			continue;
+
+		if (dy < 0.0)
+			continue;
+
+		cairo_set_source_surface (cr, cs, dx, dy);
 		cairo_paint (cr);
 	}
 
@@ -2211,7 +2422,7 @@ static void xyplot_draw_circles(XYPlot *p, cairo_t *cr, struct graph *g)
 
 	cs = xyplot_create_circle_surface(cr, g, 4.0, TRUE);
 
-	xyplot_draw_from_surface(p, cr, g, cs);
+	xyplot_draw_from_surface(p, cr, g, cs, 4.0, 4.0);
 
 	cairo_surface_destroy(cs);
 }
@@ -2228,7 +2439,7 @@ static void xyplot_draw_squares(XYPlot *p, cairo_t *cr, struct graph *g)
 
 	cs = xyplot_create_square_surface(cr, g, 4.0);
 
-	xyplot_draw_from_surface(p, cr, g, cs);
+	xyplot_draw_from_surface(p, cr, g, cs, 4.0, 4.0);
 
 	cairo_surface_destroy(cs);
 }
@@ -2245,7 +2456,7 @@ static void xyplot_draw_mario(XYPlot *p, cairo_t *cr, struct graph *g)
 
 	cs = xyplot_create_mario_surface(cr, g, 2.0);
 
-	xyplot_draw_from_surface(p, cr, g, cs);
+	xyplot_draw_from_surface(p, cr, g, cs, 2. * 12., 2. * 16.);
 
 	cairo_surface_destroy(cs);
 }
