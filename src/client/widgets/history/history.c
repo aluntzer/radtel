@@ -50,8 +50,11 @@ G_DEFINE_TYPE_WITH_PRIVATE(History, history, GTK_TYPE_BOX)
 #define HISTORY_G_HI		255
 #define HISTORY_B_H		0
 
+#define HISTORY_REFRESH_HZ_CAP  30.
 
-#define HISTORY_REFRESH_HZ	30.
+#define HISTORY_REFRESH_AVG_LEN 10.
+
+#define HISTORY_REFRESH_DUTY_CYCLE 0.8
 
 
 /**
@@ -60,14 +63,38 @@ G_DEFINE_TYPE_WITH_PRIVATE(History, history, GTK_TYPE_BOX)
 
 static void history_plot_try_refresh(GtkWidget *w, History *p)
 {
+	gdouble elapsed;
+
+	const double n  = 1.0 / HISTORY_REFRESH_AVG_LEN;
+	const double n1 = HISTORY_REFRESH_AVG_LEN - 1.0;
+
+
 	g_timer_stop(p->cfg->timer);
 
-	if (g_timer_elapsed(p->cfg->timer, NULL) > (1. / HISTORY_REFRESH_HZ)) {
+	elapsed = g_timer_elapsed(p->cfg->timer, NULL);
+
+	if (elapsed > p->cfg->refresh) {
+
+		/* reuse the timer to measure drawing time */
+		g_timer_start(p->cfg->timer);
 		xyplot_redraw(w);
+		g_timer_stop(p->cfg->timer);
+
+		elapsed = g_timer_elapsed(p->cfg->timer, NULL);
+
+		elapsed /= HISTORY_REFRESH_DUTY_CYCLE;
+
+		/* adapt refresh rate */
+		p->cfg->refresh = (p->cfg->refresh * n1 + elapsed) * n;
+
+		if (p->cfg->refresh < (1.0 / HISTORY_REFRESH_HZ_CAP))
+			p->cfg->refresh = (1.0 / HISTORY_REFRESH_HZ_CAP);
+
 		g_timer_start(p->cfg->timer);
 	} else {
 		g_timer_continue(p->cfg->timer);
 	}
+
 }
 
 
@@ -820,6 +847,7 @@ static void history_init(History *p)
 
 	p->cfg->wf_n_max = HISTORY_DEFAULT_HST_LEN;
 
+	p->cfg->refresh = 1.0 / HISTORY_REFRESH_HZ_CAP;
 
 	gtk_orientable_set_orientation(GTK_ORIENTABLE(p),
 				       GTK_ORIENTATION_VERTICAL);

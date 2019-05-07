@@ -35,7 +35,11 @@ G_DEFINE_TYPE_WITH_PRIVATE(Spectrum, spectrum, GTK_TYPE_BOX)
 #define SPECTRUM_DEFAULT_AVG_LEN 10
 #define SPECTRUM_DEFAULT_PER_LEN 10
 
-#define SPECTRUM_REFRESH_HZ	 30.
+#define SPECTRUM_REFRESH_HZ_CAP  30.
+
+#define SPECTRUM_REFRESH_AVG_LEN 10.
+
+#define SPECTRUM_REFRESH_DUTY_CYCLE 0.8
 
 
 /**
@@ -44,14 +48,40 @@ G_DEFINE_TYPE_WITH_PRIVATE(Spectrum, spectrum, GTK_TYPE_BOX)
 
 static void spectrum_plot_try_refresh(GtkWidget *w, Spectrum *p)
 {
+	gdouble elapsed;
+
+	const double n  = 1.0 / SPECTRUM_REFRESH_AVG_LEN;
+	const double n1 = SPECTRUM_REFRESH_AVG_LEN - 1.0;
+
+
 	g_timer_stop(p->cfg->timer);
 
-	if (g_timer_elapsed(p->cfg->timer, NULL) > (1. / SPECTRUM_REFRESH_HZ)) {
+	elapsed = g_timer_elapsed(p->cfg->timer, NULL);
+
+	if (elapsed > p->cfg->refresh) {
+
+		/* reuse the timer to measure drawing time */
+		g_timer_start(p->cfg->timer);
 		xyplot_redraw(w);
+		g_timer_stop(p->cfg->timer);
+
+		elapsed = g_timer_elapsed(p->cfg->timer, NULL);
+
+		elapsed /= SPECTRUM_REFRESH_DUTY_CYCLE;
+
+		/* adapt refresh rate */
+		p->cfg->refresh = (p->cfg->refresh * n1 + elapsed) * n;
+
+		if (p->cfg->refresh < (1.0 / SPECTRUM_REFRESH_HZ_CAP))
+			p->cfg->refresh = (1.0 / SPECTRUM_REFRESH_HZ_CAP);
+
+
+
 		g_timer_start(p->cfg->timer);
 	} else {
 		g_timer_continue(p->cfg->timer);
 	}
+
 }
 
 
@@ -1150,12 +1180,12 @@ static GtkWidget *spectrum_sidebar_new(Spectrum *p)
 			 G_CALLBACK(spectrum_per_value_changed_cb), p);
 
 	w = gtk_combo_box_text_new();
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(w), NULL, "HiSteps");
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(w), NULL, "HiStep");
 	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(w), NULL, "Line");
 	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(w), NULL, "Dashed Line");
 	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(w), NULL, "Bézier");
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(w), NULL, "Circles");
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(w), NULL, "Squares");
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(w), NULL, "Circle");
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(w), NULL, "Square");
 	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(w), NULL, "Mario");
 	gtk_combo_box_set_active(GTK_COMBO_BOX(w), 0);
 	gtk_combo_box_set_active(GTK_COMBO_BOX(w), 4);	/* default circles */
@@ -1346,6 +1376,8 @@ static void spectrum_init(Spectrum *p)
 	p->cfg->c_per = COLOR_YELLOW_PHOS;
 
 	p->cfg->freq_ref_mhz = 1420.406;
+
+	p->cfg->refresh = 1.0 / SPECTRUM_REFRESH_HZ_CAP;
 
 	gtk_orientable_set_orientation(GTK_ORIENTABLE(p),
 				       GTK_ORIENTATION_HORIZONTAL);

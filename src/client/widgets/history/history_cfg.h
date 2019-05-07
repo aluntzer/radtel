@@ -46,6 +46,8 @@ struct _HistoryConfig {
 	gdouble th_lo;
 	gdouble th_hi;
 
+	gdouble refresh;
+
 	gint wf_n;
 	gint wf_n_max;
 

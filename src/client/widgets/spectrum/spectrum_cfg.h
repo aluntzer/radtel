@@ -72,6 +72,7 @@ struct _SpectrumConfig {
 
 	gdouble freq_ref_mhz;
 
+	gdouble refresh;
 
 	guint id_spd;
 	guint id_acq;
