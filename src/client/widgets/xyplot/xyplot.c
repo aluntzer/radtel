@@ -775,6 +775,221 @@ static void xyplot_choose_plot_bgcolour_cb(GtkWidget *w, XYPlot *p)
 }
 
 
+
+static void xyplot_range_ctrl_reload_scale(XYPlot *p)
+{
+	gtk_widget_set_sensitive(p->sc_cmin, TRUE);
+	gtk_widget_set_sensitive(p->sc_cmax, TRUE);
+	gtk_widget_set_sensitive(p->sc_xmin, TRUE);
+	gtk_widget_set_sensitive(p->sc_xmax, TRUE);
+	gtk_widget_set_sensitive(p->sc_ymin, TRUE);
+	gtk_widget_set_sensitive(p->sc_ymax, TRUE);
+
+
+	if (p->cmin < p->cmax) {
+		gtk_range_set_range(GTK_RANGE(p->sc_cmax), p->cmin, p->cmax);
+		gtk_range_set_range(GTK_RANGE(p->sc_cmin), p->cmin, p->cmax);
+		gtk_range_set_value(GTK_RANGE(p->sc_cmax), p->cmax);
+		gtk_range_set_value(GTK_RANGE(p->sc_cmin), p->cmin);
+	} else {
+		gtk_widget_set_sensitive(p->sc_cmin, FALSE);
+		gtk_widget_set_sensitive(p->sc_cmax, FALSE);
+	}
+
+	if (p->xmin < p->xmax) {
+		gtk_range_set_range(GTK_RANGE(p->sc_xmax), p->xmin, p->xmax);
+		gtk_range_set_range(GTK_RANGE(p->sc_xmin), p->xmin, p->xmax);
+		gtk_range_set_value(GTK_RANGE(p->sc_xmax), p->xmax);
+		gtk_range_set_value(GTK_RANGE(p->sc_xmin), p->xmin);
+	} else {
+		gtk_widget_set_sensitive(p->sc_xmin, FALSE);
+		gtk_widget_set_sensitive(p->sc_xmax, FALSE);
+	}
+
+	if (p->ymin < p->ymax) {
+		gtk_range_set_range(GTK_RANGE(p->sc_ymax), p->ymin, p->ymax);
+		gtk_range_set_range(GTK_RANGE(p->sc_ymin), p->ymin, p->ymax);
+		gtk_range_set_value(GTK_RANGE(p->sc_ymax), p->ymax);
+		gtk_range_set_value(GTK_RANGE(p->sc_ymin), p->ymin);
+	} else {
+		gtk_widget_set_sensitive(p->sc_ymin, FALSE);
+		gtk_widget_set_sensitive(p->sc_ymax, FALSE);
+	}
+}
+
+
+
+static void xyplot_range_ctrl_resp_cb(GtkDialog *dia, gint resp_id, XYPlot *p)
+{
+
+	if (resp_id == GTK_RESPONSE_APPLY) {
+
+		p->autorange_x = FALSE;
+		p->autorange_y = FALSE;
+
+		p->cmin = gtk_range_get_value(GTK_RANGE(p->sc_cmin));
+		p->xmin = gtk_range_get_value(GTK_RANGE(p->sc_xmin));
+		p->ymin = gtk_range_get_value(GTK_RANGE(p->sc_ymin));
+
+		p->cmax = gtk_range_get_value(GTK_RANGE(p->sc_cmax));
+		p->xmax = gtk_range_get_value(GTK_RANGE(p->sc_xmax));
+		p->ymax = gtk_range_get_value(GTK_RANGE(p->sc_ymax));
+
+
+		xyplot_auto_axes(p);
+
+		xyplot_plot(p);
+	}
+
+	if (resp_id == GTK_RESPONSE_YES) {
+		xyplot_autorange_cb(NULL, p);
+
+		xyplot_range_ctrl_reload_scale(p);
+
+		xyplot_plot(p);
+	}
+
+	if (resp_id == GTK_RESPONSE_CLOSE)
+		gtk_widget_destroy(GTK_WIDGET(dia));
+
+}
+
+static void xyplot_range_controls_cb(GtkWidget *w, XYPlot *p)
+{
+	GtkWidget *dia;
+	GtkWidget *win;
+	GtkWidget *hbox;
+	GtkWidget *vbox;
+
+	GtkWidget *ca;
+	GtkWidget *sc;
+
+
+
+
+
+	win = gtk_widget_get_toplevel(GTK_WIDGET(p));
+
+	if (!GTK_IS_WINDOW(win)) {
+		g_warning("%s: toplevel widget is not a window", __func__);
+		return;
+	}
+
+
+	dia = gtk_dialog_new_with_buttons ("Plot Range Controls", GTK_WINDOW(win),
+			   (GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT),
+			   "_Close",
+                            GTK_RESPONSE_CLOSE,
+			   "_Auto",
+                            GTK_RESPONSE_YES,
+			   "_Apply",
+                            GTK_RESPONSE_APPLY,
+                            NULL);
+	gtk_window_set_modal(GTK_WINDOW(dia), TRUE);
+	g_signal_connect(dia, "response",
+			 G_CALLBACK(xyplot_range_ctrl_resp_cb), p);
+
+	ca = gtk_dialog_get_content_area(GTK_DIALOG(dia));
+
+
+
+	vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
+	gtk_container_set_border_width(GTK_CONTAINER(vbox), 8);
+	gtk_box_pack_start(GTK_BOX(ca), vbox, FALSE, FALSE, 0);
+
+
+	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
+	w = gtk_label_new("X MAX");
+	gtk_style_context_add_class(gtk_widget_get_style_context(w),
+				    "dim-label");
+	gtk_box_pack_start(GTK_BOX(hbox), w, FALSE, TRUE, 0);
+
+	sc = gtk_scale_new(GTK_ORIENTATION_HORIZONTAL, NULL);
+	gtk_scale_set_draw_value(GTK_SCALE(sc), TRUE);
+	gtk_box_pack_start(GTK_BOX(hbox), sc, TRUE, TRUE, 0);
+	p->sc_xmax = sc;
+
+
+	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
+	w = gtk_label_new("X MIN");
+	gtk_style_context_add_class(gtk_widget_get_style_context(w),
+				    "dim-label");
+	gtk_box_pack_start(GTK_BOX(hbox), w, FALSE, TRUE, 0);
+
+	sc = gtk_scale_new(GTK_ORIENTATION_HORIZONTAL, NULL);
+	gtk_scale_set_draw_value(GTK_SCALE(sc), TRUE);
+	gtk_box_pack_start(GTK_BOX(hbox), sc, TRUE, TRUE, 0);
+	p->sc_xmin = sc;
+
+	gtk_box_pack_start(GTK_BOX(vbox),
+			   gtk_separator_new(GTK_ORIENTATION_HORIZONTAL),
+			   TRUE, TRUE, 0);
+
+	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
+	w = gtk_label_new("Y MAX");
+	gtk_style_context_add_class(gtk_widget_get_style_context(w),
+				    "dim-label");
+	gtk_box_pack_start(GTK_BOX(hbox), w, FALSE, TRUE, 0);
+
+	sc = gtk_scale_new(GTK_ORIENTATION_HORIZONTAL, NULL);
+	gtk_scale_set_draw_value(GTK_SCALE(sc), TRUE);
+	gtk_box_pack_start(GTK_BOX(hbox), sc, TRUE, TRUE, 0);
+	p->sc_ymax = sc;
+
+
+	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
+	w = gtk_label_new("Y MIN");
+	gtk_style_context_add_class(gtk_widget_get_style_context(w),
+				    "dim-label");
+	gtk_box_pack_start(GTK_BOX(hbox), w, FALSE, TRUE, 0);
+
+	sc = gtk_scale_new(GTK_ORIENTATION_HORIZONTAL, NULL);
+	gtk_scale_set_draw_value(GTK_SCALE(sc), TRUE);
+	gtk_box_pack_start(GTK_BOX(hbox), sc, TRUE, TRUE, 0);
+	p->sc_ymin = sc;
+
+	gtk_box_pack_start(GTK_BOX(vbox),
+			   gtk_separator_new(GTK_ORIENTATION_HORIZONTAL),
+			   TRUE, TRUE, 0);
+
+	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
+	w = gtk_label_new("C MIN");
+	gtk_style_context_add_class(gtk_widget_get_style_context(w),
+				    "dim-label");
+	gtk_box_pack_start(GTK_BOX(hbox), w, FALSE, TRUE, 0);
+
+	sc = gtk_scale_new(GTK_ORIENTATION_HORIZONTAL, NULL);
+	gtk_scale_set_draw_value(GTK_SCALE(sc), TRUE);
+	gtk_box_pack_start(GTK_BOX(hbox), sc, TRUE, TRUE, 0);
+	p->sc_cmin = sc;
+
+
+	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
+	w = gtk_label_new("C MAX");
+	gtk_style_context_add_class(gtk_widget_get_style_context(w),
+				    "dim-label");
+	gtk_box_pack_start(GTK_BOX(hbox), w, FALSE, TRUE, 0);
+
+	sc = gtk_scale_new(GTK_ORIENTATION_HORIZONTAL, NULL);
+	gtk_scale_set_draw_value(GTK_SCALE(sc), TRUE);
+	gtk_box_pack_start(GTK_BOX(hbox), sc, TRUE, TRUE, 0);
+	p->sc_cmax = sc;
+
+
+
+	xyplot_range_ctrl_reload_scale(p);
+
+
+	gtk_widget_show_all(dia);
+}
+
+
 static void xyplot_col_ax_resp_cb(GtkDialog *dia, gint resp_id, XYPlot *p)
 {
 	if (resp_id == GTK_RESPONSE_OK) {
@@ -996,6 +1211,12 @@ static void xyplot_popup_menu_add_plot_cfg(XYPlot *p)
 	w = gtk_menu_item_new_with_label("Autorange");
 	g_signal_connect(w, "activate",
 			 G_CALLBACK(xyplot_autorange_cb), p);
+	gtk_menu_shell_append(GTK_MENU_SHELL(sub), w);
+
+
+	w = gtk_menu_item_new_with_label("Range Controls");
+	g_signal_connect(w, "activate",
+			 G_CALLBACK(xyplot_range_controls_cb), p);
 	gtk_menu_shell_append(GTK_MENU_SHELL(sub), w);
 
 
@@ -2565,7 +2786,7 @@ static void xyplot_draw_map(XYPlot *p, cairo_t *cr, struct graph *g)
 		cg = get_color_value_from_formula( 5, grey);
 		b = get_color_value_from_formula(15, grey);
 
-		cairo_set_source_rgba(cr, r, cg, b, 0.8);
+		cairo_set_source_rgba(cr, r, cg, b, 1.0);
 		cairo_rectangle(cr, (x[i] - p->x_ax.min) * sx - dx,
 				    (y[i] - p->y_ax.min) * sy - dy,
 				    wx, wy);

@@ -134,6 +134,14 @@ struct _XYPlot {
 	gpointer y2_userdata;
 
 
+	GtkWidget *sc_cmin;
+	GtkWidget *sc_cmax;
+	GtkWidget *sc_xmin;
+	GtkWidget *sc_xmax;
+	GtkWidget *sc_ymin;
+	GtkWidget *sc_ymax;
+
+
 
 	GList *graphs;
 	GList *graphs_cleanup;
