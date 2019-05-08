@@ -13,6 +13,7 @@
  * more details.
  *
  * NOTE: * all payload data are expected in little-endian order
+ *
  *	 * the transaction identifier is copied into an ACK packet, so the
  *	   client can track success/failure of commands if so desired;
  *	   transaction identifiers not recorded in a client's command log
@@ -20,6 +21,16 @@
  *	   priviledge levels) requesting various server parameters;
  *	   packets sent without a designated transaction identifiers should
  *	   use PKT_TRANS_ID_UNDEF as the identifier
+ *
+ *	 * the primary network performance bottleneck is the CRC16, so if this
+ *	   ever needs adaptation to very high data rate, the algorithm or the
+ *	   implementation must be replaced or threaded.
+ *	   Alternatively, protocol command could turn of CRC checks for certain
+ *	   types of payloads.
+ *	   Some approximate figures: on an i7-5700HQ CPU @ 2.70GHz, the server
+ *	   can send about 400 MiBs on the loopback with CRC, and about 900 MiBs
+ *	   without.
+ *
  *
  */
 
