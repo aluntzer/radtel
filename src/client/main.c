@@ -27,6 +27,7 @@
 
 static void main_shutdown_cb(gpointer instance, gpointer data)
 {
+	net_disconnect();
 	g_main_loop_quit((GMainLoop *) data);
 }
 

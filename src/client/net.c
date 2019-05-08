@@ -392,6 +392,12 @@ void net_connected(GObject *obj,
 	sig_status_push("Connected to server");
 }
 
+void net_disconnect(void)
+{
+	g_socket_close(g_socket_connection_get_socket(server_con.con), NULL);
+}
+
+
 gboolean net_is_connected(void)
 {
 	if (!G_IS_SOCKET_CONNECTION(server_con.con))

@@ -23,6 +23,7 @@
 int net_client_init(void);
 gboolean net_is_connected(void);
 void net_reconnect(void);
+void net_disconnect(void);
 
 
 #endif /* _CLIENT_INCLUDE_NET_H_ */
