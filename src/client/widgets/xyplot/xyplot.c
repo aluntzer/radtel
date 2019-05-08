@@ -378,7 +378,7 @@ static void xyplot_import_graph_xy_asc(const gchar *fname, XYPlot *p)
 			if (n > 2)
 				break;
 
-			t = strtok(NULL, "\t ");
+			t = strtok(NULL, "\n\t ");
 		}
 
 		if (n == 3) {
