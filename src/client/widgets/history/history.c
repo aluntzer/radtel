@@ -379,7 +379,7 @@ static void history_wf_get_rgb(gdouble val, gdouble thr_lo, gdouble thr_hi,
 static void history_append_wf(History *p, const gdouble *amp, gsize len)
 {
 
-	int i, j;
+	int i;
        	int w, h;
 	int rs, nc;
 
@@ -439,24 +439,7 @@ static void history_append_wf(History *p, const gdouble *amp, gsize len)
 
 	nc = gdk_pixbuf_get_n_channels(p->cfg->wf_pb);
 
-
-	/* down shift (quite inefficiently) */
-	for (i = h - 1; i > 0; i--) {
-
-		pix = wf + rs * i;
-
-		/* meh... */
-
-		for(j = 0; j < w; j++) {
-
-			pix[0] = pix[0 - rs];
-			pix[1] = pix[1 - rs];
-			pix[2] = pix[2 - rs];
-
-			pix += nc;
-		}
-	}
-
+	memmove(&wf[rs], wf, nc * (h - 1) * w);
 
 	for (i = 0; i < len; i++) {
 		if (amp[i] < min)
