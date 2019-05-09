@@ -28,6 +28,7 @@
 
 #include <gtk/gtk.h>
 #include <glib/gstdio.h>
+#include <locale.h>
 
 #include <string.h>
 #include <math.h>
@@ -433,6 +434,8 @@ static void xyplot_export_graph_xy_asc(const gchar *fname, struct graph *g,
 		return;
 	}
 
+	setlocale(LC_ALL, "C");
+
 	/* append mode: add empty newline to indicate new dataset */
 	if (mode[0] == 'a')
 		fprintf(f, "\n");
@@ -457,6 +460,7 @@ static void xyplot_export_graph_xy_asc(const gchar *fname, struct graph *g,
 
 	}
 
+	setlocale(LC_ALL, "");
 
 	fclose(f);
 }
