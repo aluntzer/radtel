@@ -405,7 +405,7 @@ static int sky_load_config(Sky *p)
 	g_free(cfg);
 
 	if (!ret) {
-		g_error("error loading config file %s", error->message);
+		g_warning("error loading config file %s", error->message);
 		g_clear_error(&error);
 		return -1;
 	}
