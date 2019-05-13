@@ -361,6 +361,12 @@ static void sswdnd_catch(gpointer instance, GtkWidget *ostack, gpointer data)
 	gchar *lbl = NULL;
 
 
+	/* prevent last window from accessing deallocated memory on exit */
+	if (g_ref_count_dec(&sswdnd_ref))
+		return;
+
+	g_ref_count_inc(&sswdnd_ref);
+
 	/* some other ssw might have given us a new home already */
 	if (!GTK_IS_STACK_SWITCHER(data))
 		return;

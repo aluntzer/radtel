@@ -53,4 +53,7 @@ int main(int argc, char *argv[])
 			 (gpointer) loop);
 
 	g_main_loop_run(loop);
+
+
+	return 0;
 }
