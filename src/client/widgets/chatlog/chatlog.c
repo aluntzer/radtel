@@ -246,8 +246,9 @@ static GtkWidget *chatlog_create_chat(ChatLog *p)
 	gtk_box_pack_start(GTK_BOX(tmp), w, TRUE, TRUE, 0);
 #if GTK_CHECK_VERSION(3,24,0) > GTK_CHECK_VERSION(GTK_MAJOR_VERSION, GTK_MINOR_VERSION, GTK_MICRO_VERSION)
 	g_object_set(w, "enable-emoji-completion", TRUE, NULL);
-	g_object_set(w, "show-emoji-icon", TRUE, NULL);
 #endif
+	g_object_set(w, "show-emoji-icon", TRUE, NULL);
+
 	g_signal_connect(G_OBJECT(w), "activate",
 			 G_CALLBACK(chatlog_send_msg), p);
 
