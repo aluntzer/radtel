@@ -46,8 +46,10 @@ static void fft_internal(double complex *tmp, double complex *out,
 			 const double complex *c, size_t n, int stp)
 {
 	size_t i;
+	size_t i2;
 
 	double complex t;
+	double complex t2;
 
 
 	if (stp >= n)
@@ -56,12 +58,12 @@ static void fft_internal(double complex *tmp, double complex *out,
 	fft_internal(out,        tmp,      c, n, 2 * stp);
 	fft_internal(out + stp, tmp + stp, c, n, 2 * stp);
 
-	for (i = 0; i < n; i += 2 * stp) {
+	for (i = 0, i2 = 0; i < n; i += 2 * stp, i2 += stp) {
 
-		t = c[i / 2] * out[stp + i];
+		t = c[i2] * out[stp + i];
 
-		tmp[i / 2]     = out[i] + t ;
-		tmp[(i + n)/2] = out[i] - t;
+		tmp[i2        ] = out[i] + t ;
+		tmp[i2 + n / 2] = out[i] - t;
 	}
 }
 
