@@ -710,9 +710,9 @@ static	double *conv2;
 	binw = (x1 - x0) / (bins - 1.0);
 
 
-//	printf("want %f bins, width %f\n", bins,binw);
 
-	if (!conv) {
+	if(conv)
+	g_free(conv);
 	conv = g_malloc(bins * sizeof(double));
 
 	x = x0;
@@ -741,21 +741,19 @@ static	double *conv2;
 		x += binw;
 
 	}
-	g_message("conv is %f\n", conv[0]);
-	}
 
 	/* oder conv[i] dividieren! */
 	gdouble norm = 2.0 * bins * total;
 
 
-	if (!conv2) {
+	if (conv2)
+	g_free(conv2);
 		conv2 = g_malloc(bins * bins * sizeof(double));
 		int j;
 		for (i = 0; i < (int) bins; i++) 
 			for (j = 0; j < (int) bins; j++) {
 				conv2[i* (int) bins + j] = (conv[i] + conv[j]) / norm;
 			}
-	}
 
 	/* strategy: allocate columns * rows in flat array, fill with
 	 * convolution kernel rows (2d gaussian has radial symmetry and can be convolve
@@ -1814,8 +1812,8 @@ static uint32_t sim_spec_acquire(struct observation *obs)
 	/* conv */
 
 
-	int v1 = (int) DOPPLER_VEL(g_obs.acq.freq_stop_hz, SIM_V_REF_MHZ * 1e6) + SIM_V_RED_KMS +2;
-	int v0 = (int) DOPPLER_VEL(g_obs.acq.freq_start_hz, SIM_V_REF_MHZ * 1e6) + SIM_V_RED_KMS ;
+	int v1 = (int) DOPPLER_VEL(g_obs.acq.freq_stop_hz, SIM_V_REF_MHZ * 1e6) + SIM_V_RED_KMS +2 + vlsr(galactic_to_equatorial(gal), 0.0);
+	int v0 = (int) DOPPLER_VEL(g_obs.acq.freq_start_hz, SIM_V_REF_MHZ * 1e6) + SIM_V_RED_KMS + vlsr(galactic_to_equatorial(gal), 0.0);
 
 //	g_message("vmin: %d vmax %d", v0, v1);
 
@@ -1831,22 +1829,24 @@ static uint32_t sim_spec_acquire(struct observation *obs)
 	s = g_malloc0(sizeof(struct spec_data) + (v1 - v0) * sizeof(uint32_t));
 
 	rawspec = gauss_kernel_spec(sim.r_beam, gal.lat, gal.lon);
-
-
-	s->freq_min_hz = (typeof(s->freq_min_hz)) DOPPLER_FREQ((SIM_V_RED_KMS + vlsr(galactic_to_equatorial(gal), 0.0)), SIM_V_REF_MHZ * 1e6);
-	s->freq_max_hz = (typeof(s->freq_max_hz)) DOPPLER_FREQ((SIM_V_BLU_KMS + vlsr(galactic_to_equatorial(gal), 0.0)), SIM_V_REF_MHZ * 1e6);
+#if 0
+	s->freq_min_hz = (typeof(s->freq_min_hz)) DOPPLER_FREQ((v0 - SIM_V_RED_KMS  ), SIM_V_REF_MHZ * 1e6);
+	s->freq_max_hz = (typeof(s->freq_max_hz)) DOPPLER_FREQ((v1 - SIM_V_RED_KMS - 2 ), SIM_V_REF_MHZ * 1e6);
+#endif
+	s->freq_min_hz = (typeof(s->freq_min_hz)) g_obs.acq.freq_start_hz;
+	s->freq_max_hz = (typeof(s->freq_max_hz)) g_obs.acq.freq_stop_hz;
 	s->freq_inc_hz = (typeof(s->freq_inc_hz)) SIM_FREQ_STP_HZ;
-
+#if 1
 	s->freq_min_hz = round(s->freq_min_hz / s->freq_inc_hz) * s->freq_inc_hz;
 	s->freq_max_hz = round(s->freq_max_hz / s->freq_inc_hz) * s->freq_inc_hz;
-
+#endif
 
         //srand(time(0));
 	for (i = v0; i < v1; i++) {
 		/* reverse or not? */
-		s->spec[v1 - i]  = (uint32_t) rawspec[VEL - i - 1] *6 + 150000; /* to mK fom cK + tsys*/
+		s->spec[i- v0]  = (uint32_t) rawspec[VEL - i - 1] *6 + 150000; /* to mK fom cK + tsys*/
 	//	s->spec[i]  = (uint32_t) rawspec[i] *10 + 200000; /* to mK fom cK + tsys*/
-		s->spec[v1- i] += (int) (GNOISE * 4000.);
+		s->spec[i-v0] += (int) (GNOISE * 4000.);
 
 		s->n++;
 	}
