@@ -30,6 +30,8 @@
 #include <gio/gio.h>
 #include <glib.h>
 
+#define SERVER_MAX_TX_TH_PER_CON 10
+
 
 /* client connection data */
 struct con_data {
@@ -39,6 +41,14 @@ struct con_data {
 	gchar *nick;
 	gboolean new;
 	gboolean kick;
+	GMutex lock;
+
+	GThreadPool *pool;
+};
+
+struct thread {
+	gchar *buf;
+	gsize bytes;
 };
 
 /* tracks client connections */
@@ -139,8 +149,53 @@ static void drop_connection(struct con_data *c)
 
 	con_list = g_list_remove(con_list, c);
 
+ 	g_thread_pool_free(c->pool, TRUE, FALSE);
+
+	/* BUG */
+	g_free(c);
+
 	net_push_userlist_cb(NULL);
 }
+
+static void do_send(gpointer data, gpointer user_data)
+{
+	struct con_data *c = (struct con_data *) user_data;
+	struct thread *th = (struct thread*) data;
+	GIOStream *stream;
+	GOutputStream *ostream;
+
+	GError *error = NULL;
+	gboolean ret;
+
+
+	g_mutex_lock(&c->lock);
+
+	if (!G_IS_IO_STREAM(c->con))
+	    goto bye;
+
+	stream = G_IO_STREAM(c->con);
+	ostream = g_io_stream_get_output_stream(stream);
+	ret = g_output_stream_write_all(ostream, th->buf, th->bytes, NULL, NULL, &error);
+
+
+	if (!ret) {
+		if (error) {
+			g_warning("%s", error->message);
+			g_clear_error (&error);
+		}
+
+		c->kick = TRUE;
+
+	}
+bye:
+	g_mutex_unlock(&c->lock);
+
+	g_free(th->buf);
+	g_free(th);
+
+}
+
+
 
 
 /**
@@ -151,7 +206,6 @@ static gint net_send_internal(struct con_data *c, const char *pkt, gsize nbytes)
 {
 	gssize ret = 0;
 
-	guint to;
 
 	GError *error = NULL;
 
@@ -200,6 +254,7 @@ static gint net_send_internal(struct con_data *c, const char *pkt, gsize nbytes)
 		return -1;
 	}
 
+#if 0
 	/* set a 1 second socket timeout to detect broken connections */
 	g_socket_set_timeout(g_socket_connection_get_socket(c->con), 1);
 	ret = g_output_stream_write_all(ostream, pkt, nbytes, NULL, NULL, &error);
@@ -215,6 +270,32 @@ static gint net_send_internal(struct con_data *c, const char *pkt, gsize nbytes)
 		c->kick = TRUE;
 
 	}
+#endif
+
+	if (g_thread_pool_get_num_threads(c->pool) < SERVER_MAX_TX_TH_PER_CON)
+	{
+
+	struct thread *th;
+
+	th = g_malloc(sizeof(struct thread));
+	th->bytes = nbytes;
+	th->buf = g_memdup(pkt, nbytes);
+	ret = g_thread_pool_push(c->pool, (gpointer) th, &error);
+
+//	g_message("threads %d of %d", g_thread_pool_get_num_threads(c->pool), SERVER_MAX_TX_TH_PER_CON);
+
+
+	if (!ret) {
+		if (error) {
+			g_warning("%s", error->message);
+			g_clear_error (&error);
+		}
+		g_free(th->buf);
+		g_free(th);
+	}
+	}
+	else
+		g_message("dropped pkt");
 
 	return ret;
 }
@@ -430,6 +511,10 @@ static gboolean net_incoming(GSocketService    *service,
 	c->nick = g_strdup_printf("UserUnknown (%s)", str);
 	c->new = TRUE;
 	c->kick = FALSE;
+	g_mutex_init(&c->lock);
+
+	c->pool = g_thread_pool_new(do_send, (gpointer) c,
+				       SERVER_MAX_TX_TH_PER_CON, FALSE, NULL);
 
 	g_free(str);
 
@@ -532,11 +617,11 @@ gint net_send_single(gpointer ref, const char *pkt, gsize nbytes)
 
 	g_debug("Sending packet of %d bytes", nbytes);
 
-	g_mutex_lock(&netlock);
+//	g_mutex_lock(&netlock);
 
 	ret = net_send_internal(c, pkt, nbytes);
 
-	g_mutex_unlock(&netlock);
+//	g_mutex_unlock(&netlock);
 
 	return ret;
 }

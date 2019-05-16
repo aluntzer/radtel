@@ -41,6 +41,11 @@ static size_t get_next_pow_2_bound(size_t n)
 	return (1 << (c + 1));
 }
 
+#if 1
+#pragma GCC optimize("O3","unroll-loops","omit-frame-pointer","inline") //Optimization flags
+#pragma GCC option("arch=native","tune=native","no-zero-upper") //Enable AVX
+#pragma GCC target("avx")  //Enable AVX
+#endif
 
 static void fft_internal(double complex *tmp, double complex *out,
 			 const double complex *c, size_t n, int stp)
