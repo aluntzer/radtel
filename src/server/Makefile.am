@@ -10,34 +10,40 @@ AM_CPPFLAGS := \-DCONFDIR=\"$(confdir)\" \
 AM_CFLAGS := $(GMODULE_CFLAGS)
 AM_CFLAGS += $(GTHREAD_CFLAGS)
 AM_CFLAGS += $(GLIB_CFLAGS)
+AM_CFLAGS += $(GTK3_CFLAGS)
 AM_CFLAGS += $(GIO_CFLAGS)
 AM_CFLAGS += -I$(top_srcdir)/src/include -Iinclude
 
 # force symbols from the .a that we absolutely need (and are unused otherwise)
 # it's a bit hackish, but who cares...
-AM_LDFLAGS := -u ack_spec_data
-AM_LDFLAGS += -u ack_spec_acq_disable
-AM_LDFLAGS += -u ack_spec_acq_enable
-AM_LDFLAGS += -u ack_spec_acq_cfg
-AM_LDFLAGS += -u ack_status_acq
-AM_LDFLAGS += -u ack_status_slew
-AM_LDFLAGS += -u ack_status_move
-AM_LDFLAGS += -u ack_status_rec
-AM_LDFLAGS += -u ack_moveto_azel
-AM_LDFLAGS += -u horizontal_to_galactic
-AM_LDFLAGS += -u galactic_to_equatorial
-AM_LDFLAGS += -u vlsr
+radtelsrv_LDFLAGS := -u ack_spec_data
+radtelsrv_LDFLAGS += -u ack_spec_acq_disable
+radtelsrv_LDFLAGS += -u ack_spec_acq_enable
+radtelsrv_LDFLAGS += -u ack_spec_acq_cfg
+radtelsrv_LDFLAGS += -u ack_status_acq
+radtelsrv_LDFLAGS += -u ack_status_slew
+radtelsrv_LDFLAGS += -u ack_status_move
+radtelsrv_LDFLAGS += -u ack_status_rec
+radtelsrv_LDFLAGS += -u ack_moveto_azel
+radtelsrv_LDFLAGS += -u horizontal_to_galactic
+radtelsrv_LDFLAGS += -u galactic_to_equatorial
+radtelsrv_LDFLAGS += -u vlsr
+radtelsrv_LDFLAGS += -u gtk_window_new
+radtelsrv_LDFLAGS += -u fft2
+radtelsrv_LDFLAGS += -u fft_prepare_coeff
 
-radtelsrv_LDFLAGS = -lm $(radtel_LIBS)
+
+radtelsrv_LDFLAGS += -lm $(radtel_LIBS)
 
 radtelsrv_LDADD := $(GMODULE_LIBS)
 radtelsrv_LDADD += $(GTHREAD_LIBS)
 radtelsrv_LDADD += $(GLIB_LIBS)
+radtelsrv_LDADD += $(GTK3_LIBS)
 radtelsrv_LDADD += $(GIO_LIBS)
 radtelsrv_LDADD += $(top_builddir)/src/net/libproto.a
 radtelsrv_LDADD += $(top_builddir)/src/util/libutil.a
 radtelsrv_LDADD += $(top_builddir)/src/server/api/libbackend.a
-		  
+
 
 
 # cfg to /etc
