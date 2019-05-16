@@ -54,6 +54,9 @@
 #define DOPPLER_FREQ_REL(vel, ref) ((vel) * (       ref ) / 299790.0)
 
 
+#define DOPPLER_VEL(freq, ref)     (((freq) / (ref) - 1.0)* 299790.0)
+
+
 /**
  * default limits by velocity and rest frequency reference
  */
@@ -650,7 +653,7 @@ static gpointer sim_spec_extract_HI_survey(gdouble glat, gdouble glon)
 #if 0
 		FILE *data = fopen("/home/armin/Work/radtelsim/vel_short_int.dat", "rb");
 #else
-		FILE *data = fopen("~/vel_short_int.dat", "rb");
+		FILE *data = fopen("vel_short_int.dat", "rb");
 #endif
 		if (!data) {
 			g_error("%s: error opening file", __func__);
@@ -1810,8 +1813,22 @@ static uint32_t sim_spec_acquire(struct observation *obs)
 
 	/* conv */
 
+
+	int v1 = (int) DOPPLER_VEL(g_obs.acq.freq_stop_hz, SIM_V_REF_MHZ * 1e6) + SIM_V_RED_KMS +2;
+	int v0 = (int) DOPPLER_VEL(g_obs.acq.freq_start_hz, SIM_V_REF_MHZ * 1e6) + SIM_V_RED_KMS ;
+
+//	g_message("vmin: %d vmax %d", v0, v1);
+
+	if (v0 < 0)
+		v0 = 0;
+	if (v1 > VEL)
+		v1 = VEL;
+//	g_message("vmin: %d vmax %d\n", v0, v1);
+
+
+
 	/* prepare and send: allocate full length */
-	s = g_malloc0(sizeof(struct spec_data) + VEL * sizeof(uint32_t));
+	s = g_malloc0(sizeof(struct spec_data) + (v1 - v0) * sizeof(uint32_t));
 
 	rawspec = gauss_kernel_spec(sim.r_beam, gal.lat, gal.lon);
 
@@ -1820,12 +1837,16 @@ static uint32_t sim_spec_acquire(struct observation *obs)
 	s->freq_max_hz = (typeof(s->freq_max_hz)) DOPPLER_FREQ((SIM_V_BLU_KMS + vlsr(galactic_to_equatorial(gal), 0.0)), SIM_V_REF_MHZ * 1e6);
 	s->freq_inc_hz = (typeof(s->freq_inc_hz)) SIM_FREQ_STP_HZ;
 
+	s->freq_min_hz = round(s->freq_min_hz / s->freq_inc_hz) * s->freq_inc_hz;
+	s->freq_max_hz = round(s->freq_max_hz / s->freq_inc_hz) * s->freq_inc_hz;
+
+
         //srand(time(0));
-	for (i = 0; i < VEL; i++) {
+	for (i = v0; i < v1; i++) {
 		/* reverse or not? */
-		s->spec[i]  = (uint32_t) rawspec[VEL-i -1] *6 + 150000; /* to mK fom cK + tsys*/
+		s->spec[v1 - i]  = (uint32_t) rawspec[VEL - i - 1] *6 + 150000; /* to mK fom cK + tsys*/
 	//	s->spec[i]  = (uint32_t) rawspec[i] *10 + 200000; /* to mK fom cK + tsys*/
-		s->spec[i] += (int) (GNOISE * 4000.);
+		s->spec[v1- i] += (int) (GNOISE * 4000.);
 
 		s->n++;
 	}
@@ -2036,6 +2057,25 @@ static void sim_spec_cfg_defaults(void)
 G_MODULE_EXPORT
 int be_spec_acq_cfg(struct spec_acq_cfg *acq)
 {
+
+	struct observation *obs;
+
+
+	obs = g_malloc(sizeof(struct observation));
+	if (!obs) {
+		g_error(MSG "memory allocation failed: %s: %d",
+			__func__, __LINE__);
+		return -1;
+	}
+
+	obs->acq.freq_start_hz = acq->freq_start_hz;
+	obs->acq.freq_stop_hz  = acq->freq_stop_hz;
+	obs->acq.bw_div        = 0;
+	obs->acq.bin_div       = 0;
+	obs->acq.n_stack       = 0;
+	obs->acq.acq_max       = ~0;
+
+	g_thread_new(NULL, sim_acquisition_update, (gpointer) obs);
 //	if (srt_spec_acquisition_configure(acq))
 //		return -1;
 
