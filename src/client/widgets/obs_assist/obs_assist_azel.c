@@ -104,27 +104,69 @@ static void azel_update_pbar_el(ObsAssist *p)
 
 /**
  * @brief clear and draw the AZEL plot
+ * @todo fixme: very hackish way to redraw one graph per elevation
+ * @note this was added to enable the rectangle size algoritm of xyplot to
+ *       draw touching rectangles in x-direction
  */
 
 static void azel_draw_graph(ObsAssist *p)
 {
+	gsize i, i0, i1;
+	gsize len;
+
 	gdouble *x;
 	gdouble *y;
 	gdouble *c;
 
 
-	/* update graph */
-	xyplot_drop_all_graphs(p->cfg->azel.plt);
-	x = g_memdup(p->cfg->azel.az->data,
-		     p->cfg->azel.az->len * sizeof(gdouble));
-	y = g_memdup(p->cfg->azel.el->data,
-		     p->cfg->azel.el->len * sizeof(gdouble));
-	c = g_memdup(p->cfg->azel.amp->data,
-		     p->cfg->azel.amp->len * sizeof(gdouble));
+	static void *ref;
+	static double el = -12345.;
 
-	xyplot_add_graph(p->cfg->azel.plt, x, y, c,
-			 p->cfg->azel.az->len,
-			 g_strdup_printf("AZEL Scan"));
+	gdouble *eldata;
+
+
+
+	if (el != p->cfg->azel.el_cur) {
+		el = p->cfg->azel.el_cur;
+		ref = NULL;
+	}
+
+
+	/* update graph */
+	if (ref)
+		xyplot_drop_graph(p->cfg->azel.plt, ref);
+
+
+	eldata = (gdouble *) p->cfg->azel.el->data;
+	/* uaaah */
+	for (i = 0; i < p->cfg->azel.el->len; i++) {
+		if (eldata[i] == el) {
+			i0 = i;
+			break;
+		}
+	}
+
+	i1 = p->cfg->azel.el->len;
+	for (i = i0; i < p->cfg->azel.el->len; i++) {
+		if (eldata[i] != el) {
+			g_print("%g != %g\n", eldata[i], el);
+			i1 = i;
+			break;
+		}
+	}
+
+	len = i1 - i0;
+	i0 *= sizeof(gdouble);	/* data array is in bytes */
+
+	if (!len)
+		return;
+
+	x = g_memdup(&p->cfg->azel.az->data[i0],  len * sizeof(gdouble));
+	y = g_memdup(&p->cfg->azel.el->data[i0],  len * sizeof(gdouble));
+	c = g_memdup(&p->cfg->azel.amp->data[i0], len * sizeof(gdouble));
+
+	ref = xyplot_add_graph(p->cfg->azel.plt, x, y, c,len,
+			       g_strdup_printf("AZEL Scan EL %g", el));
 
 	xyplot_redraw(p->cfg->azel.plt);
 }
@@ -383,10 +425,10 @@ static void on_assistant_apply(GtkWidget *as, ObsAssist *p)
 	gtk_widget_show_all(GTK_WIDGET(grid));
 
 
-	/* the actual work is done asynchronously, .5 seconds calls
+	/* the actual work is done asynchronously, .05 seconds calls
 	 * per should be fine
 	 */
-	g_timeout_add(500, azel_obs, p);
+	g_timeout_add(50, azel_obs, p);
 }
 
 
