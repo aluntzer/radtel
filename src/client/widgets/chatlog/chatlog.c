@@ -154,10 +154,8 @@ static void chatlog_msg_output(gpointer instance, const gchar *msg,
 	strftime(time_buf, sizeof(time_buf), "%H:%M:%S", now_tm);
 
 	stmp = g_strdup_printf("<tt>"
-			       "<span foreground='#004F96'>%s.%03d </span>"
-			       "%s</tt>",
-			       time_buf, (gint) ((now / 1000) % 1000),
-			       msg);
+			       "<span foreground='#004F96'>%s </span>"
+			       "%s</tt>", time_buf, msg);
 
 
 	mark = gtk_text_buffer_get_mark(b, "end");
