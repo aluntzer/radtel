@@ -271,6 +271,47 @@ struct _ObsAssistConfig {
 
 
 	} bswitch;
+
+
+
+	struct {
+
+		GArray *glon;
+		GArray *glat;
+		GArray *amp;
+
+		gdouble glon_lo;
+		gdouble glon_hi;
+		gdouble glon_stp;
+
+		gdouble glat_lo;
+		gdouble glat_hi;
+		gdouble glat_stp;
+
+		gdouble glon_cur;
+		gdouble glat_cur;
+
+		gint n_avg;
+
+		gboolean wait;
+
+		GtkSpinButton *sb_glon_deg;
+		GtkSpinButton *sb_glat_deg;
+
+		GtkSpinButton *sb_glon_hi;
+		GtkSpinButton *sb_glon_lo;
+
+		GtkSpinButton *sb_glat_hi;
+		GtkSpinButton *sb_glat_lo;
+
+		GtkSpinButton *sb_avg;
+
+		GtkWidget *pbar_glon;
+		GtkWidget *pbar_glat;
+
+		GtkWidget *plt;
+
+	} npoint;
 };
 
 

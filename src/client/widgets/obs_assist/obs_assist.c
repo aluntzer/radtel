@@ -351,6 +351,8 @@ static void gui_create_obs_assist_controls(ObsAssist *p)
 	gtk_box_pack_start(GTK_BOX(p), w, FALSE, FALSE, 0);
 	w = obs_assist_gal_plane_scan_new(p);
 	gtk_box_pack_start(GTK_BOX(p), w, FALSE, FALSE, 0);
+	w = obs_assist_npoint_scan_new(p);
+	gtk_box_pack_start(GTK_BOX(p), w, FALSE, FALSE, 0);
 	w = obs_assist_azel_scan_new(p);
 	gtk_box_pack_start(GTK_BOX(p), w, FALSE, FALSE, 0);
 	w = obs_assist_spectral_axis_scan_new(p);
