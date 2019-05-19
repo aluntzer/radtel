@@ -103,10 +103,9 @@ static void npoint_update_pbar_glat(ObsAssist *p)
 
 
 /**
- * @brief clear and draw the AZEL plot
- * @todo fixme: very hackish way to redraw one graph per elevation
- * @note this was added to enable the rectangle size algoritm of xyplot to
- *       draw touching rectangles in x-direction
+ * @brief clear and draw the NPoint plot
+ *
+ * @todo one graph per scanline (see also npoint_measure)
  */
 
 static void npoint_draw_graph(ObsAssist *p)
@@ -133,6 +132,8 @@ static void npoint_draw_graph(ObsAssist *p)
 }
 
 
+
+
 /**
  * @brief verify position and issue move command if necessary
  *
@@ -148,8 +149,8 @@ static gboolean npoint_in_position(ObsAssist *p, gdouble az, gdouble el)
 	gdouble d_az;
 	gdouble d_el;
 
-	const gdouble az_tol = 2.0 * p->cfg->az_res;
-	const gdouble el_tol = 2.0 * p->cfg->el_res;
+	const gdouble az_tol = 1.0 * p->cfg->az_res;
+	const gdouble el_tol = 1.0 * p->cfg->el_res;
 
 
 	d_az = fabs(az - p->cfg->az);
@@ -179,6 +180,10 @@ static gboolean npoint_in_position(ObsAssist *p, gdouble az, gdouble el)
  * @brief take a measurement
  *
  * @brief returns TRUE if measurement was taken
+ *
+ * @todo this should take actual glat/glon back-converted from the
+ *	 horizontal position to avoid position aliasing, but needs
+ *	 support in npoint_draw_graph for one-graph-per-scanline as well
  */
 
 static gboolean npoint_measure(ObsAssist *p)
@@ -189,7 +194,10 @@ static gboolean npoint_measure(ObsAssist *p)
 
 	static guint sample;
 	static gdouble avg;
-
+#if 0
+	struct coord_horizontal hor;
+	struct coord_galactic gal;
+#endif
 
 	/* enable acquisition at current position */
 	if (!p->cfg->acq_enabled) {
@@ -217,9 +225,23 @@ static gboolean npoint_measure(ObsAssist *p)
 
 	avg /= (gdouble) (sample + 1);
 
+#if 0
+	hor.az = p->cfg->az;
+	hor.el = p->cfg->el;
+
+	gal = horizontal_to_galactic(hor, p->cfg->lat, p->cfg->lon);
+
+	g_print("at %g %g: %g %g vs %g %g\n", hor.az, hor.el, gal.lat, gal.lon,
+		p->cfg->npoint.glon_cur, p->cfg->npoint.glat_cur);
+
+	g_array_append_val(p->cfg->npoint.glon, gal.lon);
+	g_array_append_val(p->cfg->npoint.glat, gal.lat);
+#else
 	g_array_append_val(p->cfg->npoint.glon, p->cfg->npoint.glon_cur);
 	g_array_append_val(p->cfg->npoint.glat, p->cfg->npoint.glat_cur);
+#endif
 	g_array_append_val(p->cfg->npoint.amp, avg);
+
 
 	sample = 0;
 	avg = 0.0;
@@ -258,14 +280,12 @@ static gboolean npoint_obs_pos(ObsAssist *p)
 
 
 	/* reset glat if upper glat bound reached and update glon */
-	if (p->cfg->npoint.glat_hi < (p->cfg->npoint.glat_cur)) {
+	if (p->cfg->npoint.glat_hi < p->cfg->npoint.glat_cur) {
 		p->cfg->npoint.glat_cur = p->cfg->npoint.glat_hi;
 		p->cfg->npoint.glon_cur += p->cfg->npoint.glon_stp;
 		p->cfg->npoint.glat_stp *= -1.0;
 
-
-
-	} else if (p->cfg->npoint.glat_lo > (p->cfg->npoint.glat_cur)) {
+	} else if (p->cfg->npoint.glat_lo > p->cfg->npoint.glat_cur) {
 		p->cfg->npoint.glat_cur = p->cfg->npoint.glat_lo;
 		p->cfg->npoint.glon_cur += p->cfg->npoint.glon_stp;
 		p->cfg->npoint.glat_stp *= -1.0;
@@ -275,6 +295,7 @@ static gboolean npoint_obs_pos(ObsAssist *p)
 	gal.lon = p->cfg->npoint.glon_cur;
 
 	hor = galactic_to_horizontal(gal, p->cfg->lat, p->cfg->lon, 0.0);
+
 
 	/* actual pointing is done in horizon system */
 	if (!npoint_in_position(p, hor.az, hor.el))
@@ -289,6 +310,15 @@ static gboolean npoint_obs_pos(ObsAssist *p)
 
 	/* update glat */
 	p->cfg->npoint.glat_cur += p->cfg->npoint.glat_stp;
+
+	/* set telescope position to be far off next measurement point
+	 * this mitigates aliasing if the galactic and horizontal grids
+	 * overlap in a way where the converted coordinates fall within
+	 * the move tolerance (i.e. aixs step size)
+	 */
+
+	p->cfg->az = -p->cfg->az;
+	p->cfg->el = -p->cfg->el;
 
 	return TRUE;
 }
@@ -390,10 +420,10 @@ static void on_assistant_apply(GtkWidget *as, ObsAssist *p)
 
 
 /**
- * @brief set up the azel observation
+ * @brief set up the npoint observation
  */
 
-static void obs_assist_on_prepare_azel(GtkWidget *as, GtkWidget *pg,
+static void obs_assist_on_prepare_npoint(GtkWidget *as, GtkWidget *pg,
 					    ObsAssist *p)
 {
 	gint cp;
@@ -737,7 +767,7 @@ static void obs_assist_npoint_setup_cb(GtkWidget *w, ObsAssist *p)
 	g_signal_connect(G_OBJECT(as), "close",
 			 G_CALLBACK(obs_assist_close_cancel), as);
 	g_signal_connect(G_OBJECT(as), "prepare",
- 			 G_CALLBACK(obs_assist_on_prepare_azel), p);
+ 			 G_CALLBACK(obs_assist_on_prepare_npoint), p);
 	g_signal_connect(G_OBJECT(as), "apply",
 			  G_CALLBACK(on_assistant_apply), p);
 
