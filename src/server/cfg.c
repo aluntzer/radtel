@@ -132,6 +132,26 @@ double server_cfg_get_station_lon(void)
 
 
 /**
+ * @brief set station latitude
+ */
+
+void server_cfg_set_station_lat(double lat)
+{
+	server_cfg->lat = lat;
+}
+
+
+/**
+ * @brief set station longitude
+ */
+
+void server_cfg_set_station_lon(double lon)
+{
+	server_cfg->lon = lon;
+}
+
+
+/**
  * @brief get station's horizon limit profile
  *
  * @returns the size of the az/el arrays pointed to by hor_az and hor_el
