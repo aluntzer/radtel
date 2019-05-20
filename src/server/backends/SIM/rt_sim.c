@@ -27,6 +27,8 @@
 #include <coordinates.h>
 #include <fourier_transform.h>
 
+#include <pkt_proc.h>
+
 #include <math.h>
 #include <complex.h>
 #include <backend.h>
@@ -36,12 +38,6 @@
 
 #include <gtk/gtk.h>
 
-#if 1
-#pragma GCC optimize("O3","unroll-loops","omit-frame-pointer","inline") //Optimization flags
-#pragma GCC option("arch=native","tune=native","no-zero-upper") //Enable AVX
-#pragma GCC target("avx")  //Enable AVX
-
-#endif
 
 #define MSG "RT SIM: "
 
@@ -78,6 +74,9 @@
 /* other properties */
 
 #define SIM_BEAM_RADIUS		0.25	/* default beam radius */
+
+#define SIM_TSYS		100.	/* default system temperature */
+#define SIM_EFF			0.6	/* default efficiency */
 
 #define SKY_GAUSS_INTG_STP	0.10	/* integration step for gaussian */
 #define SKY_BASE_RES		0.5	/* resolution of the underlying data */
@@ -133,7 +132,8 @@ static struct {
 	} radio;
 
 	gdouble r_beam;				/* the beam radius */
-
+	gdouble tsys;				/* system temperature */
+	gdouble eff;				/* system efficiency (eta) */
 
 	struct {
 		GdkPixbuf	*pb_sky;
@@ -169,9 +169,10 @@ static struct {
 	.radio.freq_if_bw       = SIM_IF_BW_HZ,
 	.radio.freq_bw_div_max  = (int) SIM_BW_DIV_MAX,
 	.radio.max_bins	        = (int) SIM_BINS,
-	.r_beam			= SIM_BEAM_RADIUS
+	.r_beam			= SIM_BEAM_RADIUS,
+	.tsys			= SIM_TSYS,
+	.eff			= SIM_EFF,
 };
-
 
 /**
  * @brief an observation
@@ -497,12 +498,24 @@ static void sim_render_sky(const gdouble *amp, gsize len)
 			max = amp[i];
 	}
 
+	if (!isnormal(min))
+		min = 0.;
+	if (!isnormal(max))
+		max = 1.;
+
+	if (min > max) {
+		double tmp = max;
+
+		max = min;
+		min = tmp;
+	}
+
+
 
 
 
 	gtk_range_set_range(GTK_RANGE(sim.gui.s_min), min, max);
 
-	//sim.gui.min = min;
 	pix = wf;
 #if 0
 	/* set image */
@@ -653,9 +666,28 @@ static gpointer sim_spec_extract_HI_survey(gdouble glat, gdouble glon)
 #if 0
 		FILE *data = fopen("/home/armin/Work/radtelsim/vel_short_int.dat", "rb");
 #else
-		FILE *data = fopen("vel_short_int.dat", "rb");
+		FILE *data = fopen("sky_vel.dat", "rb");
 #endif
+		if (!data)
+			data = fopen("../data/sky_vel.dat", "rb");
+
 		if (!data) {
+				GtkWidget *dia;
+				GtkWindow * win;
+
+				dia = gtk_message_dialog_new(NULL,
+							     GTK_DIALOG_MODAL,
+							     GTK_MESSAGE_ERROR,
+							     GTK_BUTTONS_CLOSE,
+							     "Please place sky_vel.dat in the "
+							     "directory path this program is executed in.");
+
+				gtk_dialog_run(GTK_DIALOG(dia));
+				gtk_widget_destroy(dia);
+
+
+			exit(0);
+			/** XXX **/
 			g_error("%s: error opening file", __func__);
 			return 0;
 		}
@@ -1503,7 +1535,9 @@ static void sim_gen_sky(void)
 
 	sim_render_sky(msky, SKY_WIDTH * SKY_HEIGHT);
 
-	g_timer_stop(timer); g_message("time %g", g_timer_elapsed(timer, NULL));
+	g_timer_stop(timer);
+
+	g_message("render time %gs", g_timer_elapsed(timer, NULL));
 
 
 	g_timer_destroy(timer);
@@ -1557,11 +1591,172 @@ static void sim_gui_slide_value_changed(GtkRange *range, gpointer data)
 	sim_gui_redraw_sky();
 }
 
+static gboolean sim_spb_lat_value_changed_cb(GtkSpinButton *sb, gpointer data)
+{
+	struct packet pkt;
 
-static  void sim_rt_gui_defaults(void)
+
+	server_cfg_set_station_lat(gtk_spin_button_get_value(sb));
+
+	pkt.trans_id = PKT_TRANS_ID_UNDEF;
+
+	proc_pr_capabilities(&pkt);
+}
+
+static gboolean sim_spb_lon_value_changed_cb(GtkSpinButton *sb, gpointer data)
+{
+	struct packet pkt;
+
+
+	server_cfg_set_station_lon(gtk_spin_button_get_value(sb));
+
+	pkt.trans_id = PKT_TRANS_ID_UNDEF;
+
+	proc_pr_capabilities(&pkt);
+}
+
+
+static gboolean sim_spb_tsys_value_changed_cb(GtkSpinButton *sb, gpointer data)
+{
+	sim.tsys = gtk_spin_button_get_value(sb);
+}
+
+static gboolean sim_spb_eff_value_changed_cb(GtkSpinButton *sb, gpointer data)
+{
+	sim.eff = gtk_spin_button_get_value(sb);
+}
+
+
+static void sim_rt_gui_defaults(void)
 {
 	sim.gui.th_lo = 0.01;
 	sim.gui.th_hi = 0.99;
+}
+
+
+static GtkWidget *sim_rt_par_gui(void)
+{
+	GtkWidget *w;
+	GtkWidget *frame;
+	GtkWidget *grid;
+
+
+
+	frame = gtk_frame_new("Simulation");
+	g_object_set(frame, "margin", 6, NULL);
+
+	grid = gtk_grid_new();
+	gtk_grid_set_column_spacing(GTK_GRID(grid), 12);
+	gtk_grid_set_row_spacing(GTK_GRID(grid), 6);
+	g_object_set(grid, "margin", 6, NULL);
+
+	gtk_container_add(GTK_CONTAINER(frame), GTK_WIDGET(grid));
+
+
+	w = gtk_label_new("Rbeam [deg]");
+	gtk_widget_set_halign(w, GTK_ALIGN_START);
+	gtk_widget_set_halign(w, GTK_ALIGN_START);
+	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
+	gtk_grid_attach(GTK_GRID(grid), w, 0, 0, 1, 1);
+
+	w = gtk_spin_button_new_with_range(0.25, 5.0, 0.05);
+	gtk_entry_set_alignment(GTK_ENTRY(w), 1.0);
+	gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(w), TRUE);
+	gtk_spin_button_set_digits(GTK_SPIN_BUTTON(w), 2);
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w), sim.r_beam);
+	gtk_widget_set_halign(w, GTK_ALIGN_FILL);
+	gtk_widget_set_hexpand(w, FALSE);
+	gtk_grid_attach(GTK_GRID(grid), w, 1, 0, 1, 1);
+	sim.gui.sb_beam = GTK_SPIN_BUTTON(w);
+
+	g_signal_connect(GTK_SPIN_BUTTON(w), "value-changed",
+			 G_CALLBACK(sky_spb_value_changed_cb), NULL);
+
+	w = gtk_label_new("TSYS [K]");
+	gtk_widget_set_halign(w, GTK_ALIGN_START);
+	gtk_widget_set_halign(w, GTK_ALIGN_START);
+	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
+	gtk_grid_attach(GTK_GRID(grid), w, 0, 1, 1, 1);
+
+	w = gtk_spin_button_new_with_range(0., 1000., 1.);
+	gtk_entry_set_alignment(GTK_ENTRY(w), 1.0);
+	gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(w), TRUE);
+	gtk_spin_button_set_digits(GTK_SPIN_BUTTON(w), 0);
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w), SIM_TSYS);
+	gtk_widget_set_halign(w, GTK_ALIGN_FILL);
+	gtk_widget_set_hexpand(w, FALSE);
+	gtk_grid_attach(GTK_GRID(grid), w, 1, 1, 1, 1);
+
+	g_signal_connect(GTK_SPIN_BUTTON(w), "value-changed",
+			 G_CALLBACK(sim_spb_tsys_value_changed_cb), NULL);
+
+
+	w = gtk_label_new("EFF");
+	gtk_widget_set_halign(w, GTK_ALIGN_START);
+	gtk_widget_set_halign(w, GTK_ALIGN_START);
+	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
+	gtk_grid_attach(GTK_GRID(grid), w, 0, 2, 1, 1);
+
+	w = gtk_spin_button_new_with_range(0., 1.0, 0.1);
+	gtk_entry_set_alignment(GTK_ENTRY(w), 1.0);
+	gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(w), TRUE);
+	gtk_spin_button_set_digits(GTK_SPIN_BUTTON(w), 1);
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w), SIM_EFF);
+	gtk_widget_set_halign(w, GTK_ALIGN_FILL);
+	gtk_widget_set_hexpand(w, FALSE);
+	gtk_grid_attach(GTK_GRID(grid), w, 1, 2, 1, 1);
+
+	g_signal_connect(GTK_SPIN_BUTTON(w), "value-changed",
+			 G_CALLBACK(sim_spb_eff_value_changed_cb), NULL);
+
+
+
+	w = gtk_label_new("LAT [deg]");
+	gtk_widget_set_halign(w, GTK_ALIGN_START);
+	gtk_widget_set_halign(w, GTK_ALIGN_START);
+	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
+	gtk_grid_attach(GTK_GRID(grid), w, 0, 3, 1, 1);
+
+	w = gtk_spin_button_new_with_range(-90., 90., 0.01);
+	gtk_entry_set_alignment(GTK_ENTRY(w), 1.0);
+	gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(w), TRUE);
+	gtk_spin_button_set_digits(GTK_SPIN_BUTTON(w), 2);
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w), server_cfg_get_station_lat());
+	gtk_widget_set_halign(w, GTK_ALIGN_FILL);
+	gtk_widget_set_hexpand(w, FALSE);
+	gtk_grid_attach(GTK_GRID(grid), w, 1, 3, 1, 1);
+
+
+	g_signal_connect(GTK_SPIN_BUTTON(w), "value-changed",
+			 G_CALLBACK(sim_spb_lat_value_changed_cb), NULL);
+
+	w = gtk_label_new("LON [deg]");
+	gtk_widget_set_halign(w, GTK_ALIGN_START);
+	gtk_widget_set_halign(w, GTK_ALIGN_START);
+	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
+	gtk_grid_attach(GTK_GRID(grid), w, 0, 4, 1, 1);
+
+	w = gtk_spin_button_new_with_range(-180., 180., 0.01);
+	gtk_entry_set_alignment(GTK_ENTRY(w), 1.0);
+	gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(w), TRUE);
+	gtk_spin_button_set_digits(GTK_SPIN_BUTTON(w), 2);
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w), server_cfg_get_station_lon());
+	gtk_widget_set_halign(w, GTK_ALIGN_FILL);
+	gtk_widget_set_hexpand(w, FALSE);
+	gtk_grid_attach(GTK_GRID(grid), w, 1, 4, 1, 1);
+
+	g_signal_connect(GTK_SPIN_BUTTON(w), "value-changed",
+			 G_CALLBACK(sim_spb_lon_value_changed_cb), NULL);
+
+
+
+	return frame;
+}
+
+
+void sim_exit_widget_destroy(GtkWidget *w)
+{
+	exit(0);
 }
 
 
@@ -1573,14 +1768,31 @@ static void sim_rt_create_gui(void)
 	GtkWidget *win;
 	GtkWidget *box;
 	GtkWidget *vbox;
-
+	GtkWidget *hdr;
 
 	sim_rt_gui_defaults();
 
 
 	gtk_init(NULL, NULL);
 
-	win= gtk_window_new (GTK_WINDOW_TOPLEVEL);
+	win= gtk_window_new(GTK_WINDOW_TOPLEVEL);
+
+	g_signal_connect(win, "destroy", G_CALLBACK(sim_exit_widget_destroy),
+			 NULL);
+
+
+	hdr = gtk_header_bar_new();
+	gtk_header_bar_set_show_close_button(GTK_HEADER_BAR(hdr), TRUE);
+
+	gtk_window_set_titlebar(GTK_WINDOW(win), hdr);
+
+
+
+
+
+
+
+
 
 	box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
 	gtk_container_add(GTK_CONTAINER(win), box);
@@ -1591,6 +1803,7 @@ static void sim_rt_create_gui(void)
 	gtk_box_pack_start(GTK_BOX(box), w, TRUE, TRUE, 0);
 
 	sim.gui.da_sky = GTK_DRAWING_AREA(gtk_drawing_area_new());
+	gtk_widget_set_size_request(GTK_WIDGET(sim.gui.da_sky), 360, 180);
 	g_object_set(GTK_WIDGET(sim.gui.da_sky), "margin", 12, NULL);
 
 	gtk_container_add(GTK_CONTAINER(w), GTK_WIDGET(sim.gui.da_sky));
@@ -1605,6 +1818,7 @@ static void sim_rt_create_gui(void)
 	gtk_grid_set_row_spacing(GTK_GRID(grid), 6);
 	gtk_box_pack_start(GTK_BOX(box), grid, FALSE, TRUE, 0);
 
+	gtk_box_pack_start(GTK_BOX(box), sim_rt_par_gui(), FALSE, TRUE, 0);
 
 	w = gtk_label_new("Vmin [km/s]");
 	gtk_widget_set_halign(w, GTK_ALIGN_START);
@@ -1641,52 +1855,67 @@ static void sim_rt_create_gui(void)
 
 
 
-	w = gtk_button_new_with_label("Draw");
+
+	w = gtk_button_new_with_label("Redraw");
 	gtk_widget_set_halign(w, GTK_ALIGN_CENTER);
 	gtk_grid_attach(GTK_GRID(grid), w, 0, 2, 1, 1);
 	g_signal_connect(G_OBJECT(w), "clicked",
 			 G_CALLBACK(sim_redraw_cb), NULL);
+	gtk_widget_set_vexpand(w, FALSE);
 
 
-	w = gtk_label_new("Rbeam [deg]");
-	gtk_widget_set_halign(w, GTK_ALIGN_START);
-	gtk_widget_set_halign(w, GTK_ALIGN_START);
-	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
-	gtk_grid_attach(GTK_GRID(grid), w, 0, 3, 1, 1);
-
-	w = gtk_spin_button_new_with_range(0.25, 5.0, 0.05);
-	gtk_entry_set_alignment(GTK_ENTRY(w), 1.0);
-	gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(w), TRUE);
-	gtk_spin_button_set_digits(GTK_SPIN_BUTTON(w), 2);
-	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w), sim.r_beam);
-	gtk_widget_set_halign(w, GTK_ALIGN_FILL);
-	gtk_widget_set_hexpand(w, FALSE);
-	gtk_grid_attach(GTK_GRID(grid), w, 1, 3, 1, 1);
-	sim.gui.sb_beam = GTK_SPIN_BUTTON(w);
-
-	g_signal_connect(GTK_SPIN_BUTTON(w), "value-changed",
-			 G_CALLBACK(sky_spb_value_changed_cb), NULL);
-
-
+	box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+	gtk_grid_attach(GTK_GRID(grid), box, 0, 3, 1, 1);
 	vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-	gtk_box_pack_start(GTK_BOX(box), vbox, FALSE, TRUE, 0);
-	w = gtk_scale_new_with_range(GTK_ORIENTATION_VERTICAL, 0.25, 5., 0.5);
-	gtk_scale_add_mark(GTK_SCALE(w), 3.3, GTK_POS_LEFT, NULL);
-	gtk_range_set_value(GTK_RANGE(w), sim.r_beam);
+	w = gtk_scale_new_with_range(GTK_ORIENTATION_VERTICAL, -0.2, 1., 0.01);
+	gtk_scale_add_mark(GTK_SCALE(w), sim.gui.th_lo, GTK_POS_LEFT, NULL);
+	gtk_range_set_value(GTK_RANGE(w), sim.gui.th_lo);
 	gtk_range_set_inverted(GTK_RANGE(w), TRUE);
+	sim.gui.s_lo = GTK_SCALE(w);
 	g_signal_connect(G_OBJECT(w), "value-changed",
-			 G_CALLBACK(sim_gui_beam_slide_value_changed),
-			 &sim.r_beam);
+			 G_CALLBACK(sim_gui_slide_value_changed),
+			 &sim.gui.th_lo);
 	gtk_box_pack_start(GTK_BOX(vbox), w, TRUE, TRUE, 0);
-	w = gtk_label_new("BEAM");
+	w = gtk_label_new("Lo");
 	gtk_style_context_add_class(gtk_widget_get_style_context(w),
 				    "dim-label");
 	gtk_box_pack_start(GTK_BOX(vbox), w, FALSE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(box), vbox, TRUE, TRUE, 0);
+	gtk_widget_set_vexpand(vbox, TRUE);
 
+	vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+	w = gtk_scale_new_with_range(GTK_ORIENTATION_VERTICAL, 0.0, 1.2, 0.01);
+	gtk_range_set_value(GTK_RANGE(w), sim.gui.th_hi);
+	gtk_scale_add_mark(GTK_SCALE(w), sim.gui.th_hi, GTK_POS_LEFT, NULL);
+	gtk_range_set_inverted(GTK_RANGE(w), TRUE);
+	sim.gui.s_hi = GTK_SCALE(w);
+	g_signal_connect(G_OBJECT(w), "value-changed",
+			 G_CALLBACK(sim_gui_slide_value_changed),
+			 &sim.gui.th_hi);
+	gtk_box_pack_start(GTK_BOX(vbox), w, TRUE, TRUE, 0);
+	w = gtk_label_new("Hi");
+	gtk_style_context_add_class(gtk_widget_get_style_context(w),
+				    "dim-label");
+	gtk_box_pack_start(GTK_BOX(vbox), w, FALSE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(box), vbox, TRUE, TRUE, 0);
+	gtk_widget_set_vexpand(vbox, TRUE);
 
+	vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+	w = gtk_scale_new(GTK_ORIENTATION_VERTICAL, NULL);
+	gtk_range_set_inverted(GTK_RANGE(w), TRUE);
+	sim.gui.s_min = GTK_SCALE(w);
+	gtk_scale_set_draw_value(GTK_SCALE(w), FALSE);
+	g_signal_connect(G_OBJECT(w), "value-changed",
+			 G_CALLBACK(sim_gui_slide_value_changed),
+			 &sim.gui.min);
+	gtk_box_pack_start(GTK_BOX(vbox), w, TRUE, TRUE, 0);
+	w = gtk_label_new("Lvl");
+	gtk_style_context_add_class(gtk_widget_get_style_context(w),
+				    "dim-label");
+	gtk_box_pack_start(GTK_BOX(vbox), w, FALSE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(box), vbox, TRUE, TRUE, 0);
+	gtk_widget_set_vexpand(vbox, TRUE);
 
-//	g_signal_connect(GTK_SPIN_BUTTON(w), "value-changed",
-//			 G_CALLBACK(history_hst_value_changed_cb), p);
 
 
 
@@ -1709,53 +1938,10 @@ static void sim_rt_create_gui(void)
 #endif
 
 
-	vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-	gtk_box_pack_start(GTK_BOX(box), vbox, FALSE, TRUE, 0);
-	w = gtk_scale_new_with_range(GTK_ORIENTATION_VERTICAL, -0.2, 1., 0.01);
-	gtk_scale_add_mark(GTK_SCALE(w), sim.gui.th_lo, GTK_POS_LEFT, NULL);
-	gtk_range_set_value(GTK_RANGE(w), sim.gui.th_lo);
-	gtk_range_set_inverted(GTK_RANGE(w), TRUE);
-	sim.gui.s_lo = GTK_SCALE(w);
-	g_signal_connect(G_OBJECT(w), "value-changed",
-			 G_CALLBACK(sim_gui_slide_value_changed),
-			 &sim.gui.th_lo);
-	gtk_box_pack_start(GTK_BOX(vbox), w, TRUE, TRUE, 0);
-	w = gtk_label_new("Lo");
-	gtk_style_context_add_class(gtk_widget_get_style_context(w),
-				    "dim-label");
-	gtk_box_pack_start(GTK_BOX(vbox), w, FALSE, TRUE, 0);
 
 
-	vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-	gtk_box_pack_start(GTK_BOX(box), vbox, FALSE, TRUE, 0);
-	w = gtk_scale_new_with_range(GTK_ORIENTATION_VERTICAL, 0.0, 1.2, 0.01);
-	gtk_range_set_value(GTK_RANGE(w), sim.gui.th_hi);
-	gtk_scale_add_mark(GTK_SCALE(w), sim.gui.th_hi, GTK_POS_LEFT, NULL);
-	gtk_range_set_inverted(GTK_RANGE(w), TRUE);
-	sim.gui.s_hi = GTK_SCALE(w);
-	g_signal_connect(G_OBJECT(w), "value-changed",
-			 G_CALLBACK(sim_gui_slide_value_changed),
-			 &sim.gui.th_hi);
-	gtk_box_pack_start(GTK_BOX(vbox), w, TRUE, TRUE, 0);
-	w = gtk_label_new("Hi");
-	gtk_style_context_add_class(gtk_widget_get_style_context(w),
-				    "dim-label");
-	gtk_box_pack_start(GTK_BOX(vbox), w, FALSE, TRUE, 0);
 
-	vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-	gtk_box_pack_start(GTK_BOX(box), vbox, FALSE, TRUE, 0);
-	w = gtk_scale_new(GTK_ORIENTATION_VERTICAL, NULL);
-	gtk_range_set_inverted(GTK_RANGE(w), TRUE);
-	sim.gui.s_min = GTK_SCALE(w);
-	gtk_scale_set_draw_value(GTK_SCALE(w), FALSE);
-	g_signal_connect(G_OBJECT(w), "value-changed",
-			 G_CALLBACK(sim_gui_slide_value_changed),
-			 &sim.gui.min);
-	gtk_box_pack_start(GTK_BOX(vbox), w, TRUE, TRUE, 0);
-	w = gtk_label_new("Lvl");
-	gtk_style_context_add_class(gtk_widget_get_style_context(w),
-				    "dim-label");
-	gtk_box_pack_start(GTK_BOX(vbox), w, FALSE, TRUE, 0);
+
 
 
 
@@ -1844,9 +2030,9 @@ static uint32_t sim_spec_acquire(struct observation *obs)
         //srand(time(0));
 	for (i = v0; i < v1; i++) {
 		/* reverse or not? */
-		s->spec[i- v0]  = (uint32_t) rawspec[VEL - i - 1] *6 + 150000; /* to mK fom cK + tsys*/
+		s->spec[i- v0]  = (uint32_t) ((double) rawspec[VEL - i - 1] * 10. * sim.eff + sim.tsys * 1000.); /* to mK fom cK + tsys*/
 	//	s->spec[i]  = (uint32_t) rawspec[i] *10 + 200000; /* to mK fom cK + tsys*/
-		s->spec[i-v0] += (int) (GNOISE * 4000.);
+		s->spec[i-v0] += (int) (GNOISE * sqrt((double) s->spec[i-v0] * 15.));
 
 		s->n++;
 	}
