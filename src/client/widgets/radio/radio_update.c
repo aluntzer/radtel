@@ -85,12 +85,14 @@ static void radio_update_freq_vel_sp(Radio *p, GtkSpinButton *b,
 	gtk_spin_button_update(b);
 
 	/* properly clamp value to range, Gtk just sets this to range_min */
-	if (val < min)
-		val = min;
-	else if (val > max)
-		val = max;
-	else
-		return;
+	if (!is_bw) {
+		if (val < min)
+			val = min;
+		else if (val > max)
+			val = max;
+		else
+			return;
+	}
 
 	gtk_spin_button_set_value(b, val);
 }
