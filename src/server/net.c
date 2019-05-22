@@ -173,10 +173,14 @@ static void do_send(gpointer data, gpointer user_data)
 	if (!G_IS_IO_STREAM(c->con))
 	    goto bye;
 
+
+	g_socket_set_timeout(g_socket_connection_get_socket(c->con), 10);
+
 	stream = G_IO_STREAM(c->con);
 	ostream = g_io_stream_get_output_stream(stream);
 	ret = g_output_stream_write_all(ostream, th->buf, th->bytes, NULL, NULL, &error);
 
+	g_socket_set_timeout(g_socket_connection_get_socket(c->con), 0);
 
 	if (!ret) {
 		if (error) {
