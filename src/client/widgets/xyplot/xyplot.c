@@ -695,8 +695,6 @@ static void xyplot_clear_selection_cb(GtkWidget *w, XYPlot *p)
 
 static void xyplot_col_resp_cb(GtkDialog *dia, gint resp_id, struct graph *g)
 {
-	g_ref_count_inc(&g->ref);
-
 	if (resp_id == GTK_RESPONSE_OK) {
 		gtk_color_chooser_get_rgba(GTK_COLOR_CHOOSER(dia), &g->colour);
 
@@ -732,8 +730,6 @@ static void xyplot_choose_colour_cb(GtkWidget *w, struct graph *g)
 	g_signal_connect(dia, "response", G_CALLBACK(xyplot_col_resp_cb), g);
 
 	gtk_widget_show_all(dia);
-
-	g_ref_count_dec(&g->ref);
 }
 
 
