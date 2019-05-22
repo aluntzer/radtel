@@ -29,7 +29,7 @@
 
 
 		<key name="nickname" type="s">
-			<default>"I R Baboon"</default>
+			<default>"I Я Baboon"</default>
 			<summary>Nickname</summary>
 			<description>The nickname used in the chat tab</description>
 		</key>
