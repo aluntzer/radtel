@@ -1,7 +1,11 @@
 #!/bin/sh
 
 touch NEWS
-libtoolize
+if [[ $(uname) == "Darwin" ]]; then
+ glibtoolize
+else
+ libtoolize
+fi
 aclocal
 autoconf
 automake --add-missing

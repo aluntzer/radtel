@@ -18,9 +18,13 @@ case "${host_os}" in
     mingw*)
         IS_WINDOWS=true
         ;;
+    darwin*)
+        IS_DARWIN=true
+        ;;
 esac
 
 AM_CONDITIONAL([OS_WINDOWS], [test x$IS_WINDOWS = xtrue])
+AM_CONDITIONAL([OS_DARWIN],  [test x$IS_DARWIN = xtrue])
 
 AC_PATH_PROG(GLIB_COMPILE_RESOURCES, glib-compile-resources)
 GLIB_GSETTINGS

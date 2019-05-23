@@ -20,7 +20,10 @@ AM_CFLAGS += $(GIO_CFLAGS)
 AM_CFLAGS += -I$(top_srcdir)/src/include
 AM_CFLAGS += -I$(top_srcdir)/src/server/include
 AM_CFLAGS += -Wunused
+
+if !OS_DARWIN
 AM_CFLAGS += -fopenmp
+endif
 
 
 AM_LDFLAGS := -avoid-version

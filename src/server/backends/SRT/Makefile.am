@@ -27,10 +27,10 @@ AM_LDFLAGS += -export-dynamic
 
 
 srt_drive_la_LIBADD := -L$(top_builddir)/src/net/ -lproto
-srt_drive_la_LIBADD := -L$(top_builddir)/src/net/ -lutil
+srt_drive_la_LIBADD += -L$(top_builddir)/src/net/ -lutil
 
 srt_spectrometer_la_LIBADD := -L$(top_builddir)/src/net/ -lproto
-srt_spectrometer_la_LIBADD := -L$(top_builddir)/src/net/ -lutil
+srt_spectrometer_la_LIBADD += -L$(top_builddir)/src/net/ -lutil
 
 
 plugin_LTLIBRARIES = srt_drive.la srt_comlink.la srt_spectrometer.la
