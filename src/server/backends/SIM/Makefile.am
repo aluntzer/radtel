@@ -1,42 +1,39 @@
-#paths set at make time
-confdir  = ${sysconfdir}/radtel/
 
-# we build plugin shared objects with our own rules rather than via libtool
-if !OS_WINDOWS
-plugin_CPPFLAGS := \-DCONFDIR=\"$(confdir)\"
-endif
-plugin_CFLAGS := $(GMODULE_CFLAGS)
-plugin_CFLAGS += $(GTHREAD_CFLAGS)
-plugin_CFLAGS += $(GLIB_CFLAGS)
-plugin_CFLAGS += $(GTK3_CFLAGS)
-plugin_CFLAGS += -I$(top_srcdir)/src/include  -I$(top_srcdir)/src/server/include
-plugin_LDADD := $(GTK3_LIBS)
-plugin_LDADD += $(GTHREAD_LIBS)
-plugin_LDADD += $(GLIB_LIBS)
-plugin_LDADD += $(GIO_LIBS)
+confdir = radtel
+plugdir = radtel
+
+plugindir     = $(libdir)/$(plugdir)/SIM
+pluginconfdir = $(sysconfdir)/$(confdir)/backends
+
+pluginconf_DATA = $(top_builddir)/src/server/config/backends/rt_sim.cfg
 
 
-
-if OS_WINDOWS
-all: rt_sim.dll
-
-SUFFIXES = .dll
-CLEANFILES = *.dll
+AM_CPPFLAGS := \-DCONFDIR=\"$(confdir)\" \
+	       \-DSYSCONFDIR=\"$(sysconfdir)\"
 
 
-%.dll: %.c
-	$(CC) -Wl,-no-undefined -Wl,--unresolved-symbols=ignore-all -Wl,--enable-runtime-pseudo-reloc   $(plugin_CPPFLAGS) $(plugin_CFLAGS) -shared -fPIC -fopenmp -I $(top_srcdir)/include -o $@  $< -L../../ -lhost $(plugin_LDADD)
+AM_CFLAGS := $(GMODULE_CFLAGS)
+AM_CFLAGS += $(GTHREAD_CFLAGS)
+AM_CFLAGS += $(GLIB_CFLAGS)
+AM_CFLAGS += $(GTK3_CFLAGS)
+AM_CFLAGS += $(GIO_CFLAGS)
+AM_CFLAGS += -I$(top_srcdir)/src/include
+AM_CFLAGS += -I$(top_srcdir)/src/server/include
+AM_CFLAGS += -Wunused
+AM_CFLAGS += -fopenmp
 
-else
 
-all: rt_sim.so
+AM_LDFLAGS := -avoid-version
+AM_LDFLAGS += -module
+AM_LDFLAGS += -shared
+AM_LDFLAGS += -export-dynamic
 
-SUFFIXES = .so
-CLEANFILES = *.so
 
-%.so: %.c
-	$(CC) $(plugin_CPPFLAGS) $(plugin_CFLAGS) -shared -fPIC -fopenmp -I $(top_srcdir)/include -o $@  $< $(plugin_LDADD)
+rt_sim_la_LIBADD := -L$(top_builddir)/src/net/ -lproto
+rt_sim_la_LIBADD += -L$(top_builddir)/src/util -lutil
 
-%.so: %.o
-	$(CC) $(plugin_LDFLAGS) -shared -fPIC -o $@  $<
-endif
+
+plugin_LTLIBRARIES = rt_sim.la
+
+rt_sim_la_SOURCES = rt_sim.c
+

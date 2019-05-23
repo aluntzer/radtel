@@ -380,17 +380,18 @@ static void sky_load_keys(Sky *p, GKeyFile *kf)
 
 
 /**
- * @brief load the configuration file
+ * @brief load the sky configuration file from a given prefix
+ *
+ * @returns 0 on success, otherwise error
  */
 
-static int sky_load_config(Sky *p)
+static int sky_load_config_from_prefix(Sky *p, const gchar *prefix, GError **err)
 {
 	gboolean ret;
 
 	GKeyFile *kf;
 	GKeyFileFlags flags;
 
-	GError *error = NULL;
 
 	gchar *cfg;
 
@@ -398,21 +399,60 @@ static int sky_load_config(Sky *p)
 	kf = g_key_file_new();
 	flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
 
+	cfg = g_strconcat(prefix, "sky_objects.cfg", NULL);
+	ret = g_key_file_load_from_file(kf, cfg, flags, err);
 
-	cfg = g_strconcat(CONFDIR, "sky_objects.cfg", NULL);
-	ret = g_key_file_load_from_file(kf, cfg, flags, &error);
-
-	g_free(cfg);
 
 	if (!ret) {
-		g_warning("error loading config file %s", error->message);
-		g_clear_error(&error);
+		g_key_file_free(kf);
+		g_free(cfg);
 		return -1;
 	}
+
+	g_message("Sky objects loaded from %s", cfg);
 
 	sky_load_keys(p, kf);
 
 	g_key_file_free(kf);
+	g_free(cfg);
+
+	return 0;
+}
+
+
+
+/**
+ * @brief load the configuration file
+ */
+
+static int sky_load_config(Sky *p)
+{
+	int ret;
+
+	gchar *prefix;
+
+	GError *error = NULL;
+
+
+
+	/* search relative path first */
+	ret = sky_load_config_from_prefix(p, "data/", &error);
+	if (ret) {
+		g_clear_error(&error);
+		/* try again in sysconfdir */
+		prefix = g_strconcat(SYSCONFDIR,"/", CONFDIR, "/data/", NULL);
+		ret = sky_load_config_from_prefix(p, prefix, &error);
+		g_free(prefix);
+	}
+
+	if (ret) {
+		g_warning("Could not find sky_objects.cfg: %s. "
+			  "Looked in data/, %sdata and %s/%sdata",
+			  error->message, CONFDIR, SYSCONFDIR, CONFDIR);
+		g_clear_error(&error);
+
+		return -1;
+	}
 
 	return 0;
 }

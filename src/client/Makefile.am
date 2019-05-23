@@ -1,36 +1,44 @@
 SUBDIRS = ../util ../net
 
-#paths set at make time
-confdir = etc/radtel/
+confdir = radtel
+plugdir = radtel
 
-AM_CPPFLAGS := \-DCONFDIR=\"$(confdir)\"
-AM_CPPFLAGS += -I$(top_srcdir)/src/include -Iinclude
-AM_CPPFLAGS += -Iinclude
-AM_CPPFLAGS += -Iwidgets/include
-AM_CPPFLAGS += -Iwidgets/radio/
-AM_CPPFLAGS += -Iwidgets/telescope/
-AM_CPPFLAGS += -Iwidgets/sswdnd/
-AM_CPPFLAGS += -Iwidgets/spectrum
-AM_CPPFLAGS += -Iwidgets/history
-AM_CPPFLAGS += -Iwidgets/sys_status
-AM_CPPFLAGS += -Iwidgets/obs_assist
-AM_CPPFLAGS += -Iwidgets/sky
-AM_CPPFLAGS += -Iwidgets/chatlog
 
-AM_CFLAGS := $(GTK3_CFLAGS) -Wunused
+AM_CPPFLAGS := \-DCONFDIR=\"$(confdir)\" \
+	       \-DPLUGDIR=\"$(plugdir)\" \
+	       \-DSYSCONFDIR=\"$(sysconfdir)\" \
+	       \-DLIBDIR=\"$(libdir)\"
+
+AM_CFLAGS := $(GMODULE_CFLAGS)
 AM_CFLAGS += $(GTHREAD_CFLAGS)
 AM_CFLAGS += $(GLIB_CFLAGS)
+AM_CFLAGS += $(GTK3_CFLAGS)
 AM_CFLAGS += $(GIO_CFLAGS)
+AM_CFLAGS += -I$(top_srcdir)/src/include
+AM_CFLAGS += -Iwidgets/include
+AM_CFLAGS += -Iwidgets/radio/
+AM_CFLAGS += -Iwidgets/telescope/
+AM_CFLAGS += -Iwidgets/sswdnd/
+AM_CFLAGS += -Iwidgets/spectrum
+AM_CFLAGS += -Iwidgets/history
+AM_CFLAGS += -Iwidgets/sys_status
+AM_CFLAGS += -Iwidgets/obs_assist
+AM_CFLAGS += -Iwidgets/sky
+AM_CFLAGS += -Iwidgets/chatlog
+AM_CFLAGS += -Iinclude
+AM_CFLAGS += -Wunused
 
 
-radtel_LDFLAGS = -lm $(radtel_LIBS) 
+radtel_LDFLAGS := $(radtel_LIBS)
+radtel_LDFLAGS += -lm
 
 radtel_LDADD := $(GTK3_LIBS)
 radtel_LDADD += $(GTHREAD_LIBS)
 radtel_LDADD += $(GLIB_LIBS)
 radtel_LDADD += $(GIO_LIBS)
-radtel_LDADD += $(top_builddir)/src/net/libproto.a
-radtel_LDADD += $(top_builddir)/src/util/libutil.a
+radtel_LDADD += -L$(top_builddir)/src/net/ -lproto
+radtel_LDADD += -L$(top_builddir)/src/util -lutil
+
 
 
 if OS_WINDOWS
@@ -42,8 +50,8 @@ radtel-res.o: data/radtel.rc
 endif
 
 
-sysconf_radteldir = $(confdir)
-sysconf_radtel_DATA = config/sky_objects.cfg
+sysconf_radteldir = $(sysconfdir)/$(confdir)/data
+sysconf_radtel_DATA = data/sky_objects.cfg
 
 data_desktopdir = $(datadir)/applications
 data_desktop_DATA = data/org.uvie.radtel.desktop

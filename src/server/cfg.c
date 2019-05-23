@@ -171,39 +171,36 @@ gsize server_cfg_get_hor_limits(gint32 **hor_az, gint32 **hor_el)
 
 
 /**
- * @brief load the server configuration file
+ * @brief load the server configuration file from a given prefix
+ *
+ * @returns 0 on success, otherwise error
  */
 
-int server_cfg_load(void)
+static int server_load_config_from_prefix(const gchar *prefix, GError **err)
 {
-	gsize len;
 	gboolean ret;
 
 	GKeyFile *kf;
 	GKeyFileFlags flags;
 
-	GError *error = NULL;
 
 	gchar *cfg;
-
-
-
 
 
 	kf = g_key_file_new();
 	flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
 
-	cfg = g_strconcat(CONFDIR, "server.cfg", NULL);
-	ret = g_key_file_load_from_file(kf, cfg, flags, &error);
+	cfg = g_strconcat(prefix, "server.cfg", NULL);
+	ret = g_key_file_load_from_file(kf, cfg, flags, err);
+
 
 	if (!ret) {
-		g_error("Error loading server config file %s", error->message);
-		g_clear_error(&error);
+		g_key_file_free(kf);
 		g_free(cfg);
 		return -1;
 	}
 
-	g_free(cfg);
+	g_message("Configuration file loaded from %s", cfg);
 
 	server_cfg = g_malloc0(sizeof(struct server_settings));
 
@@ -212,7 +209,44 @@ int server_cfg_load(void)
 	server_cfg_load_location(kf, server_cfg);
 
 	g_key_file_free(kf);
+	g_free(cfg);
 
 	return 0;
+}
 
+
+/**
+ * @brief try to load a server configuration file from various paths
+ */
+
+int server_cfg_load(void)
+{
+	int ret;
+
+	gchar *prefix;
+
+	GError *error = NULL;
+
+
+
+	/* search relative path first */
+	ret = server_load_config_from_prefix("/", &error);
+	if (ret) {
+		g_clear_error(&error);
+		/* try again in sysconfdir */
+		prefix = g_strconcat(SYSCONFDIR, "/", CONFDIR, "/", NULL);
+		ret = server_load_config_from_prefix(prefix, &error);
+		g_free(prefix);
+	}
+
+	if (ret) {
+		g_warning("Could not find server.cfg: %s. "
+			  "Looked in ./, %s and %s/%s",
+			  error->message, CONFDIR, SYSCONFDIR, CONFDIR);
+		g_clear_error(&error);
+
+		return -1;
+	}
+
+	return 0;
 }

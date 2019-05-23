@@ -234,20 +234,19 @@ static void sim_load_keys(GKeyFile *kf)
 		g_error(error->message);
 }
 
-
 /**
- * @brief load the configuration file
+ * @brief load the sim configuration file from a given prefix
+ *
+ * @returns 0 on success, otherwise error
  */
 
-static int sim_load_config(void)
+static int sim_load_config_from_prefix(const gchar *prefix, GError **err)
 {
-	gsize len;
 	gboolean ret;
 
 	GKeyFile *kf;
 	GKeyFileFlags flags;
 
-	GError *error = NULL;
 
 	gchar *cfg;
 
@@ -255,20 +254,59 @@ static int sim_load_config(void)
 	kf = g_key_file_new();
 	flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
 
+	cfg = g_strconcat(prefix, "backends/rt_sim.cfg", NULL);
+	ret = g_key_file_load_from_file(kf, cfg, flags, err);
 
-	cfg = g_strconcat(CONFDIR, "backends/rt_sim.cfg", NULL);
-	ret = g_key_file_load_from_file(kf, cfg, flags, &error);
-	g_free(cfg);
 
 	if (!ret) {
-		g_error(MSG "error loading config file %s", error->message);
-		g_clear_error(&error);
+		g_key_file_free(kf);
+		g_free(cfg);
 		return -1;
 	}
+
+	g_message(MSG "Configuration file loaded from %s", cfg);
 
 	sim_load_keys(kf);
 
 	g_key_file_free(kf);
+	g_free(cfg);
+
+	return 0;
+}
+
+
+/**
+ * @brief try to load a sim configuration file from various paths
+ */
+
+int sim_load_config(void)
+{
+	int ret;
+
+	gchar *prefix;
+
+	GError *error = NULL;
+
+
+
+	/* search relative path first */
+	ret = sim_load_config_from_prefix("/", &error);
+	if (ret) {
+		g_clear_error(&error);
+		/* try again in sysconfdir */
+		prefix = g_strconcat(SYSCONFDIR, "/", CONFDIR, "/", NULL);
+		ret = sim_load_config_from_prefix(prefix, &error);
+		g_free(prefix);
+	}
+
+	if (ret) {
+		g_warning(MSG "Could not find backends/rt_sim.cfg: %s. "
+			  "Looked in ./, %s and %s/%s",
+			  error->message, CONFDIR, SYSCONFDIR, CONFDIR);
+		g_clear_error(&error);
+
+		return -1;
+	}
 
 	return 0;
 }

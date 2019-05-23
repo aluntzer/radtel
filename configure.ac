@@ -1,8 +1,10 @@
 AC_INIT([radtel], [0.1], [armin.luntzer@univie.ac.at], [])
 AM_INIT_AUTOMAKE([subdir-objects foreign dist-xz])
 
+LT_INIT([dlopen])
+
 AC_PROG_CC
-AC_PROG_RANLIB
+AC_CONFIG_MACRO_DIRS([m4])
 
 
 AC_PREFIX_DEFAULT([/usr])

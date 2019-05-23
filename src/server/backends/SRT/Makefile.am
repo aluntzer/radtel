@@ -1,20 +1,43 @@
-#paths set at make time
-confdir  = ${sysconfdir}/radtel/
+confdir = radtel
+plugdir = radtel
 
-# we build plugin shared objects with our own rules rather than via libtool
-plugin_CPPFLAGS := \-DCONFDIR=\"$(confdir)\"
-plugin_CFLAGS := $(GMODULE_CFLAGS)
-plugin_CFLAGS += $(GTHREAD_CFLAGS)
-plugin_CFLAGS += $(GLIB_CFLAGS)
-plugin_CFLAGS += -I$(top_srcdir)/src/include  -I$(top_srcdir)/src/server/include
+plugindir     = $(libdir)/$(plugdir)/SRT
+pluginconfdir = $(sysconfdir)/$(confdir)/backends
 
-all: srt_drive.so srt_comlink.so srt_spectrometer.so
+pluginconf_DATA = $(top_builddir)/src/server/config/backends/srt_spectrometer.cfg \
+		  $(top_builddir)/src/server/config/backends/srt_drive.cfg \
+		  $(top_builddir)/src/server/config/backends/srt_comlink.cfg
 
-SUFFIXES = .so
-CLEANFILES = *.so
+AM_CPPFLAGS := \-DCONFDIR=\"$(confdir)\" \
+	       \-DSYSCONFDIR=\"$(sysconfdir)\"
 
-%.so: %.c
-	$(CC) $(plugin_CPPFLAGS) $(plugin_CFLAGS) -shared -fPIC -I $(top_srcdir)/include -o $@  $<
 
-%.so: %.o
-	$(CC) $(plugin_LDFLAGS) -shared -fPIC -o $@  $<
+AM_CFLAGS := $(GMODULE_CFLAGS)
+AM_CFLAGS += $(GTHREAD_CFLAGS)
+AM_CFLAGS += $(GLIB_CFLAGS)
+AM_CFLAGS += -I$(top_srcdir)/src/include
+AM_CFLAGS += -I$(top_srcdir)/src/server/include
+AM_CFLAGS += -Wunused
+
+
+AM_LDFLAGS := -avoid-version
+AM_LDFLAGS += -module
+AM_LDFLAGS += -shared
+AM_LDFLAGS += -export-dynamic
+
+
+srt_drive_la_LIBADD := -L$(top_builddir)/src/net/ -lproto
+srt_drive_la_LIBADD := -L$(top_builddir)/src/net/ -lutil
+
+srt_spectrometer_la_LIBADD := -L$(top_builddir)/src/net/ -lproto
+srt_spectrometer_la_LIBADD := -L$(top_builddir)/src/net/ -lutil
+
+
+plugin_LTLIBRARIES = srt_drive.la srt_comlink.la srt_spectrometer.la
+
+srt_drive_la_SOURCES = srt_drive.c
+
+srt_comlink_la_SOURCES = srt_comlink.c
+
+srt_spectrometer_la_SOURCES = srt_spectrometer.c
+

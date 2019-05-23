@@ -49,13 +49,17 @@ static void backend_try_load_symbols(GModule *mod)
 
 
 
+
 /**
- * @brief load a backend module
+ * @brief load a backend module from a given prefix
+ *
  * @note if a module exports a symbol module_extra_init(), the
  *       function will be executed here
+ *
+ * @returns 0 on success, otherwise error
  */
 
-static int backend_load_module(const gchar *plugin_path)
+static int backend_load_module_from_prefix(const gchar *plugin_path)
 {
 	GModule *mod;
 
@@ -66,10 +70,12 @@ static int backend_load_module(const gchar *plugin_path)
 	mod = g_module_open(plugin_path, G_MODULE_BIND_LAZY);
 
 	if(!mod) {
-		g_error("Unable to load plugin %s: %s", plugin_path,
+		g_debug("Unable to load plugin %s: %s", plugin_path,
 							g_module_error());
 		return -1;
 	}
+
+	g_message("Plugin loaded from %s", plugin_path);
 
 	g_module_symbol(mod, "module_extra_init", (gpointer) &mod_init);
 
@@ -79,6 +85,52 @@ static int backend_load_module(const gchar *plugin_path)
 
 
 	backend_try_load_symbols(mod);
+
+
+	return 0;
+}
+
+
+/**
+ * @brief try to load a backend module from various paths
+ */
+
+static int backend_load_module(const gchar *plugin_path)
+{
+	int ret;
+
+	gchar *plug;
+
+	/* try supplied path first */
+	ret = backend_load_module_from_prefix(plugin_path);
+
+	if (!ret)
+		return 0;
+
+
+	/* try again in plugdir */
+	plug = g_strconcat(PLUGDIR, "/", plugin_path, NULL);
+	ret = backend_load_module_from_prefix(plug);
+	g_free(plug);
+
+	if (!ret)
+		return 0;
+
+
+	/* try again in system lib dir/plugdir */
+	plug = g_strconcat(LIBDIR, "/", PLUGDIR, "/", plugin_path, NULL);
+	ret = backend_load_module_from_prefix(plug);
+	g_free(plug);
+
+	if (ret) {
+		g_warning("Could not find plugin: %s. "
+			  "Also looked in %s and %s/%s",
+			  plugin_path, PLUGDIR, LIBDIR, PLUGDIR);
+
+		return -1;
+	}
+
+
 
 
 	return 0;
@@ -95,7 +147,6 @@ int backend_load_plugins(void)
 	gsize i;
 	gchar **pluglist;
 
-	gchar *plug;
 
 
 	if (!g_module_supported()) {
@@ -110,9 +161,8 @@ int backend_load_plugins(void)
 
 
 	for (i = 0; pluglist[i] != NULL; i++)  {
-		plug = g_strconcat(PLUGDIR, pluglist[i], NULL);
-		g_message("Loading plugin %s", plug);
-		backend_load_module(plug);
+		g_message("Loading plugin %s", pluglist[i]);
+		backend_load_module(pluglist[i]);
 	}
 
 
