@@ -1,8 +1,13 @@
 SUBDIRS = ../util ../net backends api
 
 #paths set at make time
+if !OS_WINDOWS
 confdir = ${sysconfdir}/radtel/
 plugdir = $(libdir)/radtel/
+else
+confdir = etc/radtel/
+plugdir = lib/radtel/
+endif
 
 AM_CPPFLAGS := \-DCONFDIR=\"$(confdir)\" \
 	       \-DPLUGDIR=\"$(plugdir)\"
@@ -32,8 +37,14 @@ radtelsrv_LDFLAGS += -u gtk_window_new
 radtelsrv_LDFLAGS += -u fft2
 radtelsrv_LDFLAGS += -u fft_prepare_coeff
 
+radtelsrv_LDFLAGS += -u server_cfg_set_station_lon
+radtelsrv_LDFLAGS += -u server_cfg_set_station_lat
+radtelsrv_LDFLAGS += -u proc_pr_capabilities
+
+
 
 radtelsrv_LDFLAGS += -lm $(radtel_LIBS)
+radtelsrv_LDFLAGS += -Wl,--export-all-symbols -Wl,--out-implib,libhost.a
 
 radtelsrv_LDADD := $(GMODULE_LIBS)
 radtelsrv_LDADD += $(GTHREAD_LIBS)
@@ -45,31 +56,13 @@ radtelsrv_LDADD += $(top_builddir)/src/util/libutil.a
 radtelsrv_LDADD += $(top_builddir)/src/server/api/libbackend.a
 
 
+if OS_WINDOWS
+radtelsrv_LDFLAGS += -mwindows
 
-# cfg to /etc
-sysconf_radteldir = $(confdir)
-sysconf_radtel_DATA = config/server.cfg
-
-sysconf_radtel_backendsdir = $(sysconfdir)/radtel/backends
-sysconf_radtel_backends_DATA = config/backends/srt_spectrometer.cfg \
-			       config/backends/srt_drive.cfg \
-			       config/backends/srt_comlink.cfg \
-			       config/backends/rt_sim.cfg
-
-# cal to /etc
-sysconf_radtel_calibrationdir = $(sysconfdir)/radtel/backends/calibration
-sysconf_radtel_calibration_DATA = config/backends/calibration/spectral_response.dat
-
-# plugins to /lib
-lib_radtelplug_srtdir = $(plugdir)/SRT
-lib_radtelplug_srt_DATA = backends/SRT/srt_comlink.so \
-			  backends/SRT/srt_drive.so \
-			  backends/SRT/srt_spectrometer.so
-# plugins to /lib
-lib_radtelplug_simdir = $(plugdir)/SIM
-lib_radtelplug_sim_DATA = backends/SIM/rt_sim.so
-
-
+radtel-res.o: data/radtelsim.rc
+	windres -i data/radtelsim.rc -o radtel-res.o -O coff
+        radtelsrv_LDADD += radtel-res.o
+endif
 
 
 bin_PROGRAMS = radtelsrv
@@ -92,4 +85,36 @@ radtelsrv_SOURCES = main.c \
 		    proc/proc_pr_control.c \
 		    proc/proc_pr_message.c \
 		    proc/proc_pr_nick.c
+
+
+# cfg to /etc
+sysconf_radteldir = $(confdir)
+sysconf_radtel_DATA = config/server.cfg
+
+sysconf_radtel_backendsdir = $(confdir)/radtel/backends
+sysconf_radtel_backends_DATA = config/backends/srt_spectrometer.cfg \
+			       config/backends/srt_drive.cfg \
+			       config/backends/srt_comlink.cfg \
+			       config/backends/rt_sim.cfg
+
+# cal to /etc
+sysconf_radtel_calibrationdir = $(confdir)/radtel/backends/calibration
+sysconf_radtel_calibration_DATA = config/backends/calibration/spectral_response.dat
+
+if !OS_WINDOWS
+# plugins to /lib
+lib_radtelplug_srtdir = $(plugdir)/SRT
+lib_radtelplug_srt_DATA = backends/SRT/srt_comlink.so \
+			  backends/SRT/srt_drive.so \
+			  backends/SRT/srt_spectrometer.so
+endif
+
+# plugins to /lib
+lib_radtelplug_simdir = $(plugdir)/SIM
+lib_radtelplug_sim_DATA = backends/SIM/rt_sim.dll
+
+
+
+
+
 

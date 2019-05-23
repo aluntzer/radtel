@@ -1,1 +1,5 @@
+if OS_WINDOWS
+SUBDIRS = SIM
+else
 SUBDIRS = SRT SIM
+endif

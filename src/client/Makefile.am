@@ -1,7 +1,7 @@
 SUBDIRS = ../util ../net
 
 #paths set at make time
-confdir = ${sysconfdir}/radtel/
+confdir = etc/radtel/
 
 AM_CPPFLAGS := \-DCONFDIR=\"$(confdir)\"
 AM_CPPFLAGS += -I$(top_srcdir)/src/include -Iinclude
