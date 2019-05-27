@@ -257,7 +257,6 @@ static int sim_load_config_from_prefix(const gchar *prefix, GError **err)
 	cfg = g_strconcat(prefix, "backends/rt_sim.cfg", NULL);
 	ret = g_key_file_load_from_file(kf, cfg, flags, err);
 
-
 	if (!ret) {
 		g_key_file_free(kf);
 		g_free(cfg);
@@ -290,7 +289,16 @@ int sim_load_config(void)
 
 
 	/* search relative path first */
-	ret = sim_load_config_from_prefix("/", &error);
+	ret = sim_load_config_from_prefix("./", &error);
+
+	if (ret) {
+		g_clear_error(&error);
+		/* try again in confdir */
+		prefix = g_strconcat(CONFDIR, "/", NULL);
+		ret = sim_load_config_from_prefix(prefix, &error);
+		g_free(prefix);
+	}
+
 	if (ret) {
 		g_clear_error(&error);
 		/* try again in sysconfdir */
