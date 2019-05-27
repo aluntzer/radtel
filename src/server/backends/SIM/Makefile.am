@@ -34,5 +34,8 @@ rt_sim_la_LDFLAGS += -module
 rt_sim_la_LDFLAGS += -shared
 rt_sim_la_LDFLAGS += -export-dynamic
 
+rt_sim_la_LIBADD := $(top_builddir)/src/net/libproto.a
+rt_sim_la_LIBADD += $(top_builddir)/src/util/libutil.a
+
 rt_sim_la_SOURCES = rt_sim.c
 
