@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 touch NEWS
 if [[ $(uname) == "Darwin" ]]; then
