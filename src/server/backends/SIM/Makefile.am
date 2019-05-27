@@ -26,17 +26,13 @@ AM_CFLAGS += -fopenmp
 endif
 
 
-AM_LDFLAGS := -avoid-version
-AM_LDFLAGS += -module
-AM_LDFLAGS += -shared
-AM_LDFLAGS += -export-dynamic
-
-
-rt_sim_la_LIBADD := -L$(top_builddir)/src/net/ -lproto
-rt_sim_la_LIBADD += -L$(top_builddir)/src/util -lutil
-
 
 plugin_LTLIBRARIES = rt_sim.la
+
+rt_sim_la_LDFLAGS := -avoid-version
+rt_sim_la_LDFLAGS += -module
+rt_sim_la_LDFLAGS += -shared
+rt_sim_la_LDFLAGS += -export-dynamic
 
 rt_sim_la_SOURCES = rt_sim.c
 
