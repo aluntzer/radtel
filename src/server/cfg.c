@@ -230,7 +230,16 @@ int server_cfg_load(void)
 
 
 	/* search relative path first */
-	ret = server_load_config_from_prefix("/", &error);
+	ret = server_load_config_from_prefix("./", &error);
+
+	if (ret) {
+		g_clear_error(&error);
+		/* try again in confdir */
+		prefix = g_strconcat(CONFDIR, "/", NULL);
+		ret = server_load_config_from_prefix(prefix, &error);
+		g_free(prefix);
+	}
+
 	if (ret) {
 		g_clear_error(&error);
 		/* try again in sysconfdir */
