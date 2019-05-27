@@ -1,5 +1,5 @@
 AM_CPPFLAGS = -I$(top_srcdir)/src/include -Iinclude
-AM_CFLAGS = $(server_CFLAGS)
+AM_CFLAGS = $(server_CFLAGS) -fPIC
 
 noinst_LIBRARIES = libutil.a
 
