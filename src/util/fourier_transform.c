@@ -41,7 +41,7 @@ static size_t get_next_pow_2_bound(size_t n)
 	return (1 << (c + 1));
 }
 
-#if 1
+#if 0
 #pragma GCC optimize("O3","unroll-loops","omit-frame-pointer","inline") //Optimization flags
 #pragma GCC option("arch=native","tune=native","no-zero-upper") //Enable AVX
 #pragma GCC target("avx")  //Enable AVX
