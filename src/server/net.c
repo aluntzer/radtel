@@ -164,23 +164,49 @@ static void do_send(gpointer data, gpointer user_data)
 	GIOStream *stream;
 	GOutputStream *ostream;
 
+	GSocket *socket;
+
 	GError *error = NULL;
 	gboolean ret;
 
 
 	g_mutex_lock(&c->lock);
 
-	if (!G_IS_IO_STREAM(c->con))
-	    goto bye;
+	if (!G_IS_IO_STREAM(c->con)) {
+		c->kick = TRUE;
+		goto bye;
+	}
 
+	socket = g_socket_connection_get_socket(c->con);
+	if (!G_IS_SOCKET(socket)) {
+		c->kick = TRUE;
+		goto bye;
+	}
+	
 
-	g_socket_set_timeout(g_socket_connection_get_socket(c->con), 10);
+	g_socket_set_timeout(socket, 10);
 
 	stream = G_IO_STREAM(c->con);
+
+	if (!G_IS_IO_STREAM(stream)) {
+		c->kick = TRUE;
+		goto bye;
+	}
+
 	ostream = g_io_stream_get_output_stream(stream);
+
+	if (!G_IS_OUTPUT_STREAM(ostream)) {
+		c->kick = TRUE;
+		goto bye;
+	}
+
 	ret = g_output_stream_write_all(ostream, th->buf, th->bytes, NULL, NULL, &error);
 
-	g_socket_set_timeout(g_socket_connection_get_socket(c->con), 0);
+	if (!G_IS_SOCKET(socket)) {
+		c->kick = TRUE;
+		goto bye;
+	}
+
 
 	if (!ret) {
 		if (error) {
@@ -192,6 +218,7 @@ static void do_send(gpointer data, gpointer user_data)
 
 	}
 bye:
+	g_socket_set_timeout(socket, 0);
 	g_mutex_unlock(&c->lock);
 
 	g_free(th->buf);
