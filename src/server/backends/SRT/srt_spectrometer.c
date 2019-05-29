@@ -253,7 +253,7 @@ static int srt_spec_load_config_from_prefix(const gchar *prefix, GError **err)
 	kf = g_key_file_new();
 	flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
 
-	cfg = g_strconcat(prefix, "backends/srt_spec.cfg", NULL);
+	cfg = g_strconcat(prefix, "backends/srt_spectrometer.cfg", NULL);
 	ret = g_key_file_load_from_file(kf, cfg, flags, err);
 
 
@@ -367,7 +367,7 @@ static int srt_spec_load_calibration_from_prefix(const gchar *prefix)
  * @brief try to load a srt_spec configuration file from various paths
  */
 
-int srt_spec_load_calibrationx(void)
+int srt_spec_load_calibration(void)
 {
 	int ret;
 
