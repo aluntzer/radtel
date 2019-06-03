@@ -37,12 +37,59 @@
 #define SKY_SUN_SIZE   7.0
 #define SKY_MOON_SIZE  7.0
 
+#define SKY_REFRESH_HZ_CAP  30.
+#define SKY_REFRESH_AVG_LEN 10.
+#define SKY_REFRESH_DUTY_CYCLE 0.8
+
 #define ARRAY_SIZE(x)	(sizeof(x)/sizeof(x[0]))
 
 G_DEFINE_TYPE_WITH_PRIVATE(Sky, sky, GTK_TYPE_DRAWING_AREA)
 
 
+
 static void sky_plot(GtkWidget *w);
+
+
+static void sky_try_plot(GtkWidget *w)
+{
+	gdouble elapsed;
+
+	const double n  = 1.0 / SKY_REFRESH_AVG_LEN;
+	const double n1 = SKY_REFRESH_AVG_LEN - 1.0;
+
+	Sky *p;
+
+
+	p = SKY(w);
+
+	g_timer_stop(p->cfg->timer);
+
+	elapsed = g_timer_elapsed(p->cfg->timer, NULL);
+
+	if (elapsed > p->cfg->refresh) {
+
+		/* reuse the timer to measure drawing time */
+		g_timer_start(p->cfg->timer);
+		sky_plot(w);
+		g_timer_stop(p->cfg->timer);
+
+		elapsed = g_timer_elapsed(p->cfg->timer, NULL);
+
+		elapsed /= SKY_REFRESH_DUTY_CYCLE;
+
+		/* adapt refresh rate */
+		p->cfg->refresh = (p->cfg->refresh * n1 + elapsed) * n;
+
+		if (p->cfg->refresh < (1.0 / SKY_REFRESH_HZ_CAP))
+			p->cfg->refresh = (1.0 / SKY_REFRESH_HZ_CAP);
+
+
+
+		g_timer_start(p->cfg->timer);
+	} else {
+		g_timer_continue(p->cfg->timer);
+	}
+}
 
 
 /**
@@ -96,10 +143,15 @@ static void sky_handle_pr_moveto_azel(gpointer instance,
 
 
 	p = SKY(data);
+
+	if (p->cfg->tgt.az == az)
+		if (p->cfg->tgt.el == el)
+			return;
+
 	p->cfg->tgt.az = az;
 	p->cfg->tgt.el = el;
 
-	sky_plot(GTK_WIDGET(p));
+	sky_try_plot(GTK_WIDGET(p));
 }
 
 
@@ -118,7 +170,7 @@ static void sky_handle_pr_getpos_azel(gpointer instance, struct getpos *pos,
 	p->cfg->pos.az = (gdouble) pos->az_arcsec / 3600.0;
 	p->cfg->pos.el = (gdouble) pos->el_arcsec / 3600.0;
 
-	sky_plot(GTK_WIDGET(p));
+	sky_try_plot(GTK_WIDGET(p));
 }
 
 
@@ -155,7 +207,7 @@ static void sky_handle_pr_capabilities(gpointer instance,
 	p->cfg->local_hor = g_memdup(c->hor,
 				     c->n_hor * sizeof(struct local_horizon));
 
-	sky_plot(GTK_WIDGET(p));
+	sky_try_plot(GTK_WIDGET(p));
 }
 
 
@@ -229,7 +281,7 @@ static gboolean sky_update_coord_hor(gpointer data)
 	}
 
 
-	sky_plot(GTK_WIDGET(p));
+	sky_try_plot(GTK_WIDGET(p));
 
 	return G_SOURCE_CONTINUE;
 }
@@ -1884,7 +1936,7 @@ static void sky_button_reset_time(GtkWidget *widget, GdkEventButton *event)
 	/* reset time offset */
 	p->cfg->time_off = 0.0;
 	sky_update_coord_hor((gpointer) p);
-	sky_plot(widget);
+	sky_try_plot(widget);
 }
 
 
@@ -1957,7 +2009,7 @@ static void sky_selection(GtkWidget *widget, GdkEventButton *event)
 		break;
 	}
 
-	sky_plot(widget);
+	sky_try_plot(widget);
 }
 
 /**
@@ -2072,7 +2124,7 @@ static gboolean sky_motion_notify_event_cb(GtkWidget *widget,
 
 		/* redraw with new time */
 		sky_update_coord_hor((gpointer) p);
-		sky_plot(widget);
+		sky_try_plot(widget);
 	}
 
 
@@ -2091,7 +2143,7 @@ static gboolean sky_motion_notify_event_cb(GtkWidget *widget,
 
 	if (px * px + py * py > p->cfg->r * p->cfg->r) {
 		p->cfg->mptr.inside = FALSE;
-		sky_plot(GTK_WIDGET(p));
+		sky_try_plot(GTK_WIDGET(p));
 		goto cleanup;
 	}
 
@@ -2158,7 +2210,7 @@ static gboolean sky_configure_event_cb(GtkWidget *w,
 							   width, height);
 
 	sky_update_coord_hor((gpointer) p);
-	sky_plot(w);
+	sky_try_plot(w);
 
 exit:
 	return TRUE;
@@ -2182,6 +2234,8 @@ static gboolean sky_destroy(GtkWidget *w, void *data)
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_tgt);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_trk);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_con);
+
+	g_timer_destroy(p->cfg->timer);
 
 	return TRUE;
 }
@@ -2225,6 +2279,10 @@ static void sky_init(Sky *p)
 	bzero(p->cfg, sizeof(struct _SkyConfig));
 
 	p->cfg->tgt.el = -90.0; /* do not draw target position on init */
+
+
+	p->cfg->timer = g_timer_new();
+	p->cfg->refresh = 1.0 / SKY_REFRESH_HZ_CAP;
 
 	sky_load_config(p);
 

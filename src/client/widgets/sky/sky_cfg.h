@@ -45,6 +45,9 @@ struct _SkyConfig {
 
 	GList *obj;			/* list of sky objects */
 
+	GTimer *timer;
+	gdouble refresh;
+
 	struct {			/* reset button */
 		gdouble x0, x1;
 		gdouble y0, y1;
