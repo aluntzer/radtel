@@ -39,6 +39,7 @@
 /* client connection data */
 struct con_data {
 	GSocketConnection *con;
+	GInputStream *istream;
 	gsize nbytes;
 	gboolean priv;
 	gchar *nick;
@@ -58,6 +59,9 @@ struct thread {
 /* tracks client connections */
 static GList *con_list;
 
+static GMutex netlock;
+static GMutex netlock_big;
+static GMutex listlock;
 
 
 /**
@@ -188,6 +192,7 @@ static void drop_con_begin(struct con_data *c)
 
 	gchar *str;
 
+	g_mutex_lock(&listlock);
 
 	str = net_get_host_string(c->con);
 	g_message("Initiating disconnect for %s (%s)", str, c->nick);
@@ -205,6 +210,8 @@ static void drop_con_begin(struct con_data *c)
 	g_object_unref(c->con);
 
 	try_disconnect_socket(c);
+
+	g_mutex_unlock(&listlock);
 }
 
 
@@ -217,8 +224,13 @@ static void drop_con_finalize(struct con_data *c)
 	gchar *buf;
 
 
+	g_mutex_lock(&listlock);
+
+	if (!c->con)
+		goto exit;
+
 	if (G_IS_OBJECT(c->con))
-	    return;
+		goto exit;
 
 	if (c->kick) {
 		buf = g_strdup_printf("I kicked <tt><span foreground='#F1C40F'>"
@@ -234,9 +246,15 @@ static void drop_con_finalize(struct con_data *c)
 	net_server_broadcast_message(buf, NULL);
 	net_push_userlist_cb(NULL);
 
+	g_object_unref(c->istream);
+	g_object_unref(c->ca);
+
 	g_free(c->nick);
 	g_free(buf);
 	g_free(c);
+
+exit:
+	g_mutex_unlock(&listlock);
 }
 
 
@@ -390,6 +408,9 @@ static void net_buffer_ready(GObject *source_object, GAsyncResult *res,
 
 
 pending:
+	if (!G_IS_OBJECT(c->con))
+		return;
+
 	buf = g_buffered_input_stream_peek_buffer(bistream, &nbytes);
 
 	if (nbytes == c->nbytes) {
@@ -415,8 +436,11 @@ pending:
 			  "%ld bytes.", pkt_size,
 			  g_buffered_input_stream_get_buffer_size(bistream));
 
-		if (net_send(buf, nbytes) < 0)
+#if 1 /* careful there, this has abuse potential :) */
+		/* here's your shit back */
+		if (net_send_single(c, buf, nbytes) < 0)
 			goto error;
+#endif
 
 
 		if (pkt_size < MAX_PAYLOAD_SIZE) {
@@ -490,6 +514,8 @@ drop_pkt:
 	cmd_invalid_pkt(PKT_TRANS_ID_UNDEF);
 
 exit:
+	if (!G_IS_OBJECT(c->con))
+		return;
 
 	/* continue buffering */
 	g_buffered_input_stream_fill_async(bistream,
@@ -557,9 +583,9 @@ static void begin_reception(struct con_data *c)
 
 	/* set up as buffered input stream */
 	istream = g_io_stream_get_input_stream(G_IO_STREAM(c->con));
-	istream = g_buffered_input_stream_new(istream);
+	c->istream = g_buffered_input_stream_new(istream);
 
-	bistream = G_BUFFERED_INPUT_STREAM(istream);
+	bistream = G_BUFFERED_INPUT_STREAM(c->istream);
 	bufsize = g_buffered_input_stream_get_buffer_size(bistream);
 
 	g_buffered_input_stream_fill_async(bistream, bufsize,
@@ -616,7 +642,9 @@ static gboolean net_incoming(GSocketService    *service,
 	begin_reception(c);
 
 	/* add to list of connections for outgoing data */
+	g_mutex_lock(&listlock);
 	con_list = g_list_append(con_list, c);
+	g_mutex_unlock(&listlock);
 
 	/* push new username after 1 seconds, so they have time to configure
 	 * theirs
@@ -641,12 +669,20 @@ static gboolean net_incoming(GSocketService    *service,
 
 gint net_send_single(gpointer ref, const char *pkt, gsize nbytes)
 {
+	gint ret;
+
 	struct con_data *c;
+
 
 	c = (struct con_data *) ref;
 
+	g_mutex_lock(&netlock);
 
-	return net_send_internal(c, pkt, nbytes);
+	ret = net_send_internal(c, pkt, nbytes);
+
+	g_mutex_unlock(&netlock);
+
+	return ret;
 }
 
 
@@ -663,28 +699,30 @@ gint net_send(const char *pkt, gsize nbytes)
 	GList *elem;
 
 	struct con_data *c;
+	struct con_data *drop = NULL;
 
 
+	g_mutex_lock(&netlock_big);
 
 	for (elem = con_list; elem; elem = elem->next) {
 
 		c = (struct con_data *) elem->data;
 
+		if (!G_IS_OBJECT(c->con))
+			continue;
+
 		if (c->kick) {
 
-			/* rewind one element, the current one will be removed
-			 * in drop_con_begin()
-			 */
-			elem = elem->prev;
-
-			drop_con_begin(c);
-
+			drop = c;
 			continue;
 		}
 
 		ret |= net_send_single(c, pkt, nbytes);
 	}
 
+	if (drop)
+		drop_con_begin(drop);
+	g_mutex_unlock(&netlock_big);
 
 	return ret;
 }
