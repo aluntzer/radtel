@@ -2642,7 +2642,7 @@ static void xyplot_draw_circles(XYPlot *p, cairo_t *cr, struct graph *g)
 
 	cs = xyplot_create_circle_surface(cr, g, 4.0, TRUE);
 
-	xyplot_draw_from_surface(p, cr, g, cs, 4.0, 4.0);
+	xyplot_draw_from_surface(p, cr, g, cs, 6.0, 6.0);
 
 	cairo_surface_destroy(cs);
 }
