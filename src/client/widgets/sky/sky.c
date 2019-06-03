@@ -437,6 +437,24 @@ static int sky_load_config(Sky *p)
 
 	/* search relative path first */
 	ret = sky_load_config_from_prefix(p, "data/", &error);
+
+	if (ret) {
+		g_clear_error(&error);
+		/* try again in confdir */
+		prefix = g_strconcat(CONFDIR, "/data/", NULL);
+		ret = sky_load_config_from_prefix(p, prefix, &error);
+		g_free(prefix);
+	}
+
+
+	if (ret) {
+		g_clear_error(&error);
+		/* try again in confdir */
+		prefix = g_strconcat("etc/", CONFDIR, "/data/", NULL);
+		ret = sky_load_config_from_prefix(p, prefix, &error);
+		g_free(prefix);
+	}
+
 	if (ret) {
 		g_clear_error(&error);
 		/* try again in sysconfdir */
@@ -445,10 +463,11 @@ static int sky_load_config(Sky *p)
 		g_free(prefix);
 	}
 
+
 	if (ret) {
 		g_warning("Could not find sky_objects.cfg: %s. "
-			  "Looked in data/, %sdata and %s/%sdata",
-			  error->message, CONFDIR, SYSCONFDIR, CONFDIR);
+			  "Looked in data/, %sdata, etc/%d/data/ and %s/%sdata",
+			  error->message, CONFDIR, CONFDIR, SYSCONFDIR, CONFDIR);
 		g_clear_error(&error);
 
 		return -1;

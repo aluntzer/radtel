@@ -301,6 +301,14 @@ int sim_load_config(void)
 
 	if (ret) {
 		g_clear_error(&error);
+		/* try again in confdir */
+		prefix = g_strconcat("etc/", CONFDIR, "/", NULL);
+		ret = sim_load_config_from_prefix(prefix, &error);
+		g_free(prefix);
+	}
+
+	if (ret) {
+		g_clear_error(&error);
 		/* try again in sysconfdir */
 		prefix = g_strconcat(SYSCONFDIR, "/", CONFDIR, "/", NULL);
 		ret = sim_load_config_from_prefix(prefix, &error);
