@@ -27,21 +27,21 @@ endif
 
 if !OS_WINDOWS
 
-#plugin_LTLIBRARIES = rt_sim.la
-#rt_sim_la_LDFLAGS := -avoid-version
-#rt_sim_la_LDFLAGS += -module
-#rt_sim_la_LDFLAGS += -shared
-#rt_sim_la_LDFLAGS += -export-dynamic
-#
-#rt_sim_la_LIBADD := -L$(top_builddir)/src/net/  -lproto
-#rt_sim_la_LIBADD += -L$(top_builddir)/src/util/ -lutil
-#rt_sim_la_LIBADD += $(GMODULE_LIBS)
-#rt_sim_la_LIBADD += $(GTHREAD_LIBS)
-#rt_sim_la_LIBADD += $(GLIB_LIBS)
-#rt_sim_la_LIBADD += $(GTK3_LIBS)
-#rt_sim_la_LIBADD += $(GIO_LIBS)
-#
-#rt_sim_la_SOURCES = rt_sim.c
+plugin_LTLIBRARIES = rt_sim.la
+rt_sim_la_LDFLAGS := -avoid-version
+rt_sim_la_LDFLAGS += -module
+rt_sim_la_LDFLAGS += -shared
+rt_sim_la_LDFLAGS += -export-dynamic
+
+rt_sim_la_LIBADD := -L$(top_builddir)/src/net/  -lproto
+rt_sim_la_LIBADD += -L$(top_builddir)/src/util/ -lutil
+rt_sim_la_LIBADD += $(GMODULE_LIBS)
+rt_sim_la_LIBADD += $(GTHREAD_LIBS)
+rt_sim_la_LIBADD += $(GLIB_LIBS)
+rt_sim_la_LIBADD += $(GTK3_LIBS)
+rt_sim_la_LIBADD += $(GIO_LIBS)
+
+rt_sim_la_SOURCES = rt_sim.c
 
 else
 
