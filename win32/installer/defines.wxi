@@ -1,0 +1,15 @@
+<Include>
+  <?if $(sys.BUILDARCH) = x64 ?>
+    <?define ProductName = "radtel (64 bit)" ?>
+    <?define PlatformProgramFilesFolder = "ProgramFiles64Folder" ?>
+  <?else ?>
+    <?define ProductName = "radtel" ?>
+    <?define PlatformProgramFilesFolder = "ProgramFilesFolder" ?>
+  <?endif ?>
+  <?define ProductVersion = "@VERSION@"?>
+  <?define Manufacturer = "UVIE"?>
+  <?define Description = "Radio Telescope Control Software"?>
+  <?define TopDir = "..\..\"?>
+  <?define LicenseFile = "$(var.TopDir)\win32\installer\COPYING.rtf"?>
+  <?define UpgradeCode = "{399D5ADC-ACF7-A6BD-A4FB-A1783C491F5B}"?>
+</Include>
