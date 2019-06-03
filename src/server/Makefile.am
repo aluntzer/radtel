@@ -30,11 +30,10 @@ radtelsrv_LDADD += -L$(top_builddir)/src/server/api -lbackend
 radtelsrv_LDFLAGS := $(radtel_LIBS)
 radtelsrv_LDFLAGS += -lm
 
-# do we need this?
-#if OS_WINDOWS
-#radtelsrv_LDFLAGS += -Wl,--out-implib,libhost.a
-#radtelsrv_LDFLAGS += -Wl,--export-all-symbols
-#endif
+if OS_WINDOWS
+radtelsrv_LDFLAGS += -Wl,--out-implib,libhost.a
+radtelsrv_LDFLAGS += -Wl,--export-all-symbols
+endif
 
 
 

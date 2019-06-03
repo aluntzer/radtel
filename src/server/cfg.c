@@ -187,10 +187,14 @@ static int server_load_config_from_prefix(const gchar *prefix, GError **err)
 	gchar *cfg;
 
 
+
 	kf = g_key_file_new();
 	flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
 
 	cfg = g_strconcat(prefix, "server.cfg", NULL);
+
+	g_message("Will try to load config from %s", cfg);
+
 	ret = g_key_file_load_from_file(kf, cfg, flags, err);
 
 
@@ -236,6 +240,14 @@ int server_cfg_load(void)
 		g_clear_error(&error);
 		/* try again in confdir */
 		prefix = g_strconcat(CONFDIR, "/", NULL);
+		ret = server_load_config_from_prefix(prefix, &error);
+		g_free(prefix);
+	}
+
+	if (ret) {
+		g_clear_error(&error);
+		/* try again in confdir */
+		prefix = g_strconcat("etc/", CONFDIR, "/", NULL);
 		ret = server_load_config_from_prefix(prefix, &error);
 		g_free(prefix);
 	}

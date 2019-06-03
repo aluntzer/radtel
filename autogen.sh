@@ -2,10 +2,11 @@
 
 touch NEWS
 if [[ $(uname) == "Darwin" ]]; then
- glibtoolize
-else
- libtoolize
+	glibtoolize
+elif [[ $(uname) != "MINGW"* ]]; then
+	libtoolize
 fi
+
 aclocal
 autoconf
 automake --add-missing

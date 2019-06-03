@@ -1,7 +1,5 @@
-AC_INIT([radtel], [0.1], [armin.luntzer@univie.ac.at], [])
+AC_INIT([radtel], [0.0.1], [armin.luntzer@univie.ac.at], [])
 AM_INIT_AUTOMAKE([subdir-objects foreign dist-xz])
-
-LT_INIT([dlopen])
 
 AC_PROG_CC
 AC_CONFIG_MACRO_DIRS([m4])
@@ -23,8 +21,17 @@ case "${host_os}" in
         ;;
 esac
 
+dnl libootl sucks on windows (for our purpose), so we'll build
+dnl plugin dlls ourselves
+test x$IS_WINDOWS != xtrue && LT_INIT([dlopen])
+test x$IS_WINDOWS = xtrue && AC_PROG_RANLIB
+
+
 AM_CONDITIONAL([OS_WINDOWS], [test x$IS_WINDOWS = xtrue])
 AM_CONDITIONAL([OS_DARWIN],  [test x$IS_DARWIN = xtrue])
+
+
+
 
 AC_PATH_PROG(GLIB_COMPILE_RESOURCES, glib-compile-resources)
 GLIB_GSETTINGS

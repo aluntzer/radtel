@@ -66,11 +66,11 @@ static int backend_load_module_from_prefix(const gchar *plugin_path)
 	void (*mod_init)(void);
 
 
-
+	g_message("Will try to load plugin from %s", plugin_path);
 	mod = g_module_open(plugin_path, G_MODULE_BIND_LAZY);
 
 	if(!mod) {
-		g_debug("Unable to load plugin %s: %s", plugin_path,
+		g_warning("Unable to load plugin %s: %s", plugin_path,
 							g_module_error());
 		return -1;
 	}
@@ -110,6 +110,15 @@ static int backend_load_module(const gchar *plugin_path)
 
 	/* try again in plugdir */
 	plug = g_strconcat(PLUGDIR, "/", plugin_path, NULL);
+	ret = backend_load_module_from_prefix(plug);
+	g_free(plug);
+
+	if (!ret)
+		return 0;
+
+
+	/* try again in lib/plugdir */
+	plug = g_strconcat("lib/", PLUGDIR, "/", plugin_path, NULL);
 	ret = backend_load_module_from_prefix(plug);
 	g_free(plug);
 
