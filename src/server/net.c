@@ -103,13 +103,19 @@ static gboolean net_push_userlist_cb(gpointer data)
 
 	struct con_data *c;
 
+	gchar **msgs;
 	gchar *buf;
 	gchar *tmp;
+
+	gint i;
+	gint msgcnt = 0;
 
 	gchar *msg = NULL;
 
 
 	g_mutex_lock(&listlock);
+
+	msgs = g_malloc(g_list_length(con_list) * sizeof(gchar *));
 
 	for (elem = con_list; elem; elem = elem->next) {
 
@@ -132,22 +138,27 @@ static gboolean net_push_userlist_cb(gpointer data)
 		if (c->new) {
 			c->new = FALSE;
 
-			buf = g_strdup_printf("<tt><span foreground='#F1C40F'>"
-					      "%s</span></tt> joined",
-					      c->nick);
+			msgs[msgcnt++] = g_strdup_printf("<tt><span foreground='#F1C40F'>"
+					"%s</span></tt> joined",
+					c->nick);
 
-			net_server_broadcast_message(buf, NULL);
-			g_free(buf);
 		}
 	}
 
+	g_mutex_unlock(&listlock);
+
+	for (i = 0; i < msgcnt; i++) {
+		net_server_broadcast_message(msgs[i], NULL);
+		g_free(msgs[i]);
+	}
+
+	g_free(msgs);
 
 	if (msg) {
 		ack_userlist(PKT_TRANS_ID_UNDEF, (guchar *) msg, strlen(msg));
 		g_free(msg);
 	}
 
-	g_mutex_unlock(&listlock);
 
 	return G_SOURCE_REMOVE;
 }
@@ -526,8 +537,6 @@ drop_pkt:
 
 	ret = g_buffered_input_stream_fill_finish(bistream, res, &error);
 
-	g_object_unref(c->con);
-
 	if (ret < 0)
 		goto error;
 
@@ -542,8 +551,6 @@ exit:
 	if (!G_IS_OBJECT(c->con))
 		return;
 
-	g_object_ref(c->con);
-
 	/* continue buffering */
 	g_buffered_input_stream_fill_async(bistream,
 					   g_buffered_input_stream_get_buffer_size(bistream),
@@ -555,6 +562,8 @@ exit:
 
 
 error:
+	/* drop  ref from begin_reception() */
+	g_object_unref(c->con);
 	g_message("Error occured in %s, initiating connection drop", __func__);
 
 	if (error) {
