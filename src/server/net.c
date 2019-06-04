@@ -109,6 +109,7 @@ static gboolean net_push_userlist_cb(gpointer data)
 	gchar *msg = NULL;
 
 
+	g_mutex_lock(&listlock);
 
 	for (elem = con_list; elem; elem = elem->next) {
 
@@ -145,6 +146,8 @@ static gboolean net_push_userlist_cb(gpointer data)
 		ack_userlist(PKT_TRANS_ID_UNDEF, (guchar *) msg, strlen(msg));
 		g_free(msg);
 	}
+
+	g_mutex_unlock(&listlock);
 
 	return G_SOURCE_REMOVE;
 }
@@ -223,6 +226,8 @@ static void drop_con_begin(struct con_data *c)
 
 /**
  * @brief finalize a connection drop
+ *
+ * @note the connection must already be removed from con_list at this point!
  */
 
 static void drop_con_finalize(struct con_data *c)
@@ -230,13 +235,20 @@ static void drop_con_finalize(struct con_data *c)
 	gchar *buf;
 
 
-	g_mutex_lock(&listlock);
+	if (!c) {
+		g_warning("c is NULL");
+		return;
+	}
 
-	if (!c->con)
-		goto exit;
+	if (!c->con) {
+		g_warning("c->con is NULL");
+		return;
+	}
 
-	if (G_IS_OBJECT(c->con))
-		goto exit;
+	if (G_IS_OBJECT(c->con)) {
+		g_warning("c->con still holds references");
+		return;
+	}
 
 	if (c->kick) {
 		buf = g_strdup_printf("I kicked <tt><span foreground='#F1C40F'>"
@@ -263,10 +275,6 @@ static void drop_con_finalize(struct con_data *c)
 
 	g_free(buf);
 	g_free(c);
-
-
-exit:
-	g_mutex_unlock(&listlock);
 }
 
 
@@ -517,6 +525,9 @@ drop_pkt:
 	g_free(pkt);
 
 	ret = g_buffered_input_stream_fill_finish(bistream, res, &error);
+
+	g_object_unref(c->con);
+
 	if (ret < 0)
 		goto error;
 
@@ -530,6 +541,8 @@ drop_pkt:
 exit:
 	if (!G_IS_OBJECT(c->con))
 		return;
+
+	g_object_ref(c->con);
 
 	/* continue buffering */
 	g_buffered_input_stream_fill_async(bistream,
@@ -551,7 +564,10 @@ error:
 	}
 
 	drop_con_begin(c);
-	drop_con_finalize(c);
+
+	/* if this was the last reference, call finalize */
+	if (!G_IS_OBJECT(c->con))
+		drop_con_finalize(c);
 
 	return;
 
@@ -571,6 +587,8 @@ static void assign_default_priv(struct con_data *c)
 	struct con_data *item;
 
 
+	g_mutex_lock(&listlock);
+
 	for (elem = con_list; elem; elem = elem->next) {
 
 		item = (struct con_data *) elem->data;
@@ -581,6 +599,8 @@ static void assign_default_priv(struct con_data *c)
 
 	if (!priv)
 		c->priv = TRUE;
+
+	g_mutex_unlock(&listlock);
 }
 
 
@@ -601,6 +621,8 @@ static void begin_reception(struct con_data *c)
 
 	bistream = G_BUFFERED_INPUT_STREAM(c->istream);
 	bufsize = g_buffered_input_stream_get_buffer_size(bistream);
+
+	g_object_ref(c->con);
 
 	g_buffered_input_stream_fill_async(bistream, bufsize,
 					   G_PRIORITY_DEFAULT, c->ca,
@@ -718,6 +740,8 @@ gint net_send(const char *pkt, gsize nbytes)
 
 	g_mutex_lock(&netlock_big);
 
+	g_mutex_lock(&listlock);
+
 	for (elem = con_list; elem; elem = elem->next) {
 
 		c = (struct con_data *) elem->data;
@@ -726,7 +750,6 @@ gint net_send(const char *pkt, gsize nbytes)
 			continue;
 
 		if (c->kick) {
-
 			drop = c;
 			continue;
 		}
@@ -734,8 +757,12 @@ gint net_send(const char *pkt, gsize nbytes)
 		ret |= net_send_single(c, pkt, nbytes);
 	}
 
+	g_mutex_unlock(&listlock);
+
+	/* drop one per cycle */
 	if (drop)
 		drop_con_begin(drop);
+
 	g_mutex_unlock(&netlock_big);
 
 	return ret;
@@ -758,10 +785,12 @@ void net_server_reassign_control(gpointer ref)
 
 	c = (struct con_data *) ref;
 
+	g_mutex_lock(&listlock);
 	for (elem = con_list; elem; elem = elem->next) {
 		item = (struct con_data *) elem->data;
 		item->priv = FALSE;
 	}
+	g_mutex_unlock(&listlock);
 
 	c->priv = TRUE;
 
