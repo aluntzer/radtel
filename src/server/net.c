@@ -192,6 +192,12 @@ static void drop_con_begin(struct con_data *c)
 
 	gchar *str;
 
+	if (!c->con)
+		return;
+
+	if (!G_IS_OBJECT(c->con))
+		return;
+
 	g_mutex_lock(&listlock);
 
 	str = net_get_host_string(c->con);
@@ -246,12 +252,18 @@ static void drop_con_finalize(struct con_data *c)
 	net_server_broadcast_message(buf, NULL);
 	net_push_userlist_cb(NULL);
 
-	g_object_unref(c->istream);
-	g_object_unref(c->ca);
+	if (G_IS_OBJECT(c->istream))
+		g_object_unref(c->istream);
+
+	if (G_IS_OBJECT(c->ca))
+		g_object_unref(c->ca);
 
 	g_free(c->nick);
+	c->nick = NULL;
+
 	g_free(buf);
 	g_free(c);
+
 
 exit:
 	g_mutex_unlock(&listlock);
@@ -292,7 +304,9 @@ static void do_send(gpointer data, gpointer user_data)
 		c->kick = TRUE;
 
 	g_mutex_unlock(&c->lock);
-	g_object_unref(c->con);
+
+	if (G_IS_OBJECT(c->con))
+		g_object_unref(c->con);
 
 exit:
 	/* if this was the last reference, call finalize */
