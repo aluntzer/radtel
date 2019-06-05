@@ -2210,7 +2210,7 @@ static gboolean sky_configure_event_cb(GtkWidget *w,
 							   width, height);
 
 	sky_update_coord_hor((gpointer) p);
-	sky_try_plot(w);
+	sky_plot(w);
 
 exit:
 	return TRUE;

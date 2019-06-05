@@ -45,6 +45,11 @@
 #define CONFDIR "config/"
 #endif
 
+#ifndef SYSCONFDIR
+#define SYSCONFDIR "config/"
+#endif
+
+
 /* cant use doppler_freq() (would be non-constant init)*/
 #define DOPPLER_FREQ(vel, ref)     ((ref) * (1.0 - (vel) / 299790.0))
 #define DOPPLER_FREQ_REL(vel, ref) ((vel) * (       ref ) / 299790.0)
@@ -586,7 +591,7 @@ static void sim_render_sky(const gdouble *amp, gsize len)
 		pix[1] = 255;
 		pix += nc;
 
-//		if (i > 1 && i 
+//		if (i > 1 && i
 
 	}
 #endif
@@ -836,7 +841,7 @@ static	double *conv2;
 	g_free(conv2);
 		conv2 = g_malloc(bins * bins * sizeof(double));
 		int j;
-		for (i = 0; i < (int) bins; i++) 
+		for (i = 0; i < (int) bins; i++)
 			for (j = 0; j < (int) bins; j++) {
 				conv2[i* (int) bins + j] = (conv[i] + conv[j]) / norm;
 			}
@@ -927,15 +932,21 @@ static	double *conv2;
 	return res;
 }
 
+/**
+ * @brief transpose a two-dimensional array of complex doubles
+ *
+ * @param out the output array
+ * @param in the input array
+ *
+ * @param w the width of the input array
+ * @param h the height of the input array
+ */
 
-
-static void sky_ctransp(complex double *out, complex double *in, int w, int h)
+static void transpose(complex double *out, complex double *in, int w, int h)
 {
 	int i, j, n;
 
-
 #pragma omp parallel for private(i), private(j)
-
 	for(n = 0; n < w * h; n++) {
 
 		i = n / h;
@@ -945,22 +956,173 @@ static void sky_ctransp(complex double *out, complex double *in, int w, int h)
 	}
 }
 
-
 /**
- * @brief transpose a two-dimensional array of complex doubles
+ * @brief put one image into another image cyclically
+ *
+ * @param dst the destination matrix
+ * @param dw the width of the destination
+ * @param dh the height of the destination
+ *
+ * @param src the source matrix
+ * @param sw the width of the source
+ * @param sh the height of the source
+ *
+ * @param x the upper left corner destination x coordinate
+ * @param y the upper left corner destination y coordinate
+ *
+ * @returns 0 on success, otherwise error
+ *
+ * @note src must be smaller or equal dst; src will wrap within dst,
+ *	 x and y are taken as mod w and mod h respectively
  */
 
-static void sky_ctransp2(complex double *out, complex double *in, int w, int h)
+static int put_matrix(double complex *dst, int dw, int dh,
+		      const double  *src, int sw, int sh,
+		      int x, int y)
 {
-        int i, j;
+	int i, j;
+	int dx, dy;
 
-#pragma omp parallel for
-        for (j = 0; j < h; j++) {
-#pragma omp parallel for
-                for (i = 0; i < w; i++) {
-                        out[i * h + j] = in[j * w + i];
+
+	if (!dst || !src)
+		return -1;
+
+	if ((dw < sw) || (dh < sh))
+		return -1;
+
+
+#pragma omp parallel for private(dy)
+	for (i = 0; i < sh; i++) {
+
+		dy = y + i;
+
+		/* fold into dest height */
+		if (dy < 0 || dy > dh)
+			dy = (dy + dh) % dh;
+
+#pragma omp parallel for private(dx)
+		for (j = 0; j < sw; j++) {
+
+			dx = x + j;
+
+			/* fold into dest width */
+			if (dx < 0 || dx > dw)
+				dx = (dx + dw) % dw;
+
+			dst[dy * dw + dx] =  src[i * sw + j];
 		}
 	}
+
+	return 0;
+}
+
+
+/**
+ * @brief get one image from another image cyclically
+ *
+ * @param dst the destination matrix
+ * @param dw the width of the destination
+ * @param dh the height of the destination
+ *
+ * @param src the source matrix
+ * @param sw the width of the source area
+ * @param sh the height of the source area
+ *
+ * @param x the upper left corner source area x coordinate
+ * @param y the upper left corner source area y coordinate
+ * @param w the source area width
+ * @param h the source area height
+ *
+ * @returns 0 on success, otherwise error
+ *
+ * @note dst must be larger or equal src
+ *       the upper left corner of the sleected area area will be placed at 0,0
+ *       within dst
+ *       the src area will wrap within src, as x an y are taken as mod w and
+ *       mod h respectively for both source and destination
+ */
+
+static int get_matrix(double *dst, int dw, int dh,
+		      const double complex *src, int sw, int sh,
+		      int x, int y, int w, int h)
+{
+	int i, j;
+	int sx, sy;
+
+
+	if (!dst || !src)
+		return -1;
+
+	if ((dw < w) || (dh < h))
+		return -1;
+
+	if ((w > sw) || (h > sh))
+		return -1;
+
+
+#pragma omp parallel for private(sy)
+	for (i = 0; i < h; i++) {
+
+		sy = y +i;
+
+		/* fold into src height */
+		if (sy < 0 || sy > sh)
+			sy = (sy + sh) % sh;
+
+#pragma omp parallel for private(sx)
+		for (j = 0; j < w; j++) {
+
+			sx  = x + j;
+
+			/* fold into src width */
+			if (sx < 0 || sx > sw)
+				sx = (sx + sw) % sw;
+
+			dst[i * dw + j] = creal(src[sy * sw + sx]);
+		}
+	}
+
+	return 0;
+}
+
+
+/**
+ * @brief in-place perform a two-dimensional fft on data
+ *
+ * @param data the data matrix to transform
+ * @param coeff a precomputed coefficient array, may be NULL
+ * @param n the fft size
+ *
+ * @note the data and coefficient array dimensions must match the fft size
+ *
+ * @returns 0 on succes, otherwise error
+ */
+
+static int fft2d(double complex *data, double complex *coeff, int n)
+{
+	int i;
+	double complex *tmp;
+
+
+	tmp = malloc(n * n * sizeof(double complex));
+	if (!tmp)
+		return -1;
+	/* inverse transform rows */
+#pragma omp parallel for
+	for (i = 0; i < n; i++)
+		fft2(&data[i * n], coeff, n, FFT_INVERSE);
+
+	/* transpose forward */
+	transpose(tmp, data, n, n);
+
+	/* inverse transform columns */
+#pragma omp parallel for
+	for (i = 0; i < n; i++)
+		fft2(&tmp[i * n], coeff, n, FFT_INVERSE);
+
+	memcpy(data, tmp, n * n * sizeof(double complex));
+
+	return 0;
 }
 
 
@@ -1032,7 +1194,6 @@ static gdouble *sim_rt_get_HI_img(gint vmin, gint vmax)
  *
  * @note bins is always uneven (need center bin)
  */
-
 
 static gdouble *gauss_conv_kernel(gdouble r, gdouble sigma, gdouble res,
 				  gint *n)
@@ -1126,201 +1287,66 @@ static gdouble *gauss_conv_kernel(gdouble r, gdouble sigma, gdouble res,
  *	  sigma cutoff and resolution in degrees
  *
  * @note bins is always uneven (need center bin)
+ *
+ * @note this does not integrate the gaussian within a "pixel", i.e. with
+ *	 respect to the integer coordinates between sample locations, so this
+ *	 is technically not a correct convolution kernel; doing so would be
+ *	 quite expensive, since we'd have to oversample the grid quite a lot
+ *	 (for no added visual benefit)
  */
 
-
-static gdouble *gauss_2d(gdouble r, gdouble sigma, gdouble res,
-				  gint *n)
+static gdouble *gauss_2d(gdouble r, gdouble sigma, gdouble res, gint *n)
 {
 	gint i, j;
 	gint bins;
 
 	gdouble x;
-	gdouble x0;
-	gdouble x1;
 
 	gdouble binw;
 
-	gdouble tot;
+	gdouble sum;
 	gdouble norm;
 
-	double *conv2;
-
+	gdouble *ker;
 
 
 	/* our width-normalised kernel runs from -sigma to +sigma */
-	x1 = sigma / 2.0 * sqrt(2.0 * log(2.0)) * r;
-	x0 = - x1;
-	x  = x0;
+	x = sigma / 2.0 * sqrt(2.0 * log(2.0)) * r;
 
 	/* need an extra center bin, does not count towards stepsize */
-	bins = (gint) (round((x1 - x0) / res));
+	bins = (gint) (round((2.0 * x) / res));
 
 	if (!(bins & 0x1))
 	    bins++;
 
 
-	binw = (x1 - x0) / ((gdouble) (bins - 1));
+	ker = g_malloc(bins * bins * sizeof(double));
 
-
-
-	/* 2d kernel */
-	conv2 = g_malloc(bins * bins * sizeof(double));
-	norm = 2.0 * tot * bins;
-
-	tot = 0.0;
+	sum = 0.0;
 
 	for (i = 0; i < bins; i++) {
 		for (j = 0; j < bins; j++)  {
 
-		gdouble s;
-		gdouble intg;
-		gdouble prev;
+			gdouble s;
 
-		s = (double)bins / sqrt(((bins/2 - j) * (bins/2 -j)  + (bins/2 - i) * (bins/2 -i)));
-//		s = (x - binw * 0.5) / s;
-//			 g_message("s2 %g", s);
+			/* calculate norm and scale to resolution, take 1/2
+			 * for symmetry (we go from x0 to x1)
+			 */
+			s = 0.5 * res * euclid_norm((i - bins/2), (j - bins/2));
 
+			ker[i * bins + j] = 0.5 * ((gauss_norm(s, r)));
+			sum += ker[i * bins + j];
+		}
+	}
 
-		conv2[i * bins + j] = 0.5 * ((gauss_norm(s, r)));
-
-		x += binw;
-	}}
+	/* normalise kernel */
+	for (i = 0; i < bins; i++)
+		ker[i] /= sum;
 
 
 	(*n) = bins;
 
-	return conv2;
-}
-
-
-/**
- * @brief put one image into another image cyclically
- *
- * @param dst the destination matrix
- * @param dw the width of the destination
- * @param dh the height of the destination
- *
- * @param src the source matrix
- * @param sw the width of the source
- * @param sh the height of the source
- *
- * @param x the upper left corner destination x coordinate
- * @param y the upper left corner destination y coordinate
- *
- * @returns 0 on success, otherwise error
- *
- * @note src must be smaller or equal dst; src will wrap within dst,
- *	 x and y are taken as mod w and mod h respectively
- */
-
-static gint sky_put_matrix(double complex *dst, gint dw, gint dh,
-			   const double  *src, gint sw, gint sh,
-			   gint x, gint y)
-{
-	gint i, j;
-	gint dx, dy;
-
-
-	if (!dst || !src)
-		return -1;
-
-	if ((dw < sw) || (dh < sh))
-		return -1;
-
-
-#pragma omp parallel for private(dy)
-	for (i = 0; i < sh; i++) {
-
-		dy = y + i;
-
-		/* fold into dest height */
-		if (dy < 0 || dy > dh)
-			dy = (dy + dh) % dh;
-
-#pragma omp parallel for private(dx)
-		for (j = 0; j < sw; j++) {
-
-			dx = x + j;
-
-			/* fold into dest width */
-			if (dx < 0 || dx > dw)
-				dx = (dx + dw) % dw;
-
-			dst[dy * dw + dx] =  src[i * sw + j];
-		}
-	}
-
-	return 0;
-}
-
-
-/**
- * @brief get one image from another image cyclically
- *
- * @param dst the destination matrix
- * @param dw the width of the destination
- * @param dh the height of the destination
- *
- * @param src the source matrix
- * @param sw the width of the source area
- * @param sh the height of the source area
- *
- * @param x the upper left corner source area x coordinate
- * @param y the upper left corner source area y coordinate
- * @param w the source area width
- * @param h the source area height
- *
- * @returns 0 on success, otherwise error
- *
- * @note dst must be larger or equal src
- *       the upper left corner of the sleected area area will be placed at 0,0
- *       within dst
- *       the src area will wrap within src, as x an y are taken as mod w and
- *       mod h respectively for both source and destination
- */
-
-static gint sky_get_matrix(double *dst, gint dw, gint dh,
-			   const double complex *src, gint sw, gint sh,
-			   gint x, gint y, gint w, gint h)
-{
-	gint i, j;
-	gint sx, sy;
-
-
-	if (!dst || !src)
-		return -1;
-
-	if ((dw < w) || (dh < h))
-		return -1;
-
-	if ((w > sw) || (h > sh))
-		return -1;
-
-
-#pragma omp parallel for private(sy)
-	for (i = 0; i < h; i++) {
-
-		sy = y +i;
-
-		/* fold into src height */
-		if (sy < 0 || sy > sh)
-			sy = (sy + sh) % sh;
-
-#pragma omp parallel for private(sx)
-		for (j = 0; j < w; j++) {
-
-			sx  = x + j;
-
-			/* fold into src width */
-			if (sx < 0 || sx > sw)
-				sx = (sx + sw) % sw;
-
-			dst[i * dw + j] = creal(src[sy * sw + sx]);
-		}
-	}
-
-	return 0;
+	return ker;
 }
 
 
@@ -1334,65 +1360,6 @@ static double complex *it;
 #define SKY1_WIDTH  1024
 #define SKY1_HEIGHT 1024
 
-static gdouble *sky_convolve_dft(const double complex *sky, const double complex *ker, gint n)
-{
-	double complex *csk;
-	double complex *tmp;
-
-	double *img;
-
-	gint i, j;
-
-	GTimer *t;
-
-
-
-
-	tmp = g_malloc(SKY1_WIDTH * SKY1_HEIGHT * sizeof(double complex));
-	csk = g_malloc(SKY1_WIDTH * SKY1_HEIGHT * sizeof(double complex));
-
-	img = g_malloc(SKY1_WIDTH * SKY1_HEIGHT * sizeof(double));
-
-
-
-
-	/* 0.0033 */
-	/* convolve */
-#pragma omp parallel for
-   	for (j = 0; j < SKY1_HEIGHT * SKY1_WIDTH; j++)
-		csk[j] = sky[j] * ker[j];
-
-
-
-	/* 0.008347 */
-	/* inverse transform */
-#pragma omp parallel for
-	for (j = 0; j < SKY1_WIDTH; j++)
-		fft2(&csk[j * SKY1_HEIGHT], it, SKY1_HEIGHT, FFT_INVERSE);
-
-	/* 0.009 */
-	/* transpose forward */
-	sky_ctransp(tmp, csk, SKY1_WIDTH, SKY1_HEIGHT);
-
-
-	/* 0.008347 */
-#pragma omp parallel for
-	for (j = 0; j < SKY1_HEIGHT; j++)
-		fft2(&tmp[j * SKY1_WIDTH], it, SKY1_WIDTH, FFT_INVERSE);
-
-
-
-	/* 0.000505 */
-	sky_get_matrix(img, SKY_WIDTH, SKY_HEIGHT, tmp, SKY1_WIDTH, SKY1_HEIGHT, 0, 0, SKY_WIDTH, SKY_HEIGHT);
-
-
-	g_free(tmp);
-	g_free(csk);
-
-
-
-	return img;
-}
 
 
 static gdouble *sky_convolve(const gdouble *sky, gdouble *kernel, gint n)
@@ -1437,12 +1404,10 @@ static gdouble *sky_convolve(const gdouble *sky, gdouble *kernel, gint n)
 				}
 			}
 			csky[y * SKY_WIDTH + x] = sig;
-
 		}
 	}
 
 	return csky;
-
 }
 
 
@@ -1452,6 +1417,7 @@ static gdouble *sky_convolve(const gdouble *sky, gdouble *kernel, gint n)
 
 static double complex *ker;
 static double complex *csky;
+static double complex *conv;
 static gdouble *msky;
 static gdouble *raw_sky;
 static gdouble *kernel;
@@ -1503,9 +1469,6 @@ static void sim_gen_sky(void)
 		it = fft_prepare_coeff(1024, FFT_INVERSE);
 
 
-
-#if 1
-	/** XXX */
 	v1  = gtk_spin_button_get_value_as_int(sim.gui.sb_vmin);
 	v2  = gtk_spin_button_get_value_as_int(sim.gui.sb_vmax);
 
@@ -1520,6 +1483,9 @@ static void sim_gen_sky(void)
 		vmax = v2;
 	}
 
+	if (!conv)
+		conv = g_malloc(SKY1_WIDTH * SKY1_HEIGHT * sizeof(double complex));
+
 	if (!raw_sky) {
 		raw_sky = sim_rt_get_HI_img(vmin, vmax);
 
@@ -1532,60 +1498,49 @@ static void sim_gen_sky(void)
 		double complex *tmp = g_malloc0(SKY1_WIDTH * SKY1_HEIGHT * sizeof(double complex));
 
 
-		sky_put_matrix(csky, SKY1_WIDTH, SKY1_HEIGHT, raw_sky, SKY_WIDTH, SKY_HEIGHT, 0, 0);
-#pragma omp parallel for
-		for (int j = 0; j < SKY1_HEIGHT; j++)
-			fft2(&csky[j * SKY1_WIDTH], ft, SKY1_WIDTH, FFT_FORWARD);
+		put_matrix(csky, SKY1_WIDTH, SKY1_HEIGHT, raw_sky, SKY_WIDTH, SKY_HEIGHT, 0, 0);
 
-		/* transpose forward */
-		sky_ctransp(tmp, csky, SKY1_HEIGHT, SKY1_WIDTH);
-
-#pragma omp parallel for
-		for (int j = 0; j < SKY1_WIDTH; j++)
-			fft2(&tmp[j * SKY1_HEIGHT], ft, SKY1_HEIGHT, FFT_FORWARD);
-
-
-		for (int j = 0; j < SKY1_HEIGHT * SKY1_WIDTH; j++)
-			csky[j] = tmp[j];
+		fft2d(csky, ft, SKY1_WIDTH);
 	}
 
 
-#endif
-	kernel = gauss_conv_kernel(sim.r_beam, 3.0, SKY_BASE_RES, &n);
-	ker = g_malloc0(SKY1_WIDTH * SKY1_HEIGHT * sizeof(double complex));
-#if 0
-#endif
-	sky_put_matrix(ker, SKY1_WIDTH, SKY1_HEIGHT, kernel, n, n, -n/2, -n/2);
 #if 1
-
-	double complex *tmp = g_malloc0(SKY1_WIDTH * SKY1_HEIGHT * sizeof(double complex));
-#pragma omp parallel for
-	for (int j = 0; j < SKY1_HEIGHT; j++)
-		fft2(&ker[j * SKY1_WIDTH], ft, SKY1_WIDTH, FFT_FORWARD);
-
-	/* transpose forward */
-	sky_ctransp(tmp, ker, SKY1_HEIGHT, SKY1_WIDTH);
-
-#pragma omp parallel for
-	for (int j = 0; j < SKY1_WIDTH; j++)
-		fft2(&tmp[j * SKY1_HEIGHT], ft, SKY1_HEIGHT, FFT_FORWARD);
-
-
-#pragma omp parallel for
-   	for (int j = 0; j < SKY1_HEIGHT * SKY1_WIDTH; j++)
-		ker[j] = tmp[j];
+	kernel = gauss_2d(sim.r_beam, 3.0, SKY_BASE_RES, &n);
+#else
+	kernel = gauss_conv_kernel(sim.r_beam, 3.0, SKY_BASE_RES, &n);
 #endif
+	ker = g_malloc0(SKY1_WIDTH * SKY1_HEIGHT * sizeof(double complex));
 
+#if 1
+	put_matrix(ker, SKY1_WIDTH, SKY1_HEIGHT, kernel, n, n, -n/2, -n/2);
+#else
+	put_matrix(ker, SKY1_WIDTH, SKY1_HEIGHT, kernel, n, n, 360 - n/2, 180 - n/2);
+#endif
+#if 0
+	msky = g_malloc(SKY_WIDTH * SKY_HEIGHT * sizeof(double));
+	get_matrix(msky, SKY_WIDTH, SKY_HEIGHT, ker, SKY1_WIDTH, SKY1_HEIGHT,
+		   0, 0, SKY_WIDTH, SKY_HEIGHT);
+	sim_render_sky(msky, SKY_WIDTH * SKY_HEIGHT);
+
+	return;
+#endif
+	fft2d(ker, ft, SKY1_WIDTH);
 
 	g_timer_start(timer);
-#if 0
-	if (!msky)
-		msky = sky_convolve(raw_sky, kernel, n);
-#else
 
-//	if (!msky)
-		msky = sky_convolve_dft(csky, ker, n);
-#endif
+	/* multiplication step */
+#pragma omp parallel for
+	for (i = 0; i < SKY1_HEIGHT * SKY1_WIDTH; i++)
+		conv[i] = csky[i] * ker[i];
+
+
+	fft2d(conv, it, SKY1_WIDTH);
+	msky = g_malloc(SKY_WIDTH * SKY_HEIGHT * sizeof(double));
+	get_matrix(msky, SKY_WIDTH, SKY_HEIGHT, conv, SKY1_WIDTH, SKY1_HEIGHT,
+		   0, 0, SKY_WIDTH, SKY_HEIGHT);
+
+
+	g_message("msky %g", msky[SKY_WIDTH * SKY_HEIGHT/2 + SKY_WIDTH/2]);
 
 	sim_render_sky(msky, SKY_WIDTH * SKY_HEIGHT);
 
@@ -2143,7 +2098,7 @@ static uint32_t sim_spec_acquire(struct observation *obs)
 cleanup:
 	g_free(s);
 
-	g_usleep(G_USEC_PER_SEC);
+	g_usleep(G_USEC_PER_SEC / 32);
 
 	return obs->acq.acq_max;
 }
