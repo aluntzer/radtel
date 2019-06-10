@@ -35,6 +35,9 @@
  */
 #define SERVER_CON_POOL_SIZE 16
 
+/* max allowed client */
+#define SERVER_CON_MAX 64
+
 
 /* client connection data */
 struct con_data {
@@ -62,6 +65,7 @@ static GList *con_list;
 static GMutex netlock;
 static GMutex netlock_big;
 static GMutex listlock;
+static GMutex finalize;
 
 
 /**
@@ -141,6 +145,8 @@ static gboolean net_push_userlist_cb(gpointer data)
 			msgs[msgcnt++] = g_strdup_printf("<tt><span foreground='#F1C40F'>"
 					"%s</span></tt> joined",
 					c->nick);
+
+			g_print("%s joined\n", c->nick);
 
 		}
 	}
@@ -246,19 +252,27 @@ static void drop_con_finalize(struct con_data *c)
 	gchar *buf;
 
 
+	g_mutex_lock(&finalize);
+	g_message("enter %s\n", __func__);
+
 	if (!c) {
 		g_warning("c is NULL");
-		return;
+		goto unlock;
 	}
 
 	if (!c->con) {
 		g_warning("c->con is NULL");
-		return;
+		goto unlock;
 	}
+
 
 	if (G_IS_OBJECT(c->con)) {
 		g_warning("c->con still holds references");
-		return;
+		goto unlock;
+	}
+
+	if (!c->nick) {
+		g_warning("double-free attempt");
 	}
 
 	if (c->kick) {
@@ -266,10 +280,13 @@ static void drop_con_finalize(struct con_data *c)
 				      "%s</span></tt> for being a lazy bum "
 				      "(client input saturated or timed out)",
 				      c->nick);
+
+		g_print("%s was kicked\n", c->nick);
 	} else {
 		buf = g_strdup_printf("<tt><span foreground='#F1C40F'>"
 				      "%s</span></tt> disconnected",
 				      c->nick);
+		g_print("%s disconnected\n", c->nick);
 	}
 
 	net_server_broadcast_message(buf, NULL);
@@ -286,6 +303,11 @@ static void drop_con_finalize(struct con_data *c)
 
 	g_free(buf);
 	g_free(c);
+
+unlock:
+	g_message("leave %s\n", __func__);
+
+	g_mutex_unlock(&finalize);
 }
 
 
@@ -677,6 +699,14 @@ static gboolean net_incoming(GSocketService    *service,
 	struct con_data *c;
 
 
+
+	if (g_list_length(con_list) > SERVER_CON_MAX) {
+		g_warning("Number of active connections exceeds "
+			  "%d, dropped incoming", SERVER_CON_MAX);
+		g_object_unref(connection);
+		return FALSE;
+	}
+
 	c = g_malloc0(sizeof(struct con_data));
 
 	/* reference, so it is not dropped by glib */
@@ -874,6 +904,8 @@ void net_server_broadcast_message(const gchar *msg, gpointer ref)
 		buf = g_strdup_printf("<tt><span foreground='#7F9F7F'>"
 				      "%s:</span></tt> %s\n",
 				      c->nick, msg);
+
+		g_print("%s %s\n", c->nick, msg);
 	}
 
 
