@@ -233,7 +233,7 @@ static void drop_con_begin(struct con_data *c)
 	c->pool = NULL;
 
 	/* drop initial reference */
-	g_object_unref(c->con);
+	g_clear_object(&c->con);
 
 	try_disconnect_socket(c);
 
