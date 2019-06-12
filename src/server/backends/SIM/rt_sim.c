@@ -1207,9 +1207,14 @@ static gsize HI_get_spec_idx(struct spec_data *s, struct coord_galactic gal,
 {
 	int idx;
 
+	gdouble v;
 
-	f = f - (gdouble) s->freq_min_hz + vlsr(galactic_to_equatorial(gal), 0.0);;
+
+	v = vlsr(galactic_to_equatorial(gal), 0.0);
+
+	f = f - (gdouble) s->freq_min_hz - doppler_freq_relative(v, SIM_V_REF_HZ);
 	f = f / (gdouble) s->freq_inc_hz;
+
 
 	idx = (int) f;
 
