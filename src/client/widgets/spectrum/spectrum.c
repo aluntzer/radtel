@@ -97,18 +97,6 @@ static gdouble spectrum_convert_x2(gdouble x, gpointer data)
 	return -(vlsr(p->cfg->pos_equ, 0.0) + doppler_vel(x, p->cfg->freq_ref_mhz));
 }
 
-/**
- * @brief handle connected
- */
-
-static void spectrum_connected(gpointer instance, gpointer data)
-{
-	/* fetch the config */
-	cmd_capabilities(PKT_TRANS_ID_UNDEF);
-	cmd_getpos_azel(PKT_TRANS_ID_UNDEF);
-	cmd_spec_acq_cfg_get(PKT_TRANS_ID_UNDEF);
-}
-
 
 /**
  * @brief signal handler for toggle switch
@@ -124,7 +112,6 @@ static gboolean spectrum_acq_toggle_cb(GtkWidget *w,
 
 	return TRUE;
 }
-
 
 
 /**
@@ -148,6 +135,28 @@ static void spectrum_acq_toggle_button(GtkSwitch *s, gboolean state)
 	g_signal_handlers_unblock_matched(s, G_SIGNAL_MATCH_FUNC, 0, 0, NULL,
 					  cb, NULL);
 }
+
+
+/**
+ * @brief handle connected
+ */
+
+static void spectrum_connected(gpointer instance, gpointer data)
+{
+	Spectrum *p;
+
+
+	p = SPECTRUM(data);
+
+	/* set toggle default OFF */
+	spectrum_acq_toggle_button(p->cfg->sw_acq, FALSE);
+	/* fetch the config */
+	cmd_capabilities(PKT_TRANS_ID_UNDEF);
+	cmd_getpos_azel(PKT_TRANS_ID_UNDEF);
+	cmd_spec_acq_cfg_get(PKT_TRANS_ID_UNDEF);
+}
+
+
 
 
 /**
@@ -1108,6 +1117,7 @@ GtkWidget *spectrum_vrest_ctrl_new(Spectrum *p)
 	/* the entry is a child of the box */
 	w = gtk_bin_get_child(GTK_BIN(cb));
 	gtk_entry_set_width_chars(GTK_ENTRY(w), 8);
+	gtk_entry_set_alignment(GTK_ENTRY(w), 1.0);
 
 	g_signal_connect(w, "insert-text",
 			 G_CALLBACK(spectrum_vrest_entry_insert_text_cb), p);
@@ -1170,6 +1180,7 @@ static GtkWidget *spectrum_sidebar_new(Spectrum *p)
 	gtk_grid_attach(grid, w, 0, 2, 1, 1);
 
 	w = gtk_spin_button_new_with_range(0, 100, 1);
+	gtk_entry_set_alignment(GTK_ENTRY(w), 1.0);
 	gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(w), TRUE);
 	gtk_spin_button_set_digits(GTK_SPIN_BUTTON(w), 0);
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w), p->cfg->n_per);
@@ -1218,6 +1229,7 @@ static GtkWidget *spectrum_sidebar_new(Spectrum *p)
 	gtk_grid_attach(grid, w, 0, 7, 1, 1);
 
 	w = gtk_spin_button_new_with_range(0, 100, 1);
+	gtk_entry_set_alignment(GTK_ENTRY(w), 1.0);
 	gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(w), TRUE);
 	gtk_spin_button_set_digits(GTK_SPIN_BUTTON(w), 0);
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w), p->cfg->n_avg);
