@@ -26,10 +26,11 @@
 #include <gmodule.h>
 #include <string.h>
 
-
 #include <math.h>
 #include <backend.h>
 #include <ack.h>
+
+#include <net.h>
 
 
 #define MSG "SRT DRIVE: "
@@ -722,7 +723,7 @@ static double srt_drive_motor_cmd_eval(gchar *cmd)
  * @brief command the drive motors
  */
 
-static void srt_drive_cmd_motors(double *az_cnt, double *el_cnt)
+static int srt_drive_cmd_motors(double *az_cnt, double *el_cnt)
 {
 	const int azc = (int) (*az_cnt);
 	const int elc = (int) (*el_cnt);
@@ -757,8 +758,12 @@ static void srt_drive_cmd_motors(double *az_cnt, double *el_cnt)
 		s.eta_msec = 0;
 		ack_status_slew(PKT_TRANS_ID_UNDEF, &s);
 
-		g_message("Azimuth: %f sec/count", g_timer_elapsed(tm, NULL) / (*az_cnt));
 		g_free(cmd);
+
+		if ((*az_cnt) == 0.0)
+			return -1;
+
+		g_message("Azimuth: %f sec/count", g_timer_elapsed(tm, NULL) / (*az_cnt));
 	}
 
 	/* elevation drive */
@@ -780,11 +785,17 @@ static void srt_drive_cmd_motors(double *az_cnt, double *el_cnt)
 		s.eta_msec = 0;
 		ack_status_slew(PKT_TRANS_ID_UNDEF, &s);
 
-		g_message("Elevation: %f sec/count", g_timer_elapsed(tm, NULL) /(*el_cnt));
 		g_free(cmd);
+
+		if ((*el_cnt) == 0.0)
+			return -1;
+
+		g_message("Elevation: %f sec/count", g_timer_elapsed(tm, NULL) / (*el_cnt));
 	}
 
 	g_timer_destroy(tm);
+
+	return 0;
 }
 
 
@@ -796,6 +807,8 @@ static void srt_drive_cmd_motors(double *az_cnt, double *el_cnt)
 
 static int srt_drive_move(void)
 {
+	int ret;
+
 	double az_cnt;
 	double el_cnt;
 
@@ -816,8 +829,20 @@ static int srt_drive_move(void)
 		return 0;
 
 	be_shared_comlink_acquire();
-	srt_drive_cmd_motors(&d_az_cnt, &d_el_cnt);
+	ret = srt_drive_cmd_motors(&d_az_cnt, &d_el_cnt);
 	be_shared_comlink_release();
+
+	if (ret) {
+
+		net_server_broadcast_message("Somebody crashed into a wall, "
+					     "initiating recovery procedure.",
+					     NULL);
+
+		g_warning(MSG "timeout occured, starting recovery procedure");
+
+		be_park_telescope();
+		return 0;
+	}
 
 	/* update current sensor count */
 	srt.pos.az_cnts += d_az_cnt;
@@ -887,10 +912,6 @@ static gpointer srt_drive_thread(gpointer data)
 
 static int srt_drive_moveto(double az, double el)
 {
-	double az_cnts;
-	double el_cnts;
-
-
 	ack_moveto_azel(PKT_TRANS_ID_UNDEF, az, el);
 
 	az += srt_drive_az_tilt_corr(az, el);
@@ -974,6 +995,11 @@ static gpointer srt_park_thread(gpointer data)
 	s.eta_msec = 0;
 	ack_status_move(PKT_TRANS_ID_UNDEF, &s);
 	ack_status_slew(PKT_TRANS_ID_UNDEF, &s);
+
+
+	net_server_broadcast_message("Telescope is now at park position.",
+				     NULL);
+
 
 	g_thread_exit(NULL);
 }
@@ -1068,6 +1094,9 @@ static void srt_drive_notify_pos_update(void)
 G_MODULE_EXPORT
 void be_park_telescope(void)
 {
+	net_server_broadcast_message("Moving telescope to park position, "
+				     "please stand by.", NULL);
+
 	g_message(MSG "parking telescope");
 
 	g_thread_new(NULL, srt_park_thread, NULL);
