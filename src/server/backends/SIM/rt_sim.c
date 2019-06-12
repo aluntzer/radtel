@@ -1205,14 +1205,13 @@ static gdouble *HI_gen_conv_spec(struct coord_galactic gal,
 static gsize HI_get_spec_idx(struct spec_data *s, struct coord_galactic gal,
 			     gdouble f)
 {
-	gsize idx;
+	int idx;
 
 
 	f = f - (gdouble) s->freq_min_hz + vlsr(galactic_to_equatorial(gal), 0.0);;
 	f = f / (gdouble) s->freq_inc_hz;
 
-	idx = (gsize) f;
-
+	idx = (int) f;
 
 	/* adjust for actual spectrum */
 	if (idx < 0)
@@ -2381,7 +2380,7 @@ static GtkWidget *sim_rt_par_gui(void)
 	g_signal_connect(GTK_SPIN_BUTTON(w), "value-changed",
 			 G_CALLBACK(sim_spb_tsys_value_changed_cb), NULL);
 
-	w = gtk_label_new("SIG");
+	w = gtk_label_new("Sigma");
 	gtk_widget_set_halign(w, GTK_ALIGN_START);
 	gtk_widget_set_halign(w, GTK_ALIGN_START);
 	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
@@ -2400,7 +2399,7 @@ static GtkWidget *sim_rt_par_gui(void)
 			 G_CALLBACK(sim_spb_sig_n_value_changed_cb), NULL);
 
 
-	w = gtk_label_new("EFF");
+	w = gtk_label_new("Eff.");
 	gtk_widget_set_halign(w, GTK_ALIGN_START);
 	gtk_widget_set_halign(w, GTK_ALIGN_START);
 	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
@@ -2482,7 +2481,7 @@ static GtkWidget *sim_rt_par_gui(void)
 	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
 	gtk_grid_attach(GTK_GRID(grid), w, 0, 7, 1, 1);
 
-	w = gtk_spin_button_new_with_range(1., 200., 1.0);
+	w = gtk_spin_button_new_with_range(0.0, 200., 1.0);
 	gtk_entry_set_alignment(GTK_ENTRY(w), 1.0);
 	gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(w), TRUE);
 	gtk_spin_button_set_digits(GTK_SPIN_BUTTON(w), 1);
@@ -2781,16 +2780,16 @@ static uint32_t sim_spec_acquire(struct observation *obs)
 	 */
 	sim_stack_cmb(s, gal, beam, n_beam, sky_deg);
 
-
-	HI_stack_spec(s, gal, beam, n_beam, sky_deg);
-
 	sim_stack_moon(s, gal, beam, n_beam, sky_deg);
 
 	sim_stack_sun(s, gal, beam, n_beam, sky_deg);
 
-	sim_stack_eff(s, sim.eff);
 
 	sim_stack_tsys(s, sim.tsys);
+
+	HI_stack_spec(s, gal, beam, n_beam, sky_deg);
+
+	sim_stack_eff(s, sim.eff);
 
 	sim_stack_gnoise(s, sim.sig_n);
 
