@@ -200,6 +200,9 @@ static void try_disconnect_socket(struct con_data *c)
 			g_clear_error(&error);
 		}
 	}
+
+	/* drop initial reference */
+	g_clear_object(&c->con);
 }
 
 
@@ -231,9 +234,6 @@ static void drop_con_begin(struct con_data *c)
 
  	g_thread_pool_free(c->pool, TRUE, FALSE);
 	c->pool = NULL;
-
-	/* drop initial reference */
-	g_clear_object(&c->con);
 
 	try_disconnect_socket(c);
 
