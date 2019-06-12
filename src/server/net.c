@@ -260,15 +260,11 @@ static void drop_con_finalize(struct con_data *c)
 		goto unlock;
 	}
 
-	if (!c->con) {
-		g_warning("c->con is NULL");
-		goto unlock;
-	}
-
-
-	if (G_IS_OBJECT(c->con)) {
-		g_warning("c->con still holds references");
-		goto unlock;
+	if (c->con) {
+		if (G_IS_OBJECT(c->con)) {
+			g_warning("c->con still holds references");
+			goto unlock;
+		}
 	}
 
 	if (!c->nick) {
