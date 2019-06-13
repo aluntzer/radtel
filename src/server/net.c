@@ -835,9 +835,9 @@ static gboolean net_incoming(GSocketService    *service,
 	/* push usernames and messages after 1 seconds, so the incoming
 	 * connections have time to configure theirs
 	 */
-	g_timeout_add_seconds(1, net_push_userlist_cb, NULL);
 	g_timeout_add_seconds(1, net_push_station_single, c);
 	g_timeout_add_seconds(1, net_push_motd_single, c);
+	g_timeout_add_seconds(1, net_push_userlist_cb, NULL);
 
 	str = net_get_host_string(c->con);
 	g_message("Received connection from %s", str);
