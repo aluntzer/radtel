@@ -2,6 +2,7 @@ AM_CPPFLAGS = -I$(top_srcdir)/src/include -Iinclude
 AM_CFLAGS := $(GMODULE_CFLAGS)
 AM_CFLAGS += $(GTHREAD_CFLAGS)
 AM_CFLAGS += $(GLIB_CFLAGS)
+AM_CFLAGS += -fPIC
 
 noinst_LIBRARIES = libproto.a
 
