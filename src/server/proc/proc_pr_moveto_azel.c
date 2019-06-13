@@ -29,8 +29,6 @@ void proc_pr_moveto_azel(struct packet *pkt, gpointer ref)
 	double az;
 	double el;
 
-	gsize pkt_size;
-
 	struct moveto *m;
 
 

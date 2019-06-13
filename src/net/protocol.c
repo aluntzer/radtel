@@ -19,6 +19,21 @@
 #include <glib.h>
 #include <protocol.h>
 
+
+
+/**
+ * @brief get the total size of a packet in bytes
+ */
+
+size_t pkt_size_get(struct packet *pkt)
+{
+	if (!pkt)
+		return 0;
+
+	return sizeof(struct packet) + g_htonl(pkt->data_size);
+}
+
+
 /**
  * @brief convert packet header to network byte order
  */
@@ -78,7 +93,7 @@ uint16_t CRC16(unsigned char *buf, size_t size)
 
 			if ((b & 0x80) ^ ((S & 0x8000) >> 8))
 				S = ((S << 1) ^ 0x1021) & 0xFFFF;
-			else 
+			else
 				S = (S << 1) & 0xFFFF;
 
 			b = b << 1;

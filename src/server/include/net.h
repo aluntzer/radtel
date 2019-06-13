@@ -23,7 +23,10 @@
 
 int net_server(void);
 void net_server_reassign_control(gpointer ref);
+void net_server_drop_priv(gpointer ref);
+void net_server_iddqd(gpointer ref);
 void net_server_broadcast_message(const gchar *msg, gpointer ref);
+void net_server_direct_message(const gchar *msg, gpointer ref);
 void net_server_set_nickname(const gchar *nick, gpointer ref);
 
 

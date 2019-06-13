@@ -19,7 +19,7 @@
 #include <cmd.h>
 
 
-void cmd_moveto_azel(uint16_t trans_id, double az, double el)
+struct packet *cmd_moveto_azel_gen(uint16_t trans_id, double az, double el)
 {
 	gsize pkt_size;
 
@@ -49,10 +49,20 @@ void cmd_moveto_azel(uint16_t trans_id, double az, double el)
 
 	pkt_hdr_to_net_order(pkt);
 
+	return pkt;
+}
+
+
+void cmd_moveto_azel(uint16_t trans_id, double az, double el)
+{
+	struct packet *pkt;
+
+
+	pkt = cmd_moveto_azel_gen(trans_id, az, el);
+
 	g_debug("Sending command moveto AZ/EL %g/%g", az, el);
-	net_send((void *) pkt, pkt_size);
+	net_send((void *) pkt, pkt_size_get(pkt));
 
 	/* clean up */
 	g_free(pkt);
 }
-

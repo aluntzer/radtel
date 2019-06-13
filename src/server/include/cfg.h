@@ -27,7 +27,9 @@ struct server_settings {
 	gdouble   lon;		/* station longitude */
 	gint32   *hor_az;	/* horizon profile azimuth values */
 	gint32   *hor_el;	/* horizon profile elevaltion values */
-	gsize     n_hor;		/* number of profile values */
+	gsize     n_hor;	/* number of profile values */
+	gchar    *motd;		/* a message of the day */
+	gchar    *masterkey;	/* guess */
 };
 
 
@@ -43,6 +45,11 @@ void server_cfg_set_station_lon(double lon);
 gsize server_cfg_get_hor_limits(int **hor_az, int **hor_el);
 
 int server_cfg_load(void);
+
+gchar *server_cfg_get_motd(void);
+void server_cfg_set_motd(const gchar *motd);
+
+const gchar *server_cfg_get_masterkey(void);
 
 
 

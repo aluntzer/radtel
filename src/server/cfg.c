@@ -32,6 +32,8 @@ static void server_cfg_load_network(GKeyFile *kf, struct server_settings *s)
 
 
 	s->port = g_key_file_get_integer(kf, grp, "port", NULL);
+
+	s->masterkey = g_key_file_get_string(kf, grp, "masterkey", NULL);
 }
 
 
@@ -79,6 +81,17 @@ static void server_cfg_load_location(GKeyFile *kf, struct server_settings *s)
 	s->n_hor = len_az;
 }
 
+/**
+ * @brief load configuration keys in the message of the day group
+ */
+
+static void server_cfg_load_motd(GKeyFile *kf, struct server_settings *s)
+{
+	const char *grp = "MOTD";
+
+
+	s->motd = g_key_file_get_string(kf, grp, "motd", NULL);
+}
 
 
 /**
@@ -171,6 +184,42 @@ gsize server_cfg_get_hor_limits(gint32 **hor_az, gint32 **hor_el)
 
 
 /**
+ * @brief get the message of the day
+ *
+ * @returns a copy of the motd, cleanup using g_free()
+ *
+ */
+
+gchar *server_cfg_get_motd(void)
+{
+	return g_strdup(server_cfg->motd);
+}
+
+/**
+ * @brief update the message of the day at run time
+ *
+ * @note does not update the configuration file
+ */
+
+void server_cfg_set_motd(const gchar *motd)
+{
+	g_free(server_cfg->motd);
+
+	server_cfg->motd = g_strdup(motd);
+}
+
+
+/**
+ * @brief get the server masterkey
+ */
+
+const gchar *server_cfg_get_masterkey(void)
+{
+	return server_cfg->masterkey;
+}
+
+
+/**
  * @brief load the server configuration file from a given prefix
  *
  * @returns 0 on success, otherwise error
@@ -211,6 +260,7 @@ static int server_load_config_from_prefix(const gchar *prefix, GError **err)
 	server_cfg_load_network(kf, server_cfg);
 	server_cfg_load_backend(kf, server_cfg);
 	server_cfg_load_location(kf, server_cfg);
+	server_cfg_load_motd(kf, server_cfg);
 
 	g_key_file_free(kf);
 	g_free(cfg);

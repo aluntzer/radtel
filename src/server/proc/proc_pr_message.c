@@ -32,7 +32,7 @@ void proc_pr_message(struct packet *pkt, gpointer ref)
 	c = (struct message *) pkt->data;
 
 
-	if (strlen(c->message) != c->len)
+	if (strlen((gchar *) c->message) != c->len)
 		return;
 
 	net_server_broadcast_message((const gchar *) c->message, ref);

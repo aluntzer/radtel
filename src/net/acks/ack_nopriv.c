@@ -19,7 +19,7 @@
 #include <ack.h>
 
 
-void ack_nopriv(uint16_t trans_id, gpointer ref)
+struct packet *ack_nopriv_gen(uint16_t trans_id)
 {
 	gsize pkt_size;
 
@@ -38,8 +38,24 @@ void ack_nopriv(uint16_t trans_id, gpointer ref)
 
 	pkt_hdr_to_net_order(pkt);
 
+	return pkt;
+}
+
+
+/**
+ * @note this ack is always directed to a single client
+ */
+
+void ack_nopriv(uint16_t trans_id, gpointer ref)
+{
+	struct packet *pkt;
+
+
+	pkt = ack_nopriv_gen(trans_id);
+
+
 	g_debug("Signalling lack of priviledge");
-	net_send_single(ref, (void *) pkt, pkt_size);
+	net_send_single(ref, (void *) pkt, pkt_size_get(pkt));
 
 	/* clean up */
 	g_free(pkt);

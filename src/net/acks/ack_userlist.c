@@ -20,7 +20,8 @@
 #include <protocol.h>
 
 
-void ack_userlist(uint16_t trans_id, const uint8_t *userlist, uint16_t len)
+struct packet *ack_userlist_gen(uint16_t trans_id, const uint8_t *userlist,
+				uint16_t len)
 {
 	gsize pkt_size;
 	gsize data_size;
@@ -30,7 +31,7 @@ void ack_userlist(uint16_t trans_id, const uint8_t *userlist, uint16_t len)
 
 
 	if (len != strlen(userlist))
-	       	return;
+	       	return NULL;
 
 	/* all strings terminate with \0 char, we transport that as well! */
 	data_size = sizeof(struct userlist) + (len + 1) * sizeof(uint8_t);
@@ -52,9 +53,22 @@ void ack_userlist(uint16_t trans_id, const uint8_t *userlist, uint16_t len)
 
 	pkt_hdr_to_net_order(pkt);
 
+	return pkt;
+}
+
+
+void ack_userlist(uint16_t trans_id, const uint8_t *userlist, uint16_t len)
+{
+	struct packet *pkt;
+
+
+	pkt = ack_userlist_gen(trans_id, userlist, len);
+	if (!pkt)
+		return;
+
 	g_debug("Sending userlist: %s", userlist);
 
-	net_send((void *) pkt, pkt_size);
+	net_send((void *) pkt, pkt_size_get(pkt));
 
 	/* clean up */
 	g_free(pkt);

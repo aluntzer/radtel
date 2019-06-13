@@ -21,11 +21,7 @@
 
 
 
-/**
- * @brief acknowledge move-to-target status
- */
-
-void ack_status_move(uint16_t trans_id, struct status *c)
+struct packet *ack_status_move_gen(uint16_t trans_id, struct status *c)
 {
 	gsize pkt_size;
 
@@ -48,8 +44,24 @@ void ack_status_move(uint16_t trans_id, struct status *c)
 
 	pkt_hdr_to_net_order(pkt);
 
+
+	return pkt;
+}
+
+
+/**
+ * @brief acknowledge move-to-target status
+ */
+
+void ack_status_move(uint16_t trans_id, struct status *c)
+{
+	struct packet *pkt;
+
+
+	pkt = ack_status_move_gen(trans_id, c);
+
 	g_debug("Sending MOVE status");
-	net_send((void *) pkt, pkt_size);
+	net_send((void *) pkt, pkt_size_get(pkt));
 
 	/* clean up */
 	g_free(pkt);

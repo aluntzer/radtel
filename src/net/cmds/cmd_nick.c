@@ -20,7 +20,8 @@
 #include <protocol.h>
 
 
-void cmd_nick(uint16_t trans_id, const uint8_t *nick, uint16_t len)
+struct packet *cmd_nick_gen(uint16_t trans_id, const uint8_t *nick,
+			    uint16_t len)
 {
 	gsize pkt_size;
 	gsize data_size;
@@ -30,7 +31,7 @@ void cmd_nick(uint16_t trans_id, const uint8_t *nick, uint16_t len)
 
 
 	if (len != strlen(nick))
-	       	return;
+	       	return NULL;
 
 	/* all strings terminate with \0 char, we transport that as well! */
 	data_size = sizeof(struct nick) + (len + 1) * sizeof(uint8_t);
@@ -52,9 +53,22 @@ void cmd_nick(uint16_t trans_id, const uint8_t *nick, uint16_t len)
 
 	pkt_hdr_to_net_order(pkt);
 
+	return pkt;
+}
+
+
+void cmd_nick(uint16_t trans_id, const uint8_t *nick, uint16_t len)
+{
+	struct packet *pkt;
+
+
+	pkt = cmd_nick_gen(trans_id, nick, len);
+	if (!pkt)
+		return;
+
 	g_debug("Sending new nick: %s", nick);
 
-	net_send((void *) pkt, pkt_size);
+	net_send((void *) pkt, pkt_size_get(pkt));
 
 	/* clean up */
 	g_free(pkt);

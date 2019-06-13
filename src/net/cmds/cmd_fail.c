@@ -19,7 +19,7 @@
 #include <cmd.h>
 
 
-void cmd_fail(uint16_t trans_id)
+struct packet *cmd_fail_gen(uint16_t trans_id)
 {
 	gsize pkt_size;
 
@@ -38,8 +38,17 @@ void cmd_fail(uint16_t trans_id)
 
 	pkt_hdr_to_net_order(pkt);
 
+	return pkt;
+}
+
+
+void cmd_fail(uint16_t trans_id)
+{
+	struct packet *pkt;
+
+
 	g_debug("Signalling failed command");
-	net_send((void *) pkt, pkt_size);
+	net_send((void *) pkt, pkt_size_get(pkt));
 
 	/* clean up */
 	g_free(pkt);

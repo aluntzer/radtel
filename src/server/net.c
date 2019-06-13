@@ -38,13 +38,19 @@
 /* max allowed client */
 #define SERVER_CON_MAX 64
 
+/* privilege range */
+#define PRIV_DEFAULT	0
+#define PRIV_CONTROL	1
+#define PRIV_FULL	2
+
+
 
 /* client connection data */
 struct con_data {
 	GSocketConnection *con;
 	GInputStream *istream;
 	gsize nbytes;
-	gboolean priv;
+	gint priv;
 	gchar *nick;
 	gboolean new;
 	gboolean kick;
@@ -98,6 +104,78 @@ static gchar *net_get_host_string(GSocketConnection *con)
 
 
 /**
+ * @brief generate a chat message string
+ *
+ * @param msg the message
+ * @param c the connection (may be NULL)
+ *
+ * @returns an allocated buffer holding the string, clean using g_free()
+ *
+ * @note if c is NULL, it is assumed the server generated the message
+ */
+
+static gchar *net_server_msg_nick(const gchar *msg, struct con_data *c)
+{
+	gchar *buf;
+	gchar *nick;
+	gchar *col;
+
+
+	col  = "#FF0000";
+	nick = "A hollow voice says";
+
+	if (c) {
+		col  = "#7F9F7F";
+		nick = c->nick;
+	}
+
+	buf = g_strdup_printf("<tt><span foreground='%s'>"
+			      "%s:</span></tt> %s\n",
+			      col, nick, msg);
+
+
+	return buf;
+}
+
+static gboolean net_push_station_single(gpointer data)
+{
+	gchar *buf;
+
+	buf = g_strdup_printf("Your are connected to %s\n",
+			      server_cfg_get_station());
+
+	net_server_direct_message(buf, data);
+
+	g_free(buf);
+
+	return G_SOURCE_REMOVE;
+}
+
+
+static gboolean net_push_motd_single(gpointer data)
+{
+	gchar *buf;
+	gchar *motd;
+
+
+	motd = server_cfg_get_motd();
+	if (!motd)
+		goto exit;
+
+
+	buf = g_strdup_printf("The MOTD is: \n\n%s\n\n", motd);
+
+	net_server_direct_message(buf, data);
+
+	g_free(buf);
+	g_free(motd);
+
+exit:
+	return G_SOURCE_REMOVE;
+}
+
+
+/**
  * @brief distribute a list of users to all clients
  */
 
@@ -127,13 +205,21 @@ static gboolean net_push_userlist_cb(gpointer data)
 
 		tmp = msg;
 
-		if (c->priv)
+		g_message("%s priv is %d", c->nick, c->priv);
+		switch (c->priv) {
+		case PRIV_FULL:
 			buf = g_strdup_printf("<tt><span foreground='#FF0000'>"
 					      "%s</span></tt>\n", c->nick);
-		else
+			break;
+		case PRIV_CONTROL:
+			buf = g_strdup_printf("<tt><span foreground='#FFFF00'>"
+					      "%s</span></tt>\n", c->nick);
+			break;
+		default:
 			buf = g_strdup_printf("<tt><span foreground='#7F9F7F'>"
 					      "%s</span></tt>\n", c->nick);
-
+			break;
+		}
 		msg = g_strconcat(buf, tmp, NULL);
 
 		g_free(buf);
@@ -143,8 +229,8 @@ static gboolean net_push_userlist_cb(gpointer data)
 			c->new = FALSE;
 
 			msgs[msgcnt++] = g_strdup_printf("<tt><span foreground='#F1C40F'>"
-					"%s</span></tt> joined",
-					c->nick);
+							 "%s</span></tt> joined",
+							 c->nick);
 
 			g_print("%s joined\n", c->nick);
 
@@ -168,6 +254,7 @@ static gboolean net_push_userlist_cb(gpointer data)
 
 	return G_SOURCE_REMOVE;
 }
+
 
 
 /**
@@ -377,6 +464,10 @@ static gboolean net_send_internal(struct con_data *c, const char *pkt, gsize nby
 	if (c->kick)
 		return FALSE;
 
+	if (!G_IS_SOCKET_CONNECTION(c->con)) {
+		g_warning("%s:%d: supplied argument is not a socket connection",
+			  __func__, __LINE__);
+	}
 
 	if (g_thread_pool_get_num_threads(c->pool) >= SERVER_CON_POOL_SIZE) {
 
@@ -526,7 +617,7 @@ pending:
 
 	/* verify packet payload */
 	if (CRC16((guchar *) pkt->data, pkt->data_size) == pkt->data_crc16)  {
-		if (process_pkt(pkt, c->priv, c))
+		if (process_pkt(pkt, (gboolean) c->priv, c))
 			goto drop_pkt;
 
 		/* valid packets were free'd */
@@ -607,7 +698,7 @@ error:
 
 static void assign_default_priv(struct con_data *c)
 {
-	gboolean priv = FALSE;
+	gint priv = PRIV_DEFAULT;
 
 	GList *elem;
 
@@ -621,11 +712,11 @@ static void assign_default_priv(struct con_data *c)
 		item = (struct con_data *) elem->data;
 
 		if (item->priv)
-			priv = TRUE;
+			priv = PRIV_CONTROL;
 	}
 
-	if (!priv)
-		c->priv = TRUE;
+	if (priv == PRIV_DEFAULT)
+		c->priv = PRIV_CONTROL;
 
 	g_mutex_unlock(&listlock);
 }
@@ -717,11 +808,12 @@ static gboolean net_incoming(GSocketService    *service,
 	con_list = g_list_append(con_list, c);
 	g_mutex_unlock(&listlock);
 
-	/* push new username after 1 seconds, so they have time to configure
-	 * theirs
+	/* push usernames and messages after 1 seconds, so the incoming
+	 * connections have time to configure theirs
 	 */
 	g_timeout_add_seconds(1, net_push_userlist_cb, NULL);
-
+	g_timeout_add_seconds(1, net_push_station_single, c);
+	g_timeout_add_seconds(1, net_push_motd_single, c);
 
 	str = net_get_host_string(c->con);
 	g_message("Received connection from %s", str);
@@ -803,35 +895,64 @@ gint net_send(const char *pkt, gsize nbytes)
 	return ret;
 }
 
-
 /**
  * @brief assign control privilege level to connection
  */
 
-void net_server_reassign_control(gpointer ref)
+
+static void net_server_reassign_control_internal(gpointer ref, gint lvl)
 {
 	GList *elem;
 
 	struct con_data *c;
 	struct con_data *item;
 
+	struct con_data *p = NULL;
+
 	gchar *msg;
 	gchar *str;
+
 
 	c = (struct con_data *) ref;
 
 	g_mutex_lock(&listlock);
 	for (elem = con_list; elem; elem = elem->next) {
 		item = (struct con_data *) elem->data;
-		item->priv = FALSE;
+
+		if (item->priv <= lvl) {
+			item->priv = PRIV_DEFAULT;
+		} else {
+			p = item;
+			break;
+		}
 	}
 	g_mutex_unlock(&listlock);
 
-	c->priv = TRUE;
-
 	str = net_get_host_string(c->con);
-	msg = g_strdup_printf("Reassigned control to %s (connected from %s)",
-			      c->nick, str);
+
+	if (!p) {
+		c->priv = lvl;
+		msg = g_strdup_printf("Reassigned control to %s "
+				      "(connected from %s)",
+				      c->nick, str);
+	} else if (p == c) {
+		c->priv = lvl;
+		msg = g_strdup_printf("%s (connected from %s) changed their "
+				      "own privilege level",
+				      c->nick, str);
+	} else {
+		gchar *h;
+
+		h = net_get_host_string(c->con);
+
+		msg = g_strdup_printf("Failed to reassign control to %s "
+				      "(connected from %s), as "
+				      "%s (connected from %s) holds a higher "
+				      "level of privilege",
+				      c->nick, str, p->nick, h);
+		g_free(h);
+	}
+
 
 	net_server_broadcast_message(msg, NULL);
 	net_push_userlist_cb(NULL);
@@ -840,6 +961,35 @@ void net_server_reassign_control(gpointer ref)
 	g_free(str);
 }
 
+
+
+/**
+ * @brief escalate to maximum privilege level
+ */
+
+void net_server_iddqd(gpointer ref)
+{
+	net_server_reassign_control_internal(ref, PRIV_FULL);
+}
+
+
+/**
+ * @brief assign control privilege level to connection
+ */
+
+void net_server_reassign_control(gpointer ref)
+{
+	net_server_reassign_control_internal(ref, PRIV_CONTROL);
+}
+
+/**
+ * @brief drop to lowest priviledge on connection
+ */
+
+void net_server_drop_priv(gpointer ref)
+{
+	net_server_reassign_control_internal(ref, PRIV_DEFAULT);
+}
 
 /**
  * @brief set the nickname for a connection
@@ -856,15 +1006,21 @@ void net_server_set_nickname(const gchar *nick, gpointer ref)
 	c = (struct con_data *) ref;
 
 
+	if (!strlen(nick)) {
+		g_message("Rejected nickname of zero length");
+		return;
+	}
+
+
 	old = c->nick;
 
 	c->nick = g_strdup(nick);
 
 	if (!c->new) {
-		buf = g_strdup_printf("<tt><span foreground='#F1C40F'>%s</span></tt> "
-				      "is now known as "
-				      "<tt><span foreground='#F1C40F'>%s</span></tt> ",
-				      old, c->nick);
+		buf = g_strdup_printf("<tt><span foreground='#F1C40F'>%s</span>"
+				      "</tt> is now known as "
+				      "<tt><span foreground='#F1C40F'>%s</span>"
+				      "</tt> ", old, c->nick);
 
 		net_server_broadcast_message(buf, NULL);
 
@@ -877,6 +1033,7 @@ void net_server_set_nickname(const gchar *nick, gpointer ref)
 }
 
 
+
 /**
  * @brief broadcast a text message to all clients
  */
@@ -885,31 +1042,44 @@ void net_server_broadcast_message(const gchar *msg, gpointer ref)
 {
 	gchar *buf;
 
-
 	struct con_data *c;
 
 
 	c = (struct con_data *) ref;
 
-
-	if (!c) {
-		buf = g_strdup_printf("<tt><span foreground='#FF0000'>"
-				      "A hollow voice says:</span></tt> %s\n",
-				      msg);
-	} else {
-		buf = g_strdup_printf("<tt><span foreground='#7F9F7F'>"
-				      "%s:</span></tt> %s\n",
-				      c->nick, msg);
-
-		g_print("%s %s\n", c->nick, msg);
-	}
-
+	buf = net_server_msg_nick(msg, c);
 
 	cmd_message(PKT_TRANS_ID_UNDEF, (guchar *) buf, strlen(buf));
 
 	g_free(buf);
 }
 
+
+/**
+ * @brief send a text message to a client
+ *
+ */
+
+void net_server_direct_message(const gchar *msg, gpointer ref)
+{
+	gchar *buf;
+
+	struct con_data *c;
+	struct packet *pkt;
+
+
+	c = (struct con_data *) ref;
+
+	buf = net_server_msg_nick(msg, NULL);
+
+	pkt = cmd_message_gen(PKT_TRANS_ID_UNDEF, (uint8_t *) buf, strlen(buf));
+
+	net_send_single(c, (void *) pkt, pkt_size_get(pkt));
+
+	/* clean up */
+	g_free(pkt);
+	g_free(buf);
+}
 
 
 /**

@@ -20,14 +20,7 @@
 #include <net_common.h>
 
 
-
-/**
- * @brief acknowledge backend getpos_azel command
- *
- * @note the caller is responsible for freeing pos
- */
-
-void ack_getpos_azel(uint16_t trans_id, struct getpos *pos)
+struct packet *ack_getpos_azel_gen(uint16_t trans_id, struct getpos *pos)
 {
 	gsize pkt_size;
 
@@ -49,8 +42,25 @@ void ack_getpos_azel(uint16_t trans_id, struct getpos *pos)
 
 	pkt_hdr_to_net_order(pkt);
 
+	return pkt;
+}
+
+
+/**
+ * @brief acknowledge backend getpos_azel command
+ *
+ * @note the caller is responsible for freeing pos
+ */
+
+void ack_getpos_azel(uint16_t trans_id, struct getpos *pos)
+{
+	struct packet *pkt;
+
+
+	pkt = ack_getpos_azel_gen(trans_id, pos);
+
 	g_debug("Sending AZEL");
-	net_send((void *) pkt, pkt_size);
+	net_send((void *) pkt, pkt_size_get(pkt));
 
 	g_free(pkt);
 }

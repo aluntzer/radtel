@@ -21,6 +21,12 @@
 #include <net_common.h>
 
 
+struct packet *ack_moveto_azel_gen(uint16_t trans_id, double az, double el)
+{
+	return cmd_moveto_azel_gen(trans_id, az, el);
+}
+
+
 
 /**
  * @brief acknowledge moveto_azel command

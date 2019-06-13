@@ -32,7 +32,7 @@ void proc_pr_nick(struct packet *pkt, gpointer ref)
 	c = (struct nick *) pkt->data;
 
 
-	if (strlen(c->nick) != c->len)
+	if (strlen((gchar *) c->nick) != c->len)
 		return;
 
 	net_server_set_nickname((const gchar *) c->nick, ref);

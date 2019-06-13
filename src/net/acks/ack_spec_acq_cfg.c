@@ -20,7 +20,7 @@
 #include <ack.h>
 
 
-void ack_spec_acq_cfg(uint16_t trans_id, struct spec_acq_cfg *acq)
+struct packet *ack_spec_acq_cfg_gen(uint16_t trans_id, struct spec_acq_cfg *acq)
 {
 	gsize pkt_size;
 
@@ -43,6 +43,17 @@ void ack_spec_acq_cfg(uint16_t trans_id, struct spec_acq_cfg *acq)
 
 	pkt_hdr_to_net_order(pkt);
 
+	return pkt;
+}
+
+
+void ack_spec_acq_cfg(uint16_t trans_id, struct spec_acq_cfg *acq)
+{
+	struct packet *pkt;
+
+
+	pkt = ack_spec_acq_cfg_gen(trans_id, acq);
+
 	g_debug("Sending current spectrometer configuration "
 		  "FREQ range: %g - %g MHz, BW div: %d, BIN div %d,"
 		  "STACK: %d, ACQ %d",
@@ -54,8 +65,7 @@ void ack_spec_acq_cfg(uint16_t trans_id, struct spec_acq_cfg *acq)
 		  acq->acq_max);
 
 
-	net_send((void *) pkt, pkt_size);
+	net_send((void *) pkt, pkt_size_get(pkt));
 
 	g_free(pkt);
 }
-

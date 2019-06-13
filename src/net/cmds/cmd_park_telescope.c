@@ -19,7 +19,7 @@
 #include <cmd.h>
 
 
-void cmd_park_telescope(uint16_t trans_id)
+struct packet *cmd_park_telescope_gen(uint16_t trans_id)
 {
 	gsize pkt_size;
 
@@ -38,8 +38,19 @@ void cmd_park_telescope(uint16_t trans_id)
 
 	pkt_hdr_to_net_order(pkt);
 
+	return pkt;
+}
+
+
+void cmd_park_telescope(uint16_t trans_id)
+{
+	struct packet *pkt;
+
+
+	pkt = cmd_park_telescope_gen(trans_id);
+
 	g_debug("Requesting park_telescope");
-	net_send((void *) pkt, pkt_size);
+	net_send((void *) pkt, pkt_size_get(pkt));
 
 	/* clean up */
 	g_free(pkt);

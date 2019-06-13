@@ -223,6 +223,7 @@ static GtkWidget *chatlog_create_chat(ChatLog *p)
 	gtk_container_add(GTK_CONTAINER(w), textview);
 
 
+	gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(textview), GTK_WRAP_WORD);
 	b = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textview));
 	gtk_text_buffer_get_end_iter(b, &iter);
 	/* create right gravity mark on empty buffer, will always stay
@@ -310,6 +311,8 @@ static GtkWidget *chatlog_create_log(ChatLog *p)
 
 	textview = gtk_text_view_new();
 	gtk_text_view_set_left_margin(GTK_TEXT_VIEW(textview), 3);
+	gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(textview), GTK_WRAP_WORD);
+
 	gtk_container_add(GTK_CONTAINER(w), textview);
 
 	b = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textview));

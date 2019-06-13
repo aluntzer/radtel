@@ -31,9 +31,10 @@
  *
  */
 
-void cmd_spec_acq_cfg(uint16_t trans_id,
-		      uint64_t f0, uint64_t f1, uint32_t bw_div,
-		      uint32_t bin_div, uint32_t n_stack, uint32_t acq_max)
+struct packet *cmd_spec_acq_cfg_gen(uint16_t trans_id,
+				    uint64_t f0, uint64_t f1, uint32_t bw_div,
+				    uint32_t bin_div, uint32_t n_stack,
+				    uint32_t acq_max)
 {
 	gsize pkt_size;
 
@@ -66,6 +67,22 @@ void cmd_spec_acq_cfg(uint16_t trans_id,
 
 	pkt_hdr_to_net_order(pkt);
 
+	return pkt;
+}
+
+
+void cmd_spec_acq_cfg(uint16_t trans_id,
+		      uint64_t f0, uint64_t f1, uint32_t bw_div,
+		      uint32_t bin_div, uint32_t n_stack, uint32_t acq_max)
+{
+	struct packet *pkt;
+	struct spec_acq_cfg *acq;
+
+	pkt = cmd_spec_acq_cfg_gen(trans_id, f0, f1, bw_div,
+				   bin_div, n_stack, acq_max);
+
+	acq = (struct spec_acq_cfg *) pkt->data;
+
 	g_debug("Sending command acquire spectrum "
 		  "FREQ range: %g - %g MHz, BW div: %d, BIN div %d,"
 		  "STACK: %d, ACQ %d",
@@ -77,9 +94,8 @@ void cmd_spec_acq_cfg(uint16_t trans_id,
 		  acq->acq_max);
 
 
-	net_send((void *) pkt, pkt_size);
+	net_send((void *) pkt, pkt_size_get(pkt));
 
 	/* clean up */
 	g_free(pkt);
 }
-

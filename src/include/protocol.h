@@ -104,6 +104,8 @@ struct packet {
 #define MAX_PACKET_SIZE (sizeof(struct packet) + MAX_PAYLOAD_SIZE)
 
 
+size_t pkt_size_get(struct packet *pkt);
+
 void pkt_hdr_to_net_order(struct packet *pkt);
 void pkt_hdr_to_host_order(struct packet *pkt);
 

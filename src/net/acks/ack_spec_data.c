@@ -20,13 +20,8 @@
 #include <ack.h>
 
 
-/**
- * @brief send spectral data
- *
- * @note the caller must take care to clean the spectral data supplied
- */
 
-void ack_spec_data(uint16_t trans_id, struct spec_data *s)
+struct packet *ack_spec_data_gen(uint16_t trans_id, struct spec_data *s)
 {
 	gsize pkt_size;
 	gsize data_size;
@@ -51,9 +46,27 @@ void ack_spec_data(uint16_t trans_id, struct spec_data *s)
 
 	pkt_hdr_to_net_order(pkt);
 
-	g_debug("Transmitting spectral data");
 
-	net_send((void *) pkt, pkt_size);
+	return pkt;
+}
+
+
+/**
+ * @brief send spectral data
+ *
+ * @note the caller must take care to clean the spectral data supplied
+ */
+
+void ack_spec_data(uint16_t trans_id, struct spec_data *s)
+{
+	struct packet *pkt;
+
+
+	pkt = ack_spec_data_gen(trans_id, s);
+
+
+	g_debug("Transmitting spectral data");
+	net_send((void *) pkt, pkt_size_get(pkt));
 
 	/* clean up packet */
 	g_free(pkt);

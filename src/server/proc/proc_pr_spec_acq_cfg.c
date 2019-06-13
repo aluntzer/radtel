@@ -21,8 +21,6 @@
 
 void proc_pr_spec_acq_cfg(struct packet *pkt, gpointer ref)
 {
-	gsize pkt_size;
-
 	struct spec_acq_cfg *acq;
 
 

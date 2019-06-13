@@ -22,6 +22,34 @@
 #include <protocol.h>
 #include <net_common.h>
 
+
+/* command packet generation functions */
+
+struct packet *cmd_invalid_pkt_gen(uint16_t trans_id);
+struct packet *cmd_capabilities_gen(uint16_t trans_id);
+struct packet *cmd_success_gen(uint16_t trans_id);
+struct packet *cmd_fail_gen(uint16_t trans_id);
+struct packet *cmd_moveto_azel_gen(uint16_t trans_id, double az, double el);
+struct packet *cmd_recalibrate_pointing_gen(uint16_t trans_id);
+struct packet *cmd_park_telescope_gen(uint16_t trans_id);
+struct packet *cmd_spec_acq_cfg_gen(uint16_t trans_id,
+				    uint64_t f0, uint64_t f1, uint32_t bw_div,
+				    uint32_t bin_div, uint32_t n_stack,
+				    uint32_t acq_max);
+struct packet *cmd_getpos_azel_gen(uint16_t trans_id);
+struct packet *cmd_spec_acq_enable_gen(uint16_t trans_id);
+struct packet *cmd_spec_acq_disable_gen(uint16_t trans_id);
+struct packet *cmd_spec_acq_cfg_get_gen(uint16_t trans_id);
+struct packet *cmd_control_gen(uint16_t trans_id, const uint8_t *digest,
+			       uint16_t len);
+struct packet *cmd_message_gen(uint16_t trans_id, const uint8_t *message,
+			       uint16_t len);
+struct packet *cmd_nick_gen(uint16_t trans_id, const uint8_t *nick,
+			    uint16_t len);
+
+
+/* command generation and sending functions */
+
 void cmd_invalid_pkt(uint16_t trans_id);
 void cmd_capabilities(uint16_t trans_id);
 void cmd_success(uint16_t trans_id);

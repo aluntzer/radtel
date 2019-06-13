@@ -19,7 +19,7 @@
 #include <ack.h>
 
 
-void ack_invalid_pkt(uint16_t trans_id)
+struct packet *ack_invalid_pkt_gen(uint16_t trans_id)
 {
 	gsize pkt_size;
 
@@ -38,8 +38,20 @@ void ack_invalid_pkt(uint16_t trans_id)
 
 	pkt_hdr_to_net_order(pkt);
 
+
+	return pkt;
+}
+
+
+void ack_invalid_pkt(uint16_t trans_id)
+{
+	struct packet *pkt;
+
+
+	pkt = ack_invalid_pkt_gen(trans_id);
+
 	g_debug("Signalling invalid packet");
-	net_send((void *) pkt, pkt_size);
+	net_send((void *) pkt, pkt_size_get(pkt));
 
 	/* clean up */
 	g_free(pkt);

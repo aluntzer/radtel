@@ -19,7 +19,8 @@
 #include <cmd.h>
 
 
-void cmd_control(uint16_t trans_id, const uint8_t *digest, uint16_t len)
+struct packet *cmd_control_gen(uint16_t trans_id, const uint8_t *digest,
+			       uint16_t len)
 {
 	gsize pkt_size;
 	gsize data_size;
@@ -29,7 +30,7 @@ void cmd_control(uint16_t trans_id, const uint8_t *digest, uint16_t len)
 
 
 	if (len != strlen(digest))
-	       	return;
+	       	return NULL;
 
 	/* all strings terminate with \0 char, we transport that as well! */
 	data_size = sizeof(struct control) + (len + 1) * sizeof(uint8_t);
@@ -51,9 +52,23 @@ void cmd_control(uint16_t trans_id, const uint8_t *digest, uint16_t len)
 
 	pkt_hdr_to_net_order(pkt);
 
+
+	return pkt;
+}
+
+
+void cmd_control(uint16_t trans_id, const uint8_t *digest, uint16_t len)
+{
+	struct packet *pkt;
+
+
+	pkt = cmd_control_gen(trans_id, digest, len);
+	if (!pkt)
+		return;
+
 	g_debug("Requesting telescope control");
 
-	net_send((void *) pkt, pkt_size);
+	net_send((void *) pkt, pkt_size_get(pkt));
 
 	/* clean up */
 	g_free(pkt);

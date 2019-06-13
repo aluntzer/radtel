@@ -19,7 +19,7 @@
 #include <cmd.h>
 
 
-void cmd_spec_acq_cfg_get(uint16_t trans_id)
+struct packet *cmd_spec_acq_cfg_get_gen(uint16_t trans_id)
 {
 	gsize pkt_size;
 
@@ -38,8 +38,19 @@ void cmd_spec_acq_cfg_get(uint16_t trans_id)
 
 	pkt_hdr_to_net_order(pkt);
 
+	return pkt;
+}
+
+
+void cmd_spec_acq_cfg_get(uint16_t trans_id)
+{
+	struct packet *pkt;
+
+
+	pkt = cmd_spec_acq_cfg_get_gen(trans_id);
+
 	g_debug("Requesting spectral acquisition configuration");
-	net_send((void *) pkt, pkt_size);
+	net_send((void *) pkt, pkt_size_get(pkt));
 
 	/* clean up */
 	g_free(pkt);

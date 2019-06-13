@@ -20,7 +20,8 @@
 #include <protocol.h>
 
 
-void cmd_message(uint16_t trans_id, const uint8_t *message, uint16_t len)
+struct packet *cmd_message_gen(uint16_t trans_id, const uint8_t *message,
+			       uint16_t len)
 {
 	gsize pkt_size;
 	gsize data_size;
@@ -30,7 +31,7 @@ void cmd_message(uint16_t trans_id, const uint8_t *message, uint16_t len)
 
 
 	if (len != strlen(message))
-	       	return;
+	       	return NULL;
 
 	/* all strings terminate with \0 char, we transport that as well! */
 	data_size = sizeof(struct message) + (len + 1) * sizeof(uint8_t);
@@ -52,9 +53,23 @@ void cmd_message(uint16_t trans_id, const uint8_t *message, uint16_t len)
 
 	pkt_hdr_to_net_order(pkt);
 
+
+	return pkt;
+}
+
+
+void cmd_message(uint16_t trans_id, const uint8_t *message, uint16_t len)
+{
+	struct packet *pkt;
+
+
+	pkt = cmd_message_gen(trans_id, message, len);
+	if (!pkt)
+		return;
+
 	g_debug("Sending text message: %s", message);
 
-	net_send((void *) pkt, pkt_size);
+	net_send((void *) pkt, pkt_size_get(pkt));
 
 	/* clean up */
 	g_free(pkt);

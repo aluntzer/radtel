@@ -20,12 +20,7 @@
 #include <net_common.h>
 
 
-
-/**
- * @brief acknowledge backend spec_acq_enable command
- */
-
-void ack_spec_acq_enable(uint16_t trans_id)
+struct packet *ack_spec_acq_enable_gen(uint16_t trans_id)
 {
 	gsize pkt_size;
 
@@ -45,8 +40,23 @@ void ack_spec_acq_enable(uint16_t trans_id)
 
 	pkt_hdr_to_net_order(pkt);
 
+	return pkt;
+}
+
+
+/**
+ * @brief acknowledge backend spec_acq_enable command
+ */
+
+void ack_spec_acq_enable(uint16_t trans_id)
+{
+	struct packet *pkt;
+
+
+	pkt = ack_spec_acq_enable_gen(trans_id);
+
 	g_debug("Sending SPEC ACQ ENABLE");
-	net_send((void *) pkt, pkt_size);
+	net_send((void *) pkt, pkt_size_get(pkt));
 
 	g_free(pkt);
 }

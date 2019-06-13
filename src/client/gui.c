@@ -197,11 +197,13 @@ static void gui_update_nick(GtkEditable *ed, ChatLog *p)
 
 static void gui_request_control(GtkWidget *w, gpointer data)
 {
-
+	const gchar *pwd;
 	gchar *digest;
 
+	pwd = gtk_entry_get_text(GTK_ENTRY(data));
+
 	digest = g_compute_hmac_for_string(G_CHECKSUM_SHA256,
-					   (guint8*)"radtel", 6,
+					   (guint8*) pwd, 6,
 					   "thisishardcoed", 13);
 
 
@@ -223,6 +225,7 @@ static GtkWidget *gui_create_popover_menu(GtkWidget *widget)
 
 	GtkWidget *w;
 	GtkWidget *pop;
+	GtkWidget *pwd;
 
 	GSettings *s;
 
@@ -321,12 +324,34 @@ static GtkWidget *gui_create_popover_menu(GtkWidget *widget)
 	gtk_grid_attach(GTK_GRID(grid), w, 1, 3, 1, 1);
 
 
-	w = gtk_label_new("Request Control");
+
+	w = gtk_label_new("Control Password");
 	gtk_widget_set_halign(w, GTK_ALIGN_END);
 	gtk_widget_set_valign(w, GTK_ALIGN_BASELINE);
 	gtk_style_context_add_class(gtk_widget_get_style_context(w),
 				    "dim-label");
 	gtk_grid_attach(GTK_GRID(grid), w, 0, 4, 1, 1);
+
+
+
+	pwd = gtk_entry_new();
+	gtk_entry_set_text(GTK_ENTRY(pwd), "radtel");
+
+	gtk_entry_set_alignment(GTK_ENTRY(pwd), 1.0);
+
+	gtk_widget_set_tooltip_text(pwd, "Control Password");
+	gtk_entry_set_visibility(GTK_ENTRY(pwd), FALSE);
+
+	gtk_grid_attach(GTK_GRID(grid), pwd, 1, 4, 1, 1);
+
+
+
+	w = gtk_label_new("Request Control");
+	gtk_widget_set_halign(w, GTK_ALIGN_END);
+	gtk_widget_set_valign(w, GTK_ALIGN_BASELINE);
+	gtk_style_context_add_class(gtk_widget_get_style_context(w),
+				    "dim-label");
+	gtk_grid_attach(GTK_GRID(grid), w, 0, 5, 1, 1);
 
 
 
@@ -338,9 +363,9 @@ static GtkWidget *gui_create_popover_menu(GtkWidget *widget)
 	gtk_widget_set_tooltip_text(w, "Request Control");
 
 	g_signal_connect(G_OBJECT(w), "clicked",
-			 G_CALLBACK(gui_request_control), NULL);
+			 G_CALLBACK(gui_request_control), pwd);
 
-	gtk_grid_attach(GTK_GRID(grid), w, 1, 4, 1, 1);
+	gtk_grid_attach(GTK_GRID(grid), w, 1, 5, 1, 1);
 
 
 
@@ -349,7 +374,7 @@ static GtkWidget *gui_create_popover_menu(GtkWidget *widget)
 	gtk_widget_set_valign(w, GTK_ALIGN_BASELINE);
 	gtk_style_context_add_class(gtk_widget_get_style_context(w),
 				    "dim-label");
-	gtk_grid_attach(GTK_GRID(grid), w, 0, 5, 1, 1);
+	gtk_grid_attach(GTK_GRID(grid), w, 0, 6, 1, 1);
 
 	w = gtk_button_new();
 	gtk_button_set_always_show_image(GTK_BUTTON(w), TRUE);
@@ -361,9 +386,7 @@ static GtkWidget *gui_create_popover_menu(GtkWidget *widget)
 	g_signal_connect(G_OBJECT(w), "clicked",
 			 G_CALLBACK(gui_reconnect_net), NULL);
 
-	gtk_grid_attach(GTK_GRID(grid), w, 1, 5, 1, 1);
-
-
+	gtk_grid_attach(GTK_GRID(grid), w, 1, 6, 1, 1);
 
 
 
