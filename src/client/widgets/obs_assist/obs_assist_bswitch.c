@@ -653,6 +653,8 @@ static void on_assistant_apply(GtkWidget *as, ObsAssist *p)
 
 	w = xyplot_new();
 	xyplot_set_xlabel(w, "Frequency [MHz]");
+	xyplot_set_ylabel(w, "Temperature [K]");
+	xyplot_set_title(w, "Offset 1 Spectrum");
 	xyplot_set_title(w, "Target Spectrum");
 
 
@@ -665,6 +667,7 @@ static void on_assistant_apply(GtkWidget *as, ObsAssist *p)
 
 	w = xyplot_new();
 	xyplot_set_xlabel(w, "Frequency [MHz]");
+	xyplot_set_ylabel(w, "Temperature [K]");
 	xyplot_set_title(w, "Offset 2 Spectrum");
 
 	gtk_widget_set_hexpand(w, TRUE);
