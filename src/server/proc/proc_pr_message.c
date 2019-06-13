@@ -35,5 +35,9 @@ void proc_pr_message(struct packet *pkt, gpointer ref)
 	if (strlen((gchar *) c->message) != c->len)
 		return;
 
+	/* see if it is an interpretable command */
+	if (!net_server_parse_msg((const gchar *) c->message, ref))
+		return;
+
 	net_server_broadcast_message((const gchar *) c->message, ref);
 }

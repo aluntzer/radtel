@@ -174,6 +174,25 @@ exit:
 	return G_SOURCE_REMOVE;
 }
 
+static void net_push_motd_update(void)
+{
+	gchar *buf;
+	gchar *motd;
+
+
+	motd = server_cfg_get_motd();
+	if (!motd)
+		return;
+
+	buf = g_strdup_printf("The MOTD has been updated and now reads: "
+			      "\n\n%s\n\n", motd);
+
+	net_server_broadcast_message(buf, NULL);
+
+	g_free(buf);
+	g_free(motd);
+}
+
 
 /**
  * @brief distribute a list of users to all clients
@@ -205,7 +224,6 @@ static gboolean net_push_userlist_cb(gpointer data)
 
 		tmp = msg;
 
-		g_message("%s priv is %d", c->nick, c->priv);
 		switch (c->priv) {
 		case PRIV_FULL:
 			buf = g_strdup_printf("<tt><span foreground='#FF0000'>"
@@ -1032,6 +1050,33 @@ void net_server_set_nickname(const gchar *nick, gpointer ref)
 	g_free(old);
 }
 
+
+
+int net_server_parse_msg(const gchar *msg, gpointer ref)
+{
+	struct con_data *c;
+
+
+	c = (struct con_data *) ref;
+
+	/* ignore if not fully priviledged */
+	if (c->priv < PRIV_FULL)
+		return -1;
+
+	/* shorter than our only supported command word */
+	if (strlen(msg) < 5)
+	       return -1;
+
+	if (strncmp(msg, "!motd", 5))
+		return -1;
+
+	/* stupidly set the motd */
+	server_cfg_set_motd(&msg[5]);
+
+	net_push_motd_update();
+
+	return 0;
+}
 
 
 /**

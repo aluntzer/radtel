@@ -28,6 +28,7 @@ void net_server_iddqd(gpointer ref);
 void net_server_broadcast_message(const gchar *msg, gpointer ref);
 void net_server_direct_message(const gchar *msg, gpointer ref);
 void net_server_set_nickname(const gchar *nick, gpointer ref);
+int  net_server_parse_msg(const gchar *msg, gpointer ref);
 
 
 #endif /* _SERVER_INCLUDE_NET_H_ */
