@@ -253,13 +253,11 @@ static void drop_con_finalize(struct con_data *c)
 
 
 	g_mutex_lock(&finalize);
-	g_message("enter %s\n", __func__);
 
 	if (!c) {
 		g_warning("c is NULL");
 		goto unlock;
 	}
-
 	if (c->con) {
 		if (G_IS_OBJECT(c->con)) {
 			g_warning("c->con still holds references");
@@ -269,6 +267,7 @@ static void drop_con_finalize(struct con_data *c)
 
 	if (!c->nick) {
 		g_warning("double-free attempt");
+		goto unlock;
 	}
 
 	if (c->kick) {
@@ -289,19 +288,20 @@ static void drop_con_finalize(struct con_data *c)
 	net_push_userlist_cb(NULL);
 
 	if (G_IS_OBJECT(c->istream))
-		g_object_unref(c->istream);
+		g_clear_object(&c->istream);
 
 	if (G_IS_OBJECT(c->ca))
-		g_object_unref(c->ca);
+		g_clear_object(&c->ca);
 
-	g_free(c->nick);
-	c->nick = NULL;
+	if (c->nick) {
+		g_free(c->nick);
+		c->nick = NULL;
+	}
 
 	g_free(buf);
 	g_free(c);
 
 unlock:
-	g_message("leave %s\n", __func__);
 
 	g_mutex_unlock(&finalize);
 }
