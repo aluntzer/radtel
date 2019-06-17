@@ -689,8 +689,6 @@ exit:
 
 
 error:
-	/* drop  ref from begin_reception() */
-	g_object_unref(c->con);
 	g_message("Error occured in %s, initiating connection drop", __func__);
 
 	if (error) {
