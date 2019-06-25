@@ -96,6 +96,13 @@ static gchar *net_get_host_string(GSocketConnection *con)
 	GInetAddress   *iaddr;
 
 
+	if (!G_IS_SOCKET_CONNECTION(con))
+		return NULL;
+
+	if (!g_socket_connection_is_connected(con))
+		return NULL;
+
+
 	addr = g_socket_connection_get_remote_address(con, NULL);
 	iaddr = g_inet_socket_address_get_address(G_INET_SOCKET_ADDRESS(addr));
 
@@ -485,6 +492,7 @@ static gboolean net_send_internal(struct con_data *c, const char *pkt, gsize nby
 	if (!G_IS_SOCKET_CONNECTION(c->con)) {
 		g_warning("%s:%d: supplied argument is not a socket connection",
 			  __func__, __LINE__);
+		return FALSE;
 	}
 
 	if (g_thread_pool_get_num_threads(c->pool) >= SERVER_CON_POOL_SIZE) {
