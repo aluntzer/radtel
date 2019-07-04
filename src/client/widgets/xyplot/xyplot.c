@@ -272,10 +272,12 @@ static void xyplot_export_pdf(GtkWidget *w, XYPlot *p)
 
 	chooser = GTK_FILE_CHOOSER(dia);
 
+
 	gtk_file_chooser_set_do_overwrite_confirmation(chooser, TRUE);
 
 	gtk_file_chooser_set_current_name(chooser, "plot.pdf");
 
+	gtk_file_chooser_set_current_folder(chooser,g_get_user_special_dir(G_USER_DIRECTORY_DOCUMENTS));
 
 	res = gtk_dialog_run(GTK_DIALOG(dia));
 
@@ -285,6 +287,24 @@ static void xyplot_export_pdf(GtkWidget *w, XYPlot *p)
 
 		fname = gtk_file_chooser_get_filename(chooser);
 		cs = cairo_pdf_surface_create(fname, 1280, 720);
+
+
+		if (cairo_surface_status(cs) != CAIRO_STATUS_SUCCESS) {
+			GtkWidget *d;
+
+			d = gtk_message_dialog_new(GTK_WINDOW(win),
+						   GTK_DIALOG_MODAL,
+						   GTK_MESSAGE_ERROR,
+						   GTK_BUTTONS_CLOSE,
+						   "Could not open file %s",
+						   fname);
+
+			gtk_dialog_run(GTK_DIALOG(d));
+			gtk_widget_destroy(d);
+		}
+
+
+
 		cr = cairo_create(cs);
 
 		xyplot_plot_render(p, cr, 1280, 720);
@@ -323,7 +343,21 @@ static void xyplot_import_graph_xy_asc(const gchar *fname, XYPlot *p)
 	f = g_fopen(fname, "r");
 
 	if (!f) {
-		g_warning("%s: error opening file %s", __func__, fname);
+
+		GtkWidget *dia;
+		GtkWindow * win;
+
+		win = GTK_WINDOW(gtk_widget_get_toplevel(GTK_WIDGET(p)));
+		dia = gtk_message_dialog_new(win,
+					     GTK_DIALOG_MODAL,
+					     GTK_MESSAGE_ERROR,
+					     GTK_BUTTONS_CLOSE,
+					     "Could not open file %s",
+					     fname);
+
+		gtk_dialog_run(GTK_DIALOG(dia));
+		gtk_widget_destroy(dia);
+
 		return;
 	}
 
@@ -419,8 +453,8 @@ static void xyplot_import_graph_xy_asc(const gchar *fname, XYPlot *p)
 	g_array_free(gc, FALSE);
 }
 
-static void xyplot_export_graph_xy_asc(const gchar *fname, struct graph *g,
-				       const gchar *mode)
+static gboolean xyplot_export_graph_xy_asc(const gchar *fname, struct graph *g,
+					   const gchar *mode)
 {
 	FILE *f;
 
@@ -429,10 +463,9 @@ static void xyplot_export_graph_xy_asc(const gchar *fname, struct graph *g,
 
 	f = g_fopen(fname, mode);
 
-	if (!f) {
-		g_message("%s: error opening file %s", __func__, fname);
-		return;
-	}
+	if (!f)
+		return FALSE;
+
 
 	setlocale(LC_ALL, "C");
 
@@ -463,6 +496,8 @@ static void xyplot_export_graph_xy_asc(const gchar *fname, struct graph *g,
 	setlocale(LC_ALL, "");
 
 	fclose(f);
+
+	return TRUE;
 }
 
 
@@ -506,6 +541,7 @@ static void xyplot_export_xy_graph_cb(GtkWidget *w, struct graph *g)
 
 	gtk_file_chooser_set_current_name(chooser, fname);
 
+	gtk_file_chooser_set_current_folder(chooser,g_get_user_special_dir(G_USER_DIRECTORY_DOCUMENTS));
 
 	res = gtk_dialog_run(GTK_DIALOG(dia));
 
@@ -516,7 +552,20 @@ static void xyplot_export_xy_graph_cb(GtkWidget *w, struct graph *g)
 		fname = gtk_file_chooser_get_filename(chooser);
 
 
-		xyplot_export_graph_xy_asc(fname, g, "w");
+		if (!xyplot_export_graph_xy_asc(fname, g, "w")) {
+
+			GtkWidget *d;
+
+			d = gtk_message_dialog_new(GTK_WINDOW(win),
+						   GTK_DIALOG_MODAL,
+						   GTK_MESSAGE_ERROR,
+						   GTK_BUTTONS_CLOSE,
+						   "Could not open file %s",
+						   fname);
+
+			gtk_dialog_run(GTK_DIALOG(d));
+			gtk_widget_destroy(d);
+		}
 
 		g_free(fname);
 	}
@@ -534,6 +583,8 @@ static void xyplot_export_xy_plot_cb(GtkWidget *w, XYPlot *p)
 	gint res;
 
 	GtkWidget *win;
+
+	FILE *f;
 
 	gchar *fname;
 
@@ -567,6 +618,7 @@ static void xyplot_export_xy_plot_cb(GtkWidget *w, XYPlot *p)
 
 	gtk_file_chooser_set_current_name(chooser, fname);
 
+	gtk_file_chooser_set_current_folder(chooser,g_get_user_special_dir(G_USER_DIRECTORY_DOCUMENTS));
 
 	res = gtk_dialog_run(GTK_DIALOG(dia));
 
@@ -577,11 +629,30 @@ static void xyplot_export_xy_plot_cb(GtkWidget *w, XYPlot *p)
 		fname = gtk_file_chooser_get_filename(chooser);
 
 		/* clear file */
-		fclose(g_fopen(fname, "w"));
+		f = g_fopen(fname, "w");
+
+		if (!f) {
+			GtkWidget *d;
+
+			d = gtk_message_dialog_new(GTK_WINDOW(win),
+						   GTK_DIALOG_MODAL,
+						   GTK_MESSAGE_ERROR,
+						   GTK_BUTTONS_CLOSE,
+						   "Could not open file %s",
+						   fname);
+
+			gtk_dialog_run(GTK_DIALOG(d));
+			gtk_widget_destroy(d);
+		} else {
+			fclose(f);
+		}
 
 		for (elem = p->graphs; elem; elem = elem->next) {
 			g = (struct graph *) elem->data;
-			xyplot_export_graph_xy_asc(fname, g, "a");
+
+
+			if (!xyplot_export_graph_xy_asc(fname, g, "a"))
+				break;
 		}
 
 		g_free(fname);
@@ -620,6 +691,8 @@ static void xyplot_import_xy_graph_cb(GtkWidget *w, XYPlot *p)
 					  NULL);
 
 	chooser = GTK_FILE_CHOOSER(dia);
+
+	gtk_file_chooser_set_current_folder(chooser,g_get_user_special_dir(G_USER_DIRECTORY_DOCUMENTS));
 
 	res = gtk_dialog_run(GTK_DIALOG(dia));
 
