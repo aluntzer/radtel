@@ -30,6 +30,9 @@
 #include <fitfunc.h>
 #include <math.h>
 
+#include <glib/gstdio.h>
+#include <locale.h>
+
 G_DEFINE_TYPE_WITH_PRIVATE(Spectrum, spectrum, GTK_TYPE_BOX)
 
 #define SPECTRUM_DEFAULT_AVG_LEN 10
@@ -282,15 +285,170 @@ static gboolean spectrum_handle_getpos_azel_cb(gpointer instance,
 	hor.el = (double) pos->el_arcsec / 3600.0;
 
 
+	p->cfg->pos_hor = hor;
 	p->cfg->pos_equ = horizontal_to_equatorial(hor,
 						   p->cfg->lat, p->cfg->lon,
 						   0.0);
+	p->cfg->pos_gal = horizontal_to_galactic(hor, p->cfg->lat, p->cfg->lon);
+
 
 	return TRUE;
 }
 
 
+static void spectrum_record_add(Spectrum *p, struct spectrum *sp)
+{
+	size_t i;
 
+	time_t now;
+	struct tm *t;
+
+
+	if (!p->cfg->rec)
+		return;
+
+	if (!sp)
+		return;
+
+
+	setlocale(LC_ALL, "C");
+
+
+	time(&now);
+	t = localtime(&now);
+
+	fprintf(p->cfg->rec, "%.4f %.4f %d %d %d %.4f %.4f %.4f %.4f "
+			     "%.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %d ",
+			     p->cfg->lat, p->cfg->lon,
+			     t->tm_year + 1900, t->tm_mon  + 1,
+			     t->tm_mday, local_sidereal_time(p->cfg->lon),
+			     p->cfg->pos_hor.az, p->cfg->pos_hor.el,
+			     p->cfg->pos_equ.ra, p->cfg->pos_equ.dec,
+			     p->cfg->pos_gal.lat, p->cfg->pos_gal.lon,
+			     sp->x[0], sp->x[sp->n - 1],
+			     spectrum_convert_x2(sp->x[0], p),
+			     spectrum_convert_x2(sp->x[sp->n - 1], p),
+			     p->cfg->freq_ref_mhz, sp->n);
+
+
+	for (i = 0; i <  sp->n; i++)
+		fprintf(p->cfg->rec, "%.4f ", sp->y[i]);
+
+	fprintf(p->cfg->rec, "\n");
+
+	setlocale(LC_ALL, "");
+}
+
+
+static void spectrum_record_start(Spectrum *p)
+{
+	GtkWidget *dia;
+	GtkFileChooser *chooser;
+	gint res;
+
+	GtkWidget *win;
+
+	gchar *fname;
+
+
+	win = gtk_widget_get_toplevel(GTK_WIDGET(p));
+
+	if (!GTK_IS_WINDOW(win)) {
+		g_warning("%s: toplevel widget is not a window", __func__);
+		return;
+	}
+
+	fname = g_strdup_printf("record.dat");
+
+	dia = gtk_file_chooser_dialog_new("Select Record File",
+					  GTK_WINDOW(win),
+					  GTK_FILE_CHOOSER_ACTION_SAVE,
+					  "_Cancel",
+					  GTK_RESPONSE_CANCEL,
+					  "_Save",
+					  GTK_RESPONSE_ACCEPT,
+					  NULL);
+
+	chooser = GTK_FILE_CHOOSER(dia);
+
+	gtk_file_chooser_set_do_overwrite_confirmation(chooser, TRUE);
+
+	gtk_file_chooser_set_current_name(chooser, fname);
+
+	gtk_file_chooser_set_current_folder(chooser,g_get_user_special_dir(G_USER_DIRECTORY_DOCUMENTS));
+
+	res = gtk_dialog_run(GTK_DIALOG(dia));
+
+	g_free(fname);
+
+	if (res == GTK_RESPONSE_ACCEPT) {
+
+		fname = gtk_file_chooser_get_filename(chooser);
+
+
+		p->cfg->rec = g_fopen(fname, "w");
+
+		if (!p->cfg->rec) {
+			GtkWidget *dia;
+			GtkWindow * win;
+
+			win = GTK_WINDOW(gtk_widget_get_toplevel(GTK_WIDGET(p)));
+			dia = gtk_message_dialog_new(win,
+						     GTK_DIALOG_MODAL,
+						     GTK_MESSAGE_ERROR,
+						     GTK_BUTTONS_CLOSE,
+						     "Could not open file %s",
+						     fname);
+
+			gtk_dialog_run(GTK_DIALOG(dia));
+			gtk_widget_destroy(dia);
+		}
+
+		fprintf(p->cfg->rec,
+			"# Format: LAT LON YEAR MONTH DAY LST AZ EL RA DE "
+			"GLAT GLON FIRST_FREQ[MHz] LAST_FREQ[MHz] REF_FREQ[MHz]"
+			"VRAD0[km/s] VRAD1[km/s] BINS "
+			"Amplitude[K](1...N)\n");
+
+
+
+		g_free(fname);
+	}
+
+	gtk_widget_destroy(dia);
+}
+
+
+static void spectrum_rec_button_toggle(GtkToggleButton *btn,
+				       gpointer         data)
+{
+	Spectrum *p;
+
+	GtkStyleContext *ctx;
+
+
+	p = SPECTRUM(data);
+
+	ctx = gtk_widget_get_style_context(GTK_WIDGET (btn));
+
+	if (gtk_toggle_button_get_active(btn)) {
+		spectrum_record_start(p);
+		gtk_style_context_add_class(ctx, "destructive-action");
+	} else {
+		if (p->cfg->rec) {
+			fclose(p->cfg->rec);
+			p->cfg->rec = NULL;
+		}
+	}
+
+	/* if failed or disabled, set inactive */
+	if (!p->cfg->rec) {
+		gtk_style_context_remove_class(ctx, "destructive-action");
+		gtk_toggle_button_set_active(btn, FALSE);
+	}
+
+
+}
 
 
 /**
@@ -806,7 +964,7 @@ static void spectrum_handle_pr_spec_data(gpointer instance,
 	gdouble *frq;
 	gdouble *amp;
 
-	struct spectrum *sp;
+	struct spectrum *sp = NULL;
 
 	Spectrum *p;
 
@@ -815,6 +973,16 @@ static void spectrum_handle_pr_spec_data(gpointer instance,
 
 	if (!s->n)
 		return;
+
+
+
+	/* update positions */
+	p->cfg->pos_equ = horizontal_to_equatorial(p->cfg->pos_hor,
+						   p->cfg->lat, p->cfg->lon,
+						   0.0);
+	p->cfg->pos_gal = horizontal_to_galactic(p->cfg->pos_hor,
+						 p->cfg->lat, p->cfg->lon);
+
 
 	frq = g_malloc(s->n * sizeof(gdouble));
 	amp = g_malloc(s->n * sizeof(gdouble));
@@ -837,6 +1005,11 @@ static void spectrum_handle_pr_spec_data(gpointer instance,
 	sp->y = amp;
 	sp->n = s->n;
 
+
+	/* write to file if enabled, this one does not need a copy */
+	spectrum_record_add(p, sp);
+
+	/* this one does */
 	spectrum_append_data(p, sp);
 }
 
@@ -1138,7 +1311,6 @@ GtkWidget *spectrum_vrest_ctrl_new(Spectrum *p)
 }
 
 
-
 /**
  * @brief create vertical spectrum control bar
  */
@@ -1170,6 +1342,7 @@ static GtkWidget *spectrum_sidebar_new(Spectrum *p)
 	gtk_grid_attach(grid, w, 1, 0, 1, 1);
 
 
+
 	w = gtk_separator_new(GTK_ORIENTATION_HORIZONTAL);
 	gtk_grid_attach(grid, w, 0, 1, 2, 1);
 
@@ -1179,7 +1352,7 @@ static GtkWidget *spectrum_sidebar_new(Spectrum *p)
 	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
 	gtk_grid_attach(grid, w, 0, 2, 1, 1);
 
-	w = gtk_spin_button_new_with_range(0, 100, 1);
+	w = gtk_spin_button_new_with_range(0, 1000, 1);
 	gtk_entry_set_alignment(GTK_ENTRY(w), 1.0);
 	gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(w), TRUE);
 	gtk_spin_button_set_digits(GTK_SPIN_BUTTON(w), 0);
@@ -1228,7 +1401,7 @@ static GtkWidget *spectrum_sidebar_new(Spectrum *p)
 	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
 	gtk_grid_attach(grid, w, 0, 7, 1, 1);
 
-	w = gtk_spin_button_new_with_range(0, 100, 1);
+	w = gtk_spin_button_new_with_range(0, 1000, 1);
 	gtk_entry_set_alignment(GTK_ENTRY(w), 1.0);
 	gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(w), TRUE);
 	gtk_spin_button_set_digits(GTK_SPIN_BUTTON(w), 0);
@@ -1280,8 +1453,21 @@ static GtkWidget *spectrum_sidebar_new(Spectrum *p)
 	w = gtk_separator_new(GTK_ORIENTATION_HORIZONTAL);
 	gtk_grid_attach(grid, w, 0, 14, 2, 1);
 
-	w = gtk_label_new("");
+
+	w = gtk_toggle_button_new_with_label("Record");
+	gtk_button_set_always_show_image(GTK_BUTTON(w), TRUE);
+	gtk_button_set_image(GTK_BUTTON(w),
+			     gtk_image_new_from_icon_name("media-record-symbolic",
+							  GTK_ICON_SIZE_BUTTON));
+	g_signal_connect(G_OBJECT(w), "toggled",
+			 G_CALLBACK(spectrum_rec_button_toggle), p);
+
+
 	gtk_grid_attach(grid, w, 0, 15, 2, 1);
+
+
+	w = gtk_label_new("");
+	gtk_grid_attach(grid, w, 0, 16, 2, 1);
 	p->cfg->fit.fitpar = GTK_LABEL(w);
 
 
@@ -1375,6 +1561,7 @@ static void spectrum_init(Spectrum *p)
 	p->cfg = spectrum_get_instance_private(p);
 
 	p->cfg->timer = g_timer_new();
+	p->cfg->rec   = NULL;
 	p->cfg->avg   = NULL;
 	p->cfg->n_avg = SPECTRUM_DEFAULT_AVG_LEN;
 	p->cfg->r_avg = NULL;

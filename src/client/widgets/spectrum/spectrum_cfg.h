@@ -49,6 +49,8 @@ struct _SpectrumConfig {
 
 	GTimer *timer;
 
+	FILE *rec;
+
 	GList                    *per;
 	void                   *r_per;
 	gsize                   n_per;
@@ -68,7 +70,9 @@ struct _SpectrumConfig {
 
 	gdouble lat;
 	gdouble lon;
+	struct coord_horizontal	pos_hor;
 	struct coord_equatorial	pos_equ;
+	struct coord_galactic	pos_gal;
 
 	gdouble freq_ref_mhz;
 
