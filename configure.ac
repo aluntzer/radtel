@@ -41,6 +41,7 @@ PKG_CHECK_MODULES([GTHREAD], [gthread-2.0])
 PKG_CHECK_MODULES([GLIB], [glib-2.0])
 PKG_CHECK_MODULES([GIO],  [gio-2.0])
 PKG_CHECK_MODULES([GTK3], [gtk+-3.0 >= 3.24.4])
+PKG_CHECK_MODULES([GTKNODES],  [gtknodes])
 AC_SEARCH_LIBS([log10], [m])
 
 

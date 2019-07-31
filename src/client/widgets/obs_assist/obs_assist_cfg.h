@@ -77,6 +77,7 @@ struct _ObsAssistConfig {
 	gboolean moving;
 	gboolean abort;
 
+
 	GList *hidden;
 
 	struct spectrum spec;
@@ -312,6 +313,12 @@ struct _ObsAssistConfig {
 		GtkWidget *plt;
 
 	} npoint;
+
+
+	struct  {
+		GtkWidget *node_view;
+		GtkWidget *menu;
+	} nodes;
 };
 
 

@@ -14,6 +14,7 @@ AM_CFLAGS += $(GTHREAD_CFLAGS)
 AM_CFLAGS += $(GLIB_CFLAGS)
 AM_CFLAGS += $(GTK3_CFLAGS)
 AM_CFLAGS += $(GIO_CFLAGS)
+AM_CFLAGS += $(GTKNODES_CFLAGS)
 AM_CFLAGS += -I$(top_srcdir)/src/include
 AM_CFLAGS += -Iwidgets/include
 AM_CFLAGS += -Iwidgets/radio/
@@ -36,6 +37,7 @@ radtel_LDADD := $(GTK3_LIBS)
 radtel_LDADD += $(GTHREAD_LIBS)
 radtel_LDADD += $(GLIB_LIBS)
 radtel_LDADD += $(GIO_LIBS)
+radtel_LDADD += $(GTKNODES_LIBS)
 radtel_LDADD += -L$(top_builddir)/src/net/ -lproto
 radtel_LDADD += -L$(top_builddir)/src/util -lutil
 
@@ -152,7 +154,14 @@ radtel_SOURCES += widgets/obs_assist/obs_assist.c \
 		  widgets/obs_assist/obs_assist_npoint.c \
 		  widgets/obs_assist/obs_assist_bswitch.c \
 		  widgets/obs_assist/obs_assist_spectral_axis.c \
-		  widgets/obs_assist/obs_assist_gal_plane.c
+		  widgets/obs_assist/obs_assist_gal_plane.c \
+		  widgets/obs_assist/obs_assist_nodes.c
+
+radtel_SOURCES += widgets/nodes/node_pulse.c \
+		  widgets/nodes/node_step.c \
+		  widgets/nodes/node_spec_src.c \
+		  widgets/nodes/node_plot.c \
+		  widgets/nodes/node_medfilt.c
 
 
 radtel_SOURCES += widgets/chatlog/chatlog.c
