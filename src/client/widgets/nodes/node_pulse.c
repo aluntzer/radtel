@@ -20,6 +20,12 @@
 #include <gtknodesocket.h>
 #include <nodes.h>
 
+struct _PulsePrivate {
+	int var;
+};
+
+G_DEFINE_TYPE_WITH_PRIVATE(Pulse, pulse, GTKNODES_TYPE_NODE)
+
 
 /* configurable pulse range */
 #define PULSE_INTERVAL_MIN_MS	0
@@ -107,7 +113,7 @@ static gboolean node_pulse_toggle_periodic(GtkWidget *w,
 					   gboolean state,
 					   struct pulse_config *cfg)
 {
-	GtkNodesSocket *socket;
+	GtkNodesNodeSocket *socket;
 
 	const GSourceFunc sf = node_pulse_timeout_cb;
 
@@ -141,7 +147,7 @@ static gboolean node_pulse_toggle_periodic(GtkWidget *w,
 static void node_pulse_timeout_changed(GtkWidget *w,
 				       struct pulse_config *cfg)
 {
-	GtkNodesSocket *socket;
+	GtkNodesNodeSocket *socket;
 
 	const GSourceFunc sf = node_pulse_timeout_cb;
 
@@ -163,23 +169,42 @@ static void node_pulse_timeout_changed(GtkWidget *w,
 
 static void node_pulse_remove(GtkWidget *w, struct pulse_config *cfg)
 {
-	if (cfg->id_to)
+	if (cfg->id_to) {
 		g_source_remove(cfg->id_to);
+		cfg->id_to = 0;
+	}
 
-	if (cfg->id_col)
+	if (cfg->id_col) {
 		g_source_remove(cfg->id_col);
+		cfg->id_col = 0;
+	}
 
 	gtk_widget_destroy(w);
-	g_byte_array_free (cfg->payload, TRUE);
+
+	if (cfg->payload) {
+		g_byte_array_free (cfg->payload, TRUE);
+		cfg->payload = NULL;
+	}
+
 	g_free(cfg);
 }
 
 
-GtkWidget *node_pulse_new(void)
+static void pulse_class_init(PulseClass *klass)
+{
+	__attribute__((unused))
+	GtkWidgetClass *widget_class;
+
+
+	widget_class = GTK_WIDGET_CLASS(klass);
+
+	/* override widget methods go here if needed */
+}
+
+static void pulse_init(Pulse *node)
 {
 	GtkWidget *w;
 	GtkWidget *grid;
-	GtkWidget *node;
 
 	struct pulse_config *cfg;
 
@@ -193,7 +218,6 @@ GtkWidget *node_pulse_new(void)
 	cfg->payload = g_byte_array_new();
 	g_byte_array_append (cfg->payload, msg, strlen(msg) + 1);
 
-	node = gtk_nodes_node_new();
 	g_signal_connect(G_OBJECT(node), "node-func-clicked",
 			 G_CALLBACK(node_pulse_remove), cfg);
 
@@ -206,15 +230,16 @@ GtkWidget *node_pulse_new(void)
 	gtk_grid_set_column_spacing(GTK_GRID(grid), 12);
 	gtk_grid_set_row_spacing(GTK_GRID(grid), 6);
 
-	gtk_nodes_node_item_add(GTKNODES_NODE(node), grid,
-				GTKNODES_NODE_ITEM_NONE);
+	gtk_nodes_node_add_item(GTKNODES_NODE(node), grid,
+				GTKNODES_NODE_SOCKET_DISABLE);
 
 	/* output socket */
 	w = gtk_label_new("Output");
 	gtk_label_set_xalign(GTK_LABEL(w), 1.0);
-	cfg->output = gtk_nodes_node_item_add(GTKNODES_NODE(node), w,
-					      GTKNODES_NODE_ITEM_SOURCE);
-	gtk_nodes_node_item_set_packing(GTKNODES_NODE(node), w, GTK_PACK_END);
+	cfg->output = gtk_nodes_node_add_item(GTKNODES_NODE(node), w,
+					      GTKNODES_NODE_SOCKET_SOURCE);
+	gtk_box_set_child_packing(GTK_BOX(node), w, FALSE, FALSE, 0,
+				  GTK_PACK_END);
 	/* get original colour */
 	gtk_nodes_node_socket_get_rgba(GTKNODES_NODE_SOCKET(cfg->output),
 				       &cfg->rgba);
@@ -231,8 +256,6 @@ GtkWidget *node_pulse_new(void)
 	gtk_grid_attach(GTK_GRID(grid), w, 1, 0, 1, 1);
 	gtk_widget_set_hexpand(w, TRUE);
 	gtk_widget_set_halign(w, GTK_ALIGN_END);
-
-
 
 
 	w = gtk_label_new("Interval [ms]");
@@ -252,5 +275,16 @@ GtkWidget *node_pulse_new(void)
 			 G_CALLBACK(node_pulse_clicked), cfg);
 	gtk_grid_attach(GTK_GRID(grid), w, 0, 2, 1, 1);
 
-	return node;
+	gtk_widget_show_all(grid);
+}
+
+
+GtkWidget *pulse_new(void)
+{
+	Pulse *pulse;
+
+
+	pulse = g_object_new(TYPE_PULSE, NULL);
+
+	return GTK_WIDGET(pulse);
 }

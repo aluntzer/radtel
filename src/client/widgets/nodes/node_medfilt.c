@@ -1,5 +1,5 @@
 /**
- * @file    widgets/nodes/node_medfilt.c
+ * @file    widgets/nodes/medfilt.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -20,6 +20,12 @@
 #include <gtknodesocket.h>
 #include <nodes.h>
 
+
+struct _MedfiltPrivate {
+	int var;
+};
+
+G_DEFINE_TYPE_WITH_PRIVATE(Medfilt, medfilt, GTKNODES_TYPE_NODE)
 
 #define MEDFILT_BLINK_TIMEOUT_MS	100
 
@@ -91,7 +97,7 @@ static gboolean node_median_deactivate_timeout_output (gpointer data)
 }
 
 
-static void node_medfilt_blink_output(struct medfilt_config *cfg)
+static void medfilt_blink_output(struct medfilt_config *cfg)
 {
 	if (cfg->id_out)
 		return;
@@ -104,15 +110,15 @@ static void node_medfilt_blink_output(struct medfilt_config *cfg)
 				    cfg);
 }
 
-static void node_medfilt_output(struct medfilt_config *cfg)
+static void medfilt_output(struct medfilt_config *cfg)
 {
 	gtk_nodes_node_socket_write(GTKNODES_NODE_SOCKET(cfg->output),
 				    cfg->payload);
 
-	node_medfilt_blink_output(cfg);
+	medfilt_blink_output(cfg);
 }
 
-static void node_medfilt_apply(struct medfilt_config *cfg)
+static void medfilt_apply(struct medfilt_config *cfg)
 {
 	gsize i;
 	gsize mid;
@@ -184,7 +190,7 @@ static void node_medfilt_apply(struct medfilt_config *cfg)
 	cfg->payload = g_byte_array_new_take((void *) out, len);
 
 
-	node_medfilt_output(cfg);
+	medfilt_output(cfg);
 
 	g_free(y);
 	g_free(m);
@@ -195,11 +201,11 @@ static void node_med_filter_len(GtkWidget *w,  struct medfilt_config *cfg)
 {
 	cfg->filter_len = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(w));
 
-	node_medfilt_apply(cfg);
+	medfilt_apply(cfg);
 }
 
 
-static void node_medfilt_input(GtkWidget *widget,
+static void medfilt_input(GtkWidget *widget,
 			       GByteArray *payload,
 			       struct medfilt_config *cfg)
 {
@@ -216,47 +222,63 @@ static void node_medfilt_input(GtkWidget *widget,
 
 	cfg->data = g_memdup(payload->data, payload->len);
 
-	node_medfilt_apply(cfg);
+	medfilt_apply(cfg);
 }
 
-static void node_medfilt_output_connected(GtkWidget *widget,
+static void medfilt_output_connected(GtkWidget *widget,
 					  GtkWidget *source,
 					  struct medfilt_config *cfg)
 {
 	/* push last dataset */
-	node_medfilt_output(cfg);
+	medfilt_output(cfg);
 }
 
-static void node_medfilt_remove(GtkWidget *w, struct medfilt_config *cfg)
+static void medfilt_remove(GtkWidget *w, struct medfilt_config *cfg)
 {
-	if (cfg->id_out)
+	if (cfg->id_out) {
 		g_source_remove(cfg->id_out);
+		cfg->id_out = 0;
+	}
 
-	if (cfg->data)
+	if (cfg->data) {
 		g_free(cfg->data);
+		cfg->data = NULL;
+	}
 
-	if (cfg->payload)
+	if (cfg->payload) {
 		g_byte_array_free (cfg->payload, TRUE);
+		cfg->payload = NULL;
+	}
 
 	gtk_widget_destroy(w);
 	g_free(cfg);
 }
 
 
-GtkWidget *node_medfilt_new(void)
+static void medfilt_class_init(MedfiltClass *klass)
 {
+	__attribute__((unused))
+	GtkWidgetClass *widget_class;
+
+
+	widget_class = GTK_WIDGET_CLASS(klass);
+
+	/* override widget methods go here if needed */
+}
+
+static void medfilt_init(Medfilt *node)
+{
+
 	GtkWidget *w;
 	GtkWidget *grid;
-	GtkWidget *node;
 
 	struct medfilt_config *cfg;
 
 
 	cfg = g_malloc0(sizeof(struct medfilt_config));
 
-	node = gtk_nodes_node_new();
 	g_signal_connect(G_OBJECT(node), "node-func-clicked",
-			 G_CALLBACK(node_medfilt_remove), cfg);
+			 G_CALLBACK(medfilt_remove), cfg);
 
 	gtk_nodes_node_set_label(GTKNODES_NODE (node), "Median Filter");
 
@@ -264,10 +286,10 @@ GtkWidget *node_medfilt_new(void)
 
 	w = gtk_label_new("Data");
 	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
-	cfg->input = gtk_nodes_node_item_add(GTKNODES_NODE(node), w,
-					    GTKNODES_NODE_ITEM_SINK);
+	cfg->input = gtk_nodes_node_add_item(GTKNODES_NODE(node), w,
+					    GTKNODES_NODE_SOCKET_SINK);
 	g_signal_connect(G_OBJECT(cfg->input), "socket-incoming",
-			 G_CALLBACK(node_medfilt_input), cfg);
+			 G_CALLBACK(medfilt_input), cfg);
 	gtk_nodes_node_socket_set_rgba(GTKNODES_NODE_SOCKET(cfg->input),
 				       &COL_POINTS);
 	gtk_nodes_node_socket_set_key(GTKNODES_NODE_SOCKET(cfg->input),
@@ -279,8 +301,8 @@ GtkWidget *node_medfilt_new(void)
 	grid = gtk_grid_new();
 	gtk_grid_set_column_spacing(GTK_GRID(grid), 12);
 	gtk_grid_set_row_spacing(GTK_GRID(grid), 6);
-	gtk_nodes_node_item_add(GTKNODES_NODE(node), grid,
-				GTKNODES_NODE_ITEM_NONE);
+	gtk_nodes_node_add_item(GTKNODES_NODE(node), grid,
+				GTKNODES_NODE_SOCKET_DISABLE);
 
 	w = gtk_label_new("Length");
 	gtk_grid_attach(GTK_GRID(grid), w, 0, 0, 1, 1);
@@ -297,16 +319,27 @@ GtkWidget *node_medfilt_new(void)
 	/* output socket */
 	w = gtk_label_new("Data");
 	gtk_label_set_xalign(GTK_LABEL(w), 1.0);
-	cfg->output = gtk_nodes_node_item_add(GTKNODES_NODE(node), w,
-					      GTKNODES_NODE_ITEM_SOURCE);
-	gtk_nodes_node_item_set_packing(GTKNODES_NODE(node), w, GTK_PACK_END);
+	cfg->output = gtk_nodes_node_add_item(GTKNODES_NODE(node), w,
+					      GTKNODES_NODE_SOCKET_SOURCE);
+	gtk_box_set_child_packing(GTK_BOX(node), w, FALSE, FALSE, 0,
+				  GTK_PACK_START);
 	gtk_nodes_node_socket_set_rgba(GTKNODES_NODE_SOCKET(cfg->output),
 				       &COL_POINTS);
 	gtk_nodes_node_socket_set_key(GTKNODES_NODE_SOCKET(cfg->output),
 				      KEY_POINTS);
 	g_signal_connect(G_OBJECT(cfg->output), "socket-connect",
-			 G_CALLBACK(node_medfilt_output_connected), cfg);
+			 G_CALLBACK(medfilt_output_connected), cfg);
+
+	gtk_widget_show_all(grid);
+}
 
 
-	return node;
+GtkWidget *medfilt_new(void)
+{
+	Medfilt *medfilt;
+
+
+	medfilt = g_object_new(TYPE_MEDFILT, NULL);
+
+	return GTK_WIDGET(medfilt);
 }

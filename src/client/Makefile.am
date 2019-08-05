@@ -161,7 +161,9 @@ radtel_SOURCES += widgets/nodes/node_pulse.c \
 		  widgets/nodes/node_step.c \
 		  widgets/nodes/node_spec_src.c \
 		  widgets/nodes/node_plot.c \
-		  widgets/nodes/node_medfilt.c
+		  widgets/nodes/node_medfilt.c \
+		  widgets/nodes/node_coordinates.c \
+		  widgets/nodes/node_target.c
 
 
 radtel_SOURCES += widgets/chatlog/chatlog.c

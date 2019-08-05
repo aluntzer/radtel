@@ -21,6 +21,13 @@
 #include <nodes.h>
 
 
+struct _StepPrivate {
+	int var;
+};
+
+G_DEFINE_TYPE_WITH_PRIVATE(Step, step, GTKNODES_TYPE_NODE)
+
+
 /* configurable pulse range */
 #define STEP_INTERVAL_MIN	-1000.0
 #define STEP_INTERVAL_MAX	 1000.0
@@ -194,19 +201,36 @@ void node_reset_clicked(GtkWidget *button,  struct step_config *cfg)
 
 static void node_step_remove(GtkWidget *w, struct step_config *cfg)
 {
-	if (cfg->id_trg)
+	if (cfg->id_trg) {
 		g_source_remove(cfg->id_trg);
+		cfg->id_trg = 0;
+	}
 
 	gtk_widget_destroy(w);
-	g_byte_array_free (cfg->payload, TRUE);
+
+	if (cfg->payload) {
+		g_byte_array_free (cfg->payload, TRUE);
+		cfg->payload = NULL;
+	}
+
 	g_free(cfg);
 }
 
-GtkWidget *node_step_new(void)
+static void step_class_init(StepClass *klass)
+{
+	__attribute__((unused))
+	GtkWidgetClass *widget_class;
+
+
+	widget_class = GTK_WIDGET_CLASS(klass);
+
+	/* override widget methods go here if needed */
+}
+
+static void step_init(Step *node)
 {
 	GtkWidget *w;
 	GtkWidget *grid;
-	GtkWidget *node;
 
 	struct step_config *cfg;
 
@@ -218,7 +242,6 @@ GtkWidget *node_step_new(void)
 	cfg->cur = g_malloc0(sizeof(double));
 	cfg->payload = g_byte_array_new_take((void *) cfg->cur, sizeof(double));
 
-	node = gtk_nodes_node_new();
 	g_signal_connect(G_OBJECT(node), "node-func-clicked",
 			 G_CALLBACK(node_step_remove), cfg);
 
@@ -228,15 +251,15 @@ GtkWidget *node_step_new(void)
 	/* input sockets */
 	w = gtk_label_new("Trigger");
 	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
-	cfg->trg_i = gtk_nodes_node_item_add(GTKNODES_NODE(node), w,
-					     GTKNODES_NODE_ITEM_SINK);
+	cfg->trg_i = gtk_nodes_node_add_item(GTKNODES_NODE(node), w,
+					     GTKNODES_NODE_SOCKET_SINK);
 	g_signal_connect(G_OBJECT(cfg->trg_i), "socket-incoming",
 			 G_CALLBACK(node_step_trigger), cfg);
 
 	w = gtk_label_new("Reset");
 	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
-	cfg->rst = gtk_nodes_node_item_add(GTKNODES_NODE(node), w,
-					   GTKNODES_NODE_ITEM_SINK);
+	cfg->rst = gtk_nodes_node_add_item(GTKNODES_NODE(node), w,
+					   GTKNODES_NODE_SOCKET_SINK);
 	g_signal_connect(G_OBJECT(cfg->rst), "socket-incoming",
 			 G_CALLBACK(node_step_reset), cfg);
 
@@ -249,17 +272,18 @@ GtkWidget *node_step_new(void)
 	gtk_grid_set_column_spacing(GTK_GRID(grid), 12);
 	gtk_grid_set_row_spacing(GTK_GRID(grid), 6);
 
-	gtk_nodes_node_item_add(GTKNODES_NODE(node), grid,
-				GTKNODES_NODE_ITEM_NONE);
+	gtk_nodes_node_add_item(GTKNODES_NODE(node), grid,
+				GTKNODES_NODE_SOCKET_DISABLE);
 
 
 
 	/* output sockets */
 	w = gtk_label_new("Output");
 	gtk_label_set_xalign(GTK_LABEL(w), 1.0);
-	cfg->dat_o = gtk_nodes_node_item_add(GTKNODES_NODE(node), w,
-					     GTKNODES_NODE_ITEM_SOURCE);
-	gtk_nodes_node_item_set_packing(GTKNODES_NODE(node), w, GTK_PACK_END);
+	cfg->dat_o = gtk_nodes_node_add_item(GTKNODES_NODE(node), w,
+					     GTKNODES_NODE_SOCKET_SOURCE);
+	gtk_box_set_child_packing(GTK_BOX(node), w, FALSE, FALSE, 0,
+				  GTK_PACK_END);
 	gtk_nodes_node_socket_set_rgba(GTKNODES_NODE_SOCKET(cfg->dat_o),
 				       &COL_DOUBLE);
 	gtk_nodes_node_socket_set_key(GTKNODES_NODE_SOCKET(cfg->dat_o),
@@ -270,9 +294,10 @@ GtkWidget *node_step_new(void)
 
 	w = gtk_label_new("Last");
 	gtk_label_set_xalign(GTK_LABEL(w), 1.0);
-	cfg->trg_o = gtk_nodes_node_item_add(GTKNODES_NODE(node), w,
-					     GTKNODES_NODE_ITEM_SOURCE);
-	gtk_nodes_node_item_set_packing(GTKNODES_NODE(node), w, GTK_PACK_END);
+	cfg->trg_o = gtk_nodes_node_add_item(GTKNODES_NODE(node), w,
+					     GTKNODES_NODE_SOCKET_SOURCE);
+	gtk_box_set_child_packing(GTK_BOX(node), w, FALSE, FALSE, 0,
+				  GTK_PACK_END);
 	/* get original colour */
 	gtk_nodes_node_socket_get_rgba(GTKNODES_NODE_SOCKET(cfg->trg_o),
 				       &cfg->rgba_trg_o);
@@ -333,6 +358,16 @@ GtkWidget *node_step_new(void)
 			 G_CALLBACK(node_reset_clicked), cfg);
 	gtk_grid_attach(GTK_GRID(grid), w, 0, 5, 1, 1);
 
+	gtk_widget_show_all(grid);
+}
 
-	return node;
+
+GtkWidget *step_new(void)
+{
+	Step *step;
+
+
+	step = g_object_new(TYPE_STEP, NULL);
+
+	return GTK_WIDGET(step);
 }

@@ -24,6 +24,12 @@
 #include <signals.h>
 #include <xyplot.h>
 
+struct _SpecsrcPrivate {
+	int var;
+};
+
+G_DEFINE_TYPE_WITH_PRIVATE(Specsrc, specsrc, GTKNODES_TYPE_NODE)
+
 
 #define SPEC_SRC_BLINK_TIMEOUT_MS	100
 
@@ -128,30 +134,44 @@ static void node_spec_src_output_connected(GtkWidget *widget,
 static void node_spec_src_remove(GtkWidget *w, struct spec_src_config *cfg)
 {
 
-	if (cfg->id_out)
+	if (cfg->id_out) {
 		g_source_remove(cfg->id_out);
+		cfg->id_out = 0;
+	}
 
-	if (cfg->payload)
+	if (cfg->payload) {
 		g_byte_array_free (cfg->payload, TRUE);
+		cfg->payload = NULL;
+	}
 
-	g_signal_handler_disconnect(sig_get_instance(), cfg->id_spd);
+	if (cfg->id_spd) {
+		g_signal_handler_disconnect(sig_get_instance(), cfg->id_spd);
+		cfg->id_spd = 0;
+	}
 
 	gtk_widget_destroy(w);
 	g_free(cfg);
 }
 
+static void specsrc_class_init(SpecsrcClass *klass)
+{
+	__attribute__((unused))
+	GtkWidgetClass *widget_class;
 
-GtkWidget *node_spec_src_new(void)
+
+	widget_class = GTK_WIDGET_CLASS(klass);
+
+	/* override widget methods go here if needed */
+}
+
+static void specsrc_init(Specsrc *node)
 {
 	GtkWidget *w;
-	GtkWidget *node;
-
 	struct spec_src_config *cfg;
 
 
 	cfg = g_malloc0(sizeof(struct spec_src_config));
 
-	node = gtk_nodes_node_new();
 	g_signal_connect(G_OBJECT(node), "node-func-clicked",
 			 G_CALLBACK(node_spec_src_remove), cfg);
 
@@ -163,17 +183,18 @@ GtkWidget *node_spec_src_new(void)
 	xyplot_set_xlabel(cfg->plot, "Frequency [MHz]");
 	xyplot_set_ylabel(cfg->plot, "Amplitude [K]");
 	gtk_widget_set_size_request(cfg->plot, 250, 250);
-	gtk_nodes_node_item_add(GTKNODES_NODE(node), cfg->plot,
-				GTKNODES_NODE_ITEM_NONE);
-	gtk_nodes_node_item_set_fill(GTKNODES_NODE(node), cfg->plot, TRUE);
-	gtk_nodes_node_item_set_expand(GTKNODES_NODE(node), cfg->plot, TRUE);
+	gtk_nodes_node_add_item(GTKNODES_NODE(node), cfg->plot,
+				GTKNODES_NODE_SOCKET_DISABLE);
+	gtk_box_set_child_packing(GTK_BOX(node), cfg->plot, TRUE, TRUE, 0,
+				  GTK_PACK_START);
 
 	/* output socket */
 	w = gtk_label_new("Spectrum");
 	gtk_label_set_xalign(GTK_LABEL(w), 1.0);
-	cfg->output = gtk_nodes_node_item_add(GTKNODES_NODE(node), w,
-					      GTKNODES_NODE_ITEM_SOURCE);
-	gtk_nodes_node_item_set_packing(GTKNODES_NODE(node), w, GTK_PACK_END);
+	cfg->output = gtk_nodes_node_add_item(GTKNODES_NODE(node), w,
+					      GTKNODES_NODE_SOCKET_SOURCE);
+	gtk_box_set_child_packing(GTK_BOX(node), cfg->plot, TRUE, TRUE, 0,
+				  GTK_PACK_START);
 	gtk_nodes_node_socket_set_rgba(GTKNODES_NODE_SOCKET(cfg->output),
 				       &COL_POINTS);
 	gtk_nodes_node_socket_set_key(GTKNODES_NODE_SOCKET(cfg->output),
@@ -186,5 +207,13 @@ GtkWidget *node_spec_src_new(void)
 				       G_CALLBACK(node_spec_src_handle_pr_spec_data),
 				       cfg);
 
-	return node;
+}
+
+GtkWidget *specsrc_new(void)
+{
+	Specsrc *specsrc;
+
+	specsrc = g_object_new(TYPE_SPECSRC, NULL);
+
+	return GTK_WIDGET(specsrc);
 }

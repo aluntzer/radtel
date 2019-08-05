@@ -34,13 +34,179 @@
 #include <nodes.h>
 
 
+#if 0
+gchar *g_object_property_to_string(const gchar *property_name,
+				   GValue *value,
+				   GType type)
+{
+	gchar *string = NULL;
+
+	switch (type)
+	{
+	case G_TYPE_INVALID:
+		g_print("%s %d\n", __func__, __LINE__);
+		break;
+	case G_TYPE_NONE:
+		g_print("%s %d\n", __func__, __LINE__);
+		break;
+	case G_TYPE_INTERFACE:
+		g_print("%s %d\n", __func__, __LINE__);
+		break;
+	case G_TYPE_CHAR:
+		g_print("%s %d\n", __func__, __LINE__);
+		break;
+	case G_TYPE_UCHAR:
+		g_print("%s %d\n", __func__, __LINE__);
+		break;
+	case G_TYPE_BOOLEAN:
+		g_print("%s %d\n", __func__, __LINE__);
+		break;
+	case G_TYPE_INT:
+		g_print("%s %d\n", __func__, __LINE__);
+		string = g_strdup_printf ("%d", g_value_get_int (value));
+		break;
+	case G_TYPE_UINT:
+		g_print("%s %d\n", __func__, __LINE__);
+		string = g_strdup_printf ("%d", g_value_get_uint (value));
+		break;
+	case G_TYPE_LONG:
+		g_print("%s %d\n", __func__, __LINE__);
+		string = g_strdup_printf ("%d", g_value_get_long (value));
+		break;
+	case G_TYPE_ULONG:
+		g_print("%s %d\n", __func__, __LINE__);
+		string = g_strdup_printf ("%d", g_value_get_ulong (value));
+		break;
+	case G_TYPE_INT64:
+		g_print("%s %d\n", __func__, __LINE__);
+		string = g_strdup_printf ("%d", g_value_get_int64 (value));
+		break;
+	case G_TYPE_UINT64:
+		g_print("%s %d\n", __func__, __LINE__);
+		string = g_strdup_printf ("%d", g_value_get_uint64 (value));
+		break;
+	case G_TYPE_ENUM:
+		g_print("%s %d\n", __func__, __LINE__);
+		{
+			GEnumClass *eclass;
+			gchar *string = NULL;
+			guint i;
+			g_print("enum!\n\n");
+			g_return_val_if_fail ((eclass = g_type_class_ref (type)) != NULL, NULL);
+			for (i = 0; i < eclass->n_values; i++)
+			{
+				if (g_value_get_enum (value) == eclass->values[i].value)
+				{
+					string = g_strdup (eclass->values[i].value_nick);
+					break;
+				}
+			}
+			g_type_class_unref (eclass);
+			return string;
+		}
+		break;
+	case G_TYPE_FLAGS:
+		g_print("%s %d\n", __func__, __LINE__);
+		break;
+	case G_TYPE_FLOAT:
+		g_print("%s %d\n", __func__, __LINE__);
+		break;
+	case G_TYPE_DOUBLE:
+		g_print("%s %d\n", __func__, __LINE__);
+		break;
+	case G_TYPE_STRING:
+		g_print("%s %d\n", __func__, __LINE__);
+		string = g_strdup (g_value_get_string (value));
+		break;
+	case G_TYPE_POINTER:
+		g_print("%s %d\n", __func__, __LINE__);
+		break;
+	case G_TYPE_BOXED:
+		g_print("%s %d\n", __func__, __LINE__);
+		break;
+	case G_TYPE_PARAM:
+		g_print("%s %d\n", __func__, __LINE__);
+		break;
+	case G_TYPE_OBJECT:
+		g_print("%s %d\n", __func__, __LINE__);
+		break;
+	case G_TYPE_VARIANT:
+		g_print("%s %d\n", __func__, __LINE__);
+		break;
+
+	default:
+		g_print("\nWEIRD: %x %s %d\n\n",type, __func__, __LINE__);
+	}
+
+	return string;
+}
+
+
+
+GObject *
+g_object_clone(GObject *src)
+{
+    GObject *dst;
+    GParameter *params;
+    GParamSpec **specs;
+    guint n, n_specs, n_params;
+
+    specs = g_object_class_list_properties(G_OBJECT_GET_CLASS(src), &n_specs);
+    params = g_new0(GParameter, n_specs);
+    n_params = 0;
+
+
+    g_print("Object %s\n", G_OBJECT_TYPE_NAME(src));
+
+
+    for (n = 0; n < n_specs; ++n)
+        if (strcmp(specs[n]->name, "parent") &&
+            (specs[n]->flags & G_PARAM_READWRITE) == G_PARAM_READWRITE) {
+            params[n_params].name = g_intern_string(specs[n]->name);
+            g_value_init(&params[n_params].value, specs[n]->value_type);
+            g_object_get_property(src, specs[n]->name, &params[n_params].value);
+
+	    gchar *str = g_object_property_to_string (specs[n]->name,
+					 &params[n_params].value,
+					 specs[n]->value_type);
+
+	  g_print("%s: %s\n", specs[n]->name, str);
+
+
+            n_params++;
+
+
+        }
+
+//    dst = g_object_newv(G_TYPE_FROM_INSTANCE(src), n_params, params);
+    g_free(specs);
+    g_free(params);
+
+    return dst;
+}
+
+
+static void
+traverse_container (GtkWidget *widget,
+		    gpointer   data)
+{
+	if (GTK_IS_WIDGET (widget))
+		g_object_clone(G_OBJECT(widget));
+	else if (GTK_IS_CONTAINER (widget))
+		gtk_container_forall (GTK_CONTAINER (widget), traverse_container,
+				      data);
+}
+#endif
+
+
 static void obs_assist_node_create_pulse_cb(GtkWidget *widget, ObsAssist *p)
 {
 	GtkWidget *node;
 
-	node = node_pulse_new();
+
+	node = pulse_new();
 	gtk_container_add(GTK_CONTAINER(p->cfg->nodes.node_view), node);
-	gtk_widget_show_all(p->cfg->nodes.node_view);
+	gtk_widget_show_all(node);
 }
 
 
@@ -48,7 +214,7 @@ static void obs_assist_node_create_step_cb(GtkWidget *widget, ObsAssist *p)
 {
 	GtkWidget *node;
 
-	node = node_step_new();
+	node = step_new();
 	gtk_container_add(GTK_CONTAINER(p->cfg->nodes.node_view), node);
 	gtk_widget_show_all(p->cfg->nodes.node_view);
 }
@@ -57,8 +223,38 @@ static void obs_assist_node_create_medfilt_cb(GtkWidget *widget, ObsAssist *p)
 {
 	GtkWidget *node;
 
-	node = node_medfilt_new();
+	node = medfilt_new();
 	gtk_container_add(GTK_CONTAINER(p->cfg->nodes.node_view), node);
+
+#if 0
+	gtk_container_forall (GTK_CONTAINER (node), traverse_container,
+			 NULL);
+#endif
+#if 0
+	gtk_widget_destroy(node);
+
+
+
+
+
+	guint n_props = 0, i;
+	GParamSpec **props;
+	widget = GTK_WIDGET(n);
+	g_print("widget %s has\n", G_OBJECT_TYPE_NAME(widget));
+	props =	g_object_class_list_properties (G_OBJECT_GET_CLASS (widget), &n_props);
+	for (i = 0; i < n_props; i++) {
+		const gchar *name = g_param_spec_get_name (props[i]);
+		g_print("\t %s\n", name);
+	}
+
+
+
+	gtk_builder_add_from_file(builder, "test.glade", NULL);
+	n = gtk_builder_get_object(builder, "filt");
+	g_print("ret: %p", n);
+	gtk_container_add(GTK_CONTAINER(p->cfg->nodes.node_view), GTK_WIDGET(n));
+
+#endif
 	gtk_widget_show_all(p->cfg->nodes.node_view);
 }
 
@@ -66,7 +262,7 @@ static void obs_assist_node_create_spec_src_cb(GtkWidget *widget, ObsAssist *p)
 {
 	GtkWidget *node;
 
-	node = node_spec_src_new();
+	node = specsrc_new();
 	gtk_container_add(GTK_CONTAINER(p->cfg->nodes.node_view), node);
 	gtk_widget_show_all(p->cfg->nodes.node_view);
 }
@@ -75,11 +271,67 @@ static void obs_assist_node_create_plot_cb(GtkWidget *widget, ObsAssist *p)
 {
 	GtkWidget *node;
 
-	node = node_plot_new();
+	node = plot_new();
 	gtk_container_add(GTK_CONTAINER(p->cfg->nodes.node_view), node);
 	gtk_widget_show_all(p->cfg->nodes.node_view);
 }
 
+
+static void obs_assist_node_create_coordinates_cb(GtkWidget *widget, ObsAssist *p)
+{
+	GtkWidget *node;
+
+	node = coordinates_new();
+	gtk_container_add(GTK_CONTAINER(p->cfg->nodes.node_view), node);
+	gtk_widget_show_all(p->cfg->nodes.node_view);
+}
+
+
+static void obs_assist_node_create_target_cb(GtkWidget *widget, ObsAssist *p)
+{
+	GtkWidget *node;
+
+	node = target_new();
+	gtk_container_add(GTK_CONTAINER(p->cfg->nodes.node_view), node);
+	gtk_widget_show_all(p->cfg->nodes.node_view);
+}
+
+
+static void obs_assist_node_save_cb(GtkWidget *widget, ObsAssist *p)
+{
+	gtk_nodes_node_view_save (GTKNODES_NODE_VIEW(p->cfg->nodes.node_view));
+}
+
+
+static void obs_assist_node_load_cb(GtkWidget *widget, ObsAssist *p)
+{
+	  	/* apparently I have to load the once */
+	GtkWidget *w;
+
+	w = coordinates_new();
+	gtk_widget_destroy(w);
+
+	w = medfilt_new();
+	gtk_widget_destroy(w);
+
+	w = plot_new();
+	gtk_widget_destroy(w);
+
+	w = pulse_new();
+	gtk_widget_destroy(w);
+
+	w = specsrc_new();
+	gtk_widget_destroy(w);
+
+	w = step_new();
+	gtk_widget_destroy(w);
+
+	w = target_new();
+	gtk_widget_destroy(w);
+
+
+	gtk_nodes_node_view_load(GTKNODES_NODE_VIEW (p->cfg->nodes.node_view));
+}
 
 
 /**
@@ -97,6 +349,16 @@ static void obs_assist_node_build_popup_menu(ObsAssist *p)
 	p->cfg->nodes.menu = gtk_menu_new();
 
 
+	menuitem = gtk_menu_item_new_with_label("LOAD");
+	g_signal_connect(menuitem, "activate",
+			 G_CALLBACK(obs_assist_node_load_cb), p);
+	gtk_menu_shell_append(GTK_MENU_SHELL(p->cfg->nodes.menu), menuitem);
+
+	menuitem = gtk_menu_item_new_with_label("SAVE");
+	g_signal_connect(menuitem, "activate",
+			 G_CALLBACK(obs_assist_node_save_cb), p);
+	gtk_menu_shell_append(GTK_MENU_SHELL(p->cfg->nodes.menu), menuitem);
+
 	menuitem = gtk_menu_item_new_with_label("Pulse");
 	g_signal_connect(menuitem, "activate",
 			 G_CALLBACK(obs_assist_node_create_pulse_cb), p);
@@ -105,6 +367,16 @@ static void obs_assist_node_build_popup_menu(ObsAssist *p)
 	menuitem = gtk_menu_item_new_with_label("Step");
 	g_signal_connect(menuitem, "activate",
 			 G_CALLBACK(obs_assist_node_create_step_cb), p);
+	gtk_menu_shell_append(GTK_MENU_SHELL(p->cfg->nodes.menu), menuitem);
+
+	menuitem = gtk_menu_item_new_with_label("Coordinates");
+	g_signal_connect(menuitem, "activate",
+			 G_CALLBACK(obs_assist_node_create_coordinates_cb), p);
+	gtk_menu_shell_append(GTK_MENU_SHELL(p->cfg->nodes.menu), menuitem);
+
+	menuitem = gtk_menu_item_new_with_label("Target");
+	g_signal_connect(menuitem, "activate",
+			 G_CALLBACK(obs_assist_node_create_target_cb), p);
 	gtk_menu_shell_append(GTK_MENU_SHELL(p->cfg->nodes.menu), menuitem);
 
 	menuitem = gtk_menu_item_new_with_label("Spectrum Source");

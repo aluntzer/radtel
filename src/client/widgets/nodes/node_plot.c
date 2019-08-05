@@ -24,6 +24,11 @@
 #include <signals.h>
 #include <xyplot.h>
 
+struct _PlotPrivate {
+	int var;
+};
+
+G_DEFINE_TYPE_WITH_PRIVATE(Plot, plot, GTKNODES_TYPE_NODE)
 
 
 struct plot_config {
@@ -108,8 +113,10 @@ static void node_plot_data(GtkWidget *widget,
 
 	struct nodes_point *spec;
 
-	if (!payload)
+	if (!payload) {
 		g_warning("empty payload!");
+		return;
+	}
 
 	len = payload->len / sizeof(struct nodes_point);
 	x = g_malloc(len * sizeof(gdouble));
@@ -142,18 +149,27 @@ static void node_plot_remove(GtkWidget *w, struct plot_config *cfg)
 }
 
 
-GtkWidget *node_plot_new(void)
+static void plot_class_init(PlotClass *klass)
+{
+	__attribute__((unused))
+	GtkWidgetClass *widget_class;
+
+
+	widget_class = GTK_WIDGET_CLASS(klass);
+
+	/* override widget methods go here if needed */
+}
+
+static void plot_init(Plot *node)
 {
 	GtkWidget *w;
 	GtkWidget *grid;
-	GtkWidget *node;
 
 	struct plot_config *cfg;
 
 
 	cfg = g_malloc0(sizeof(struct plot_config));
 
-	node = gtk_nodes_node_new();
 	g_signal_connect(G_OBJECT(node), "node-func-clicked",
 			 G_CALLBACK(node_plot_remove), cfg);
 
@@ -163,8 +179,8 @@ GtkWidget *node_plot_new(void)
 
 	w = gtk_label_new("Graph");
 	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
-	cfg->data = gtk_nodes_node_item_add(GTKNODES_NODE(node), w,
-					    GTKNODES_NODE_ITEM_SINK);
+	cfg->data = gtk_nodes_node_add_item(GTKNODES_NODE(node), w,
+					    GTKNODES_NODE_SOCKET_SINK);
 	g_signal_connect(G_OBJECT(cfg->data), "socket-incoming",
 			 G_CALLBACK(node_plot_data), cfg);
 	gtk_nodes_node_socket_set_rgba(GTKNODES_NODE_SOCKET(cfg->data),
@@ -174,8 +190,8 @@ GtkWidget *node_plot_new(void)
 
 	w = gtk_label_new("Clear");
 	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
-	cfg->clear = gtk_nodes_node_item_add(GTKNODES_NODE(node), w,
-					     GTKNODES_NODE_ITEM_SINK);
+	cfg->clear = gtk_nodes_node_add_item(GTKNODES_NODE(node), w,
+					     GTKNODES_NODE_SOCKET_SINK);
 	g_signal_connect(G_OBJECT(cfg->clear), "socket-incoming",
 			 G_CALLBACK(node_plot_clear), cfg);
 
@@ -183,10 +199,10 @@ GtkWidget *node_plot_new(void)
 	/* spectrum display */
 	cfg->plot = xyplot_new();
 	gtk_widget_set_size_request(cfg->plot, 250, 250);
-	gtk_nodes_node_item_add(GTKNODES_NODE(node), cfg->plot,
-				GTKNODES_NODE_ITEM_NONE);
-	gtk_nodes_node_item_set_fill(GTKNODES_NODE(node), cfg->plot, TRUE);
-	gtk_nodes_node_item_set_expand(GTKNODES_NODE(node), cfg->plot, TRUE);
+	gtk_nodes_node_add_item(GTKNODES_NODE(node), cfg->plot,
+				GTKNODES_NODE_SOCKET_DISABLE);
+	gtk_box_set_child_packing(GTK_BOX(node), cfg->plot, TRUE, TRUE, 0,
+				  GTK_PACK_START);
 
 
 	/* grid containing user controls */
@@ -195,8 +211,8 @@ GtkWidget *node_plot_new(void)
 	gtk_grid_set_column_spacing(GTK_GRID(grid), 12);
 	gtk_grid_set_row_spacing(GTK_GRID(grid), 6);
 
-	gtk_nodes_node_item_add(GTKNODES_NODE(node), grid,
-				GTKNODES_NODE_ITEM_NONE);
+	gtk_nodes_node_add_item(GTKNODES_NODE(node), grid,
+				GTKNODES_NODE_SOCKET_DISABLE);
 
 
 	w = gtk_button_new_with_label("Clear");
@@ -227,7 +243,15 @@ GtkWidget *node_plot_new(void)
 	gtk_combo_box_set_active(GTK_COMBO_BOX(w), 4);	/* default circles */
 
 
+	gtk_widget_show_all(grid);
+}
 
 
-	return node;
+GtkWidget *plot_new(void)
+{
+	Plot *plot;
+
+	plot = g_object_new(TYPE_PLOT, NULL);
+
+	return GTK_WIDGET(plot);
 }
