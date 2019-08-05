@@ -140,14 +140,24 @@ static void node_step_trigger(GtkWidget *widget,
 			      GByteArray *payload,
 			      struct step_config *cfg)
 {
-	if ((* cfg->cur) < cfg->max)
-		(* cfg->cur) += cfg->stp;
+	if (cfg->min < cfg->max) {
+		if ((* cfg->cur) < cfg->max)
+			(* cfg->cur) += cfg->stp;
+	} else {
+		if ((* cfg->cur) > cfg->max)
+			(* cfg->cur) += cfg->stp;
+	}
 
 	node_progress_bar_update(cfg);
 	node_step_output(cfg);
 
-	if ((* cfg->cur) < cfg->max)
-		return;
+	if (cfg->min < cfg->max) {
+		if ((* cfg->cur) < cfg->max)
+			return;
+	} else {
+		if ((* cfg->cur) > cfg->max)
+			return;
+	}
 
 	gtk_nodes_node_socket_write(GTKNODES_NODE_SOCKET(cfg->trg_o),
 				    cfg->payload);
@@ -271,7 +281,7 @@ GtkWidget *node_step_new(void)
 
 
 	/* create main controls, they need the socket reference */
-	w = gtk_label_new("MIN");
+	w = gtk_label_new("START");
 	gtk_grid_attach(GTK_GRID(grid), w, 0, 0, 1, 1);
 	w = gtk_spin_button_new_with_range(STEP_INTERVAL_MIN,
 					   STEP_INTERVAL_MAX,
@@ -284,7 +294,7 @@ GtkWidget *node_step_new(void)
 	gtk_grid_attach(GTK_GRID(grid), w, 1, 0, 1, 1);
 
 
-	w = gtk_label_new("MAX");
+	w = gtk_label_new("STOP");
 	gtk_grid_attach(GTK_GRID(grid), w, 0, 1, 1, 1);
 	w = gtk_spin_button_new_with_range(STEP_INTERVAL_MIN,
 					   STEP_INTERVAL_MAX,
