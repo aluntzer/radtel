@@ -992,13 +992,14 @@ static void spectrum_handle_pr_spec_data(gpointer instance,
 		amp[i] = (gdouble) s->spec[i] * 0.001;	/* mK to K */
 	}
 
-
 	/* everyone gets a copy of the data */
-	sp    = (struct spectrum *) g_malloc(sizeof(struct spectrum));
-	sp->x = g_memdup(frq, s->n * sizeof(gdouble));
-	sp->y = g_memdup(amp, s->n * sizeof(gdouble));
-	sp->n = s->n;
-	spectrum_append_avg(p, sp);
+	if (p->cfg->n_per) {
+		sp    = (struct spectrum *) g_malloc(sizeof(struct spectrum));
+		sp->x = g_memdup(frq, s->n * sizeof(gdouble));
+		sp->y = g_memdup(amp, s->n * sizeof(gdouble));
+		sp->n = s->n;
+		spectrum_append_data(p, sp);
+	}
 
 	sp    = (struct spectrum *) g_malloc(sizeof(struct spectrum));
 	sp->x = frq;
@@ -1010,7 +1011,7 @@ static void spectrum_handle_pr_spec_data(gpointer instance,
 	spectrum_record_add(p, sp);
 
 	/* this one does */
-	spectrum_append_data(p, sp);
+	spectrum_append_avg(p, sp);
 }
 
 
