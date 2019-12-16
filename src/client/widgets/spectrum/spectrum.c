@@ -992,7 +992,21 @@ static void spectrum_handle_pr_spec_data(gpointer instance,
 		amp[i] = (gdouble) s->spec[i] * 0.001;	/* mK to K */
 	}
 
-	/* everyone gets a copy of the data */
+	sp    = (struct spectrum *) g_malloc(sizeof(struct spectrum));
+	sp->x = frq;
+	sp->y = amp;
+	sp->n = s->n;
+
+	/* write to file if enabled, this one does not need a copy */
+	spectrum_record_add(p, sp);
+
+	/* this one does */
+	spectrum_append_avg(p, sp);
+
+	/* everyone gets a copy of the data
+	 * We do this at the end so the averages are on top of the individial
+	 * samples.
+	 */
 	if (p->cfg->n_per) {
 		sp    = (struct spectrum *) g_malloc(sizeof(struct spectrum));
 		sp->x = g_memdup(frq, s->n * sizeof(gdouble));
@@ -1000,18 +1014,6 @@ static void spectrum_handle_pr_spec_data(gpointer instance,
 		sp->n = s->n;
 		spectrum_append_data(p, sp);
 	}
-
-	sp    = (struct spectrum *) g_malloc(sizeof(struct spectrum));
-	sp->x = frq;
-	sp->y = amp;
-	sp->n = s->n;
-
-
-	/* write to file if enabled, this one does not need a copy */
-	spectrum_record_add(p, sp);
-
-	/* this one does */
-	spectrum_append_avg(p, sp);
 }
 
 
