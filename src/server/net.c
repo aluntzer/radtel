@@ -148,7 +148,7 @@ static gboolean net_push_station_single(gpointer data)
 {
 	gchar *buf;
 
-	buf = g_strdup_printf("Your are connected to %s\n",
+	buf = g_strdup_printf("You are connected to %s\n",
 			      server_cfg_get_station());
 
 	net_server_direct_message(buf, data);
