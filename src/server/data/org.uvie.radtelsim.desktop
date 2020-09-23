@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Radio Telescope Server
+Comment=A Radio Telescope Server
+Exec=radtelsrv
+Terminal=false
+Type=Application
+StartupNotify=true
+Icon=org.uvie.radtelsim
+Categories=GTK;Science;Astronomy;
+Keywords=RadioAstronomy;SRT;UVIE;

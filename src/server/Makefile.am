@@ -91,7 +91,11 @@ if !OS_WINDOWS
 #			  backends/SRT/srt_spectrometer.so
 endif
 
+data_desktopdir = $(datadir)/applications
+data_desktop_DATA = data/org.uvie.radtelsim.desktop
+EXTRA_DIST = $(data_desktop_DATA)
 
-
+appicondir=$(datadir)/icons/hicolor/scalable/apps
+appicon_DATA=data/org.uvie.radtelsim.svg
 
 
