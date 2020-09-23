@@ -183,7 +183,7 @@ static void specsrc_init(Specsrc *node)
 	xyplot_set_xlabel(cfg->plot, "Frequency [MHz]");
 	xyplot_set_ylabel(cfg->plot, "Amplitude [K]");
 	gtk_widget_set_size_request(cfg->plot, 250, 250);
-	gtk_nodes_node_add_item(GTKNODES_NODE(node), cfg->plot,
+	gtk_nodes_node_item_add(GTKNODES_NODE(node), cfg->plot,
 				GTKNODES_NODE_SOCKET_DISABLE);
 	gtk_box_set_child_packing(GTK_BOX(node), cfg->plot, TRUE, TRUE, 0,
 				  GTK_PACK_START);
@@ -191,7 +191,7 @@ static void specsrc_init(Specsrc *node)
 	/* output socket */
 	w = gtk_label_new("Spectrum");
 	gtk_label_set_xalign(GTK_LABEL(w), 1.0);
-	cfg->output = gtk_nodes_node_add_item(GTKNODES_NODE(node), w,
+	cfg->output = gtk_nodes_node_item_add(GTKNODES_NODE(node), w,
 					      GTKNODES_NODE_SOCKET_SOURCE);
 	gtk_box_set_child_packing(GTK_BOX(node), cfg->plot, TRUE, TRUE, 0,
 				  GTK_PACK_START);

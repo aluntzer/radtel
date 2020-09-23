@@ -39,6 +39,9 @@ struct plot_config {
 	GdkRGBA rgba_graph;
 
 	enum xyplot_graph_style style;
+
+	guint id_data;
+	guint id_clear;
 };
 
 
@@ -144,6 +147,16 @@ void node_plot_clear_cb(GtkWidget *button, struct plot_config *cfg)
 
 static void node_plot_remove(GtkWidget *w, struct plot_config *cfg)
 {
+	if (cfg->id_data) {
+		g_source_remove(cfg->id_data);
+		cfg->id_data = 0;
+	}
+
+	if (cfg->id_clear) {
+		g_source_remove(cfg->id_clear);
+		cfg->id_clear = 0;
+	}
+
 	gtk_widget_destroy(w);
 	g_free(cfg);
 }
@@ -179,10 +192,10 @@ static void plot_init(Plot *node)
 
 	w = gtk_label_new("Graph");
 	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
-	cfg->data = gtk_nodes_node_add_item(GTKNODES_NODE(node), w,
+	cfg->data = gtk_nodes_node_item_add(GTKNODES_NODE(node), w,
 					    GTKNODES_NODE_SOCKET_SINK);
-	g_signal_connect(G_OBJECT(cfg->data), "socket-incoming",
-			 G_CALLBACK(node_plot_data), cfg);
+	cfg->id_data = g_signal_connect(G_OBJECT(cfg->data), "socket-incoming",
+					G_CALLBACK(node_plot_data), cfg);
 	gtk_nodes_node_socket_set_rgba(GTKNODES_NODE_SOCKET(cfg->data),
 				       &COL_POINTS);
 	gtk_nodes_node_socket_set_key(GTKNODES_NODE_SOCKET(cfg->data),
@@ -190,16 +203,16 @@ static void plot_init(Plot *node)
 
 	w = gtk_label_new("Clear");
 	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
-	cfg->clear = gtk_nodes_node_add_item(GTKNODES_NODE(node), w,
+	cfg->clear = gtk_nodes_node_item_add(GTKNODES_NODE(node), w,
 					     GTKNODES_NODE_SOCKET_SINK);
-	g_signal_connect(G_OBJECT(cfg->clear), "socket-incoming",
-			 G_CALLBACK(node_plot_clear), cfg);
+	cfg->id_clear = g_signal_connect(G_OBJECT(cfg->clear), "socket-incoming",
+					 G_CALLBACK(node_plot_clear), cfg);
 
 
 	/* spectrum display */
 	cfg->plot = xyplot_new();
 	gtk_widget_set_size_request(cfg->plot, 250, 250);
-	gtk_nodes_node_add_item(GTKNODES_NODE(node), cfg->plot,
+	gtk_nodes_node_item_add(GTKNODES_NODE(node), cfg->plot,
 				GTKNODES_NODE_SOCKET_DISABLE);
 	gtk_box_set_child_packing(GTK_BOX(node), cfg->plot, TRUE, TRUE, 0,
 				  GTK_PACK_START);
@@ -211,7 +224,7 @@ static void plot_init(Plot *node)
 	gtk_grid_set_column_spacing(GTK_GRID(grid), 12);
 	gtk_grid_set_row_spacing(GTK_GRID(grid), 6);
 
-	gtk_nodes_node_add_item(GTKNODES_NODE(node), grid,
+	gtk_nodes_node_item_add(GTKNODES_NODE(node), grid,
 				GTKNODES_NODE_SOCKET_DISABLE);
 
 

@@ -346,7 +346,7 @@ static void coordinates_init(Coordinates *node)
 
 	w = gtk_label_new("Coordinate");
 	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
-	cfg->i_cx = gtk_nodes_node_add_item(GTKNODES_NODE(node), w,
+	cfg->i_cx = gtk_nodes_node_item_add(GTKNODES_NODE(node), w,
 					    GTKNODES_NODE_SOCKET_SINK);
 	g_signal_connect(G_OBJECT(cfg->i_cx), "socket-incoming",
 			 G_CALLBACK(node_coordinates_input_1), cfg);
@@ -357,7 +357,7 @@ static void coordinates_init(Coordinates *node)
 
 	cfg->ic1_lbl = gtk_label_new(NULL);
 	gtk_label_set_xalign(GTK_LABEL(cfg->ic1_lbl), 0.0);
-	cfg->i_c1 = gtk_nodes_node_add_item(GTKNODES_NODE(node), cfg->ic1_lbl,
+	cfg->i_c1 = gtk_nodes_node_item_add(GTKNODES_NODE(node), cfg->ic1_lbl,
 					    GTKNODES_NODE_SOCKET_SINK);
 	g_signal_connect(G_OBJECT(cfg->i_c1), "socket-incoming",
 			 G_CALLBACK(node_coordinates_input_2), cfg);
@@ -368,7 +368,7 @@ static void coordinates_init(Coordinates *node)
 
 	cfg->ic2_lbl = gtk_label_new(NULL);
 	gtk_label_set_xalign(GTK_LABEL(cfg->ic2_lbl), 0.0);
-	cfg->i_c2 = gtk_nodes_node_add_item(GTKNODES_NODE(node), cfg->ic2_lbl,
+	cfg->i_c2 = gtk_nodes_node_item_add(GTKNODES_NODE(node), cfg->ic2_lbl,
 					    GTKNODES_NODE_SOCKET_SINK);
 	g_signal_connect(G_OBJECT(cfg->i_c2), "socket-incoming",
 			 G_CALLBACK(node_coordinates_input_3), cfg);
@@ -385,7 +385,7 @@ static void coordinates_init(Coordinates *node)
 	g_object_set(grid, "margin", 6, NULL);
 	gtk_grid_set_column_spacing(GTK_GRID(grid), 12);
 	gtk_grid_set_row_spacing(GTK_GRID(grid), 6);
-	gtk_nodes_node_add_item(GTKNODES_NODE(node), grid,
+	gtk_nodes_node_item_add(GTKNODES_NODE(node), grid,
 				GTKNODES_NODE_SOCKET_DISABLE);
 
 
@@ -394,7 +394,7 @@ static void coordinates_init(Coordinates *node)
 	/* outputs */
 	cfg->oc1_lbl = gtk_label_new(NULL);
 	gtk_label_set_xalign(GTK_LABEL(cfg->oc1_lbl), 1.0);
-	cfg->o_c1 = gtk_nodes_node_add_item(GTKNODES_NODE(node), cfg->oc1_lbl,
+	cfg->o_c1 = gtk_nodes_node_item_add(GTKNODES_NODE(node), cfg->oc1_lbl,
 					    GTKNODES_NODE_SOCKET_SOURCE);
 	gtk_nodes_node_socket_set_rgba(GTKNODES_NODE_SOCKET(cfg->o_c1),
 				       &COL_DOUBLE);
@@ -405,7 +405,7 @@ static void coordinates_init(Coordinates *node)
 
 	cfg->oc2_lbl = gtk_label_new(NULL);
 	gtk_label_set_xalign(GTK_LABEL(cfg->oc2_lbl), 1.0);
-	cfg->o_c2 = gtk_nodes_node_add_item(GTKNODES_NODE(node), cfg->oc2_lbl,
+	cfg->o_c2 = gtk_nodes_node_item_add(GTKNODES_NODE(node), cfg->oc2_lbl,
 					    GTKNODES_NODE_SOCKET_SOURCE);
 	gtk_nodes_node_socket_set_rgba(GTKNODES_NODE_SOCKET(cfg->o_c2),
 				       &COL_DOUBLE);
@@ -417,7 +417,7 @@ static void coordinates_init(Coordinates *node)
 
 	w = gtk_label_new("Coordinate");
 	gtk_label_set_xalign(GTK_LABEL(w), 1.0);
-	cfg->o_cx = gtk_nodes_node_add_item(GTKNODES_NODE(node), w,
+	cfg->o_cx = gtk_nodes_node_item_add(GTKNODES_NODE(node), w,
 					    GTKNODES_NODE_SOCKET_SOURCE);
 	gtk_nodes_node_socket_set_rgba(GTKNODES_NODE_SOCKET(cfg->o_cx),
 				       &COL_COORDINATES);
@@ -469,7 +469,7 @@ static void coordinates_init(Coordinates *node)
 	/* trigger input */
 	w = gtk_label_new("Trigger");
 	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
-	cfg->i_tr = gtk_nodes_node_add_item(GTKNODES_NODE(node),w,
+	cfg->i_tr = gtk_nodes_node_item_add(GTKNODES_NODE(node),w,
 					    GTKNODES_NODE_SOCKET_SINK);
 	g_signal_connect(G_OBJECT(cfg->i_tr), "socket-incoming",
 			 G_CALLBACK(node_coordinates_trigger), cfg);

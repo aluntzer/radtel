@@ -286,7 +286,7 @@ static void medfilt_init(Medfilt *node)
 
 	w = gtk_label_new("Data");
 	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
-	cfg->input = gtk_nodes_node_add_item(GTKNODES_NODE(node), w,
+	cfg->input = gtk_nodes_node_item_add(GTKNODES_NODE(node), w,
 					    GTKNODES_NODE_SOCKET_SINK);
 	g_signal_connect(G_OBJECT(cfg->input), "socket-incoming",
 			 G_CALLBACK(medfilt_input), cfg);
@@ -301,7 +301,7 @@ static void medfilt_init(Medfilt *node)
 	grid = gtk_grid_new();
 	gtk_grid_set_column_spacing(GTK_GRID(grid), 12);
 	gtk_grid_set_row_spacing(GTK_GRID(grid), 6);
-	gtk_nodes_node_add_item(GTKNODES_NODE(node), grid,
+	gtk_nodes_node_item_add(GTKNODES_NODE(node), grid,
 				GTKNODES_NODE_SOCKET_DISABLE);
 
 	w = gtk_label_new("Length");
@@ -319,7 +319,7 @@ static void medfilt_init(Medfilt *node)
 	/* output socket */
 	w = gtk_label_new("Data");
 	gtk_label_set_xalign(GTK_LABEL(w), 1.0);
-	cfg->output = gtk_nodes_node_add_item(GTKNODES_NODE(node), w,
+	cfg->output = gtk_nodes_node_item_add(GTKNODES_NODE(node), w,
 					      GTKNODES_NODE_SOCKET_SOURCE);
 	gtk_box_set_child_packing(GTK_BOX(node), w, FALSE, FALSE, 0,
 				  GTK_PACK_START);

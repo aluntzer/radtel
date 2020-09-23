@@ -250,7 +250,6 @@ static void xyplot_export_pdf(GtkWidget *w, XYPlot *p)
 	cairo_t *cr;
 	cairo_surface_t *cs;
 
-	gchar *fname;
 
 
 
@@ -281,9 +280,10 @@ static void xyplot_export_pdf(GtkWidget *w, XYPlot *p)
 
 	res = gtk_dialog_run(GTK_DIALOG(dia));
 
-	g_free(fname);
 
 	if (res == GTK_RESPONSE_ACCEPT) {
+
+		gchar *fname;
 
 		fname = gtk_file_chooser_get_filename(chooser);
 		cs = cairo_pdf_surface_create(fname, 1280, 720);

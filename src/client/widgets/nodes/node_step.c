@@ -251,14 +251,14 @@ static void step_init(Step *node)
 	/* input sockets */
 	w = gtk_label_new("Trigger");
 	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
-	cfg->trg_i = gtk_nodes_node_add_item(GTKNODES_NODE(node), w,
+	cfg->trg_i = gtk_nodes_node_item_add(GTKNODES_NODE(node), w,
 					     GTKNODES_NODE_SOCKET_SINK);
 	g_signal_connect(G_OBJECT(cfg->trg_i), "socket-incoming",
 			 G_CALLBACK(node_step_trigger), cfg);
 
 	w = gtk_label_new("Reset");
 	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
-	cfg->rst = gtk_nodes_node_add_item(GTKNODES_NODE(node), w,
+	cfg->rst = gtk_nodes_node_item_add(GTKNODES_NODE(node), w,
 					   GTKNODES_NODE_SOCKET_SINK);
 	g_signal_connect(G_OBJECT(cfg->rst), "socket-incoming",
 			 G_CALLBACK(node_step_reset), cfg);
@@ -272,7 +272,7 @@ static void step_init(Step *node)
 	gtk_grid_set_column_spacing(GTK_GRID(grid), 12);
 	gtk_grid_set_row_spacing(GTK_GRID(grid), 6);
 
-	gtk_nodes_node_add_item(GTKNODES_NODE(node), grid,
+	gtk_nodes_node_item_add(GTKNODES_NODE(node), grid,
 				GTKNODES_NODE_SOCKET_DISABLE);
 
 
@@ -280,7 +280,7 @@ static void step_init(Step *node)
 	/* output sockets */
 	w = gtk_label_new("Output");
 	gtk_label_set_xalign(GTK_LABEL(w), 1.0);
-	cfg->dat_o = gtk_nodes_node_add_item(GTKNODES_NODE(node), w,
+	cfg->dat_o = gtk_nodes_node_item_add(GTKNODES_NODE(node), w,
 					     GTKNODES_NODE_SOCKET_SOURCE);
 	gtk_box_set_child_packing(GTK_BOX(node), w, FALSE, FALSE, 0,
 				  GTK_PACK_END);
@@ -294,7 +294,7 @@ static void step_init(Step *node)
 
 	w = gtk_label_new("Last");
 	gtk_label_set_xalign(GTK_LABEL(w), 1.0);
-	cfg->trg_o = gtk_nodes_node_add_item(GTKNODES_NODE(node), w,
+	cfg->trg_o = gtk_nodes_node_item_add(GTKNODES_NODE(node), w,
 					     GTKNODES_NODE_SOCKET_SOURCE);
 	gtk_box_set_child_packing(GTK_BOX(node), w, FALSE, FALSE, 0,
 				  GTK_PACK_END);

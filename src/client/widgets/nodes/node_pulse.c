@@ -230,13 +230,13 @@ static void pulse_init(Pulse *node)
 	gtk_grid_set_column_spacing(GTK_GRID(grid), 12);
 	gtk_grid_set_row_spacing(GTK_GRID(grid), 6);
 
-	gtk_nodes_node_add_item(GTKNODES_NODE(node), grid,
+	gtk_nodes_node_item_add(GTKNODES_NODE(node), grid,
 				GTKNODES_NODE_SOCKET_DISABLE);
 
 	/* output socket */
 	w = gtk_label_new("Output");
 	gtk_label_set_xalign(GTK_LABEL(w), 1.0);
-	cfg->output = gtk_nodes_node_add_item(GTKNODES_NODE(node), w,
+	cfg->output = gtk_nodes_node_item_add(GTKNODES_NODE(node), w,
 					      GTKNODES_NODE_SOCKET_SOURCE);
 	gtk_box_set_child_packing(GTK_BOX(node), w, FALSE, FALSE, 0,
 				  GTK_PACK_END);

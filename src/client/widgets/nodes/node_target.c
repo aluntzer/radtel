@@ -161,7 +161,7 @@ static void target_init(Target *node)
 	/* input socket */
 	w = gtk_label_new("Coordinates");
 	gtk_label_set_xalign(GTK_LABEL(w), 1.0);
-	cfg->input = gtk_nodes_node_add_item(GTKNODES_NODE(node), w,
+	cfg->input = gtk_nodes_node_item_add(GTKNODES_NODE(node), w,
 					     GTKNODES_NODE_SOCKET_SINK);
 	gtk_nodes_node_socket_set_rgba(GTKNODES_NODE_SOCKET(cfg->input),
 				       &COL_COORDINATES);
