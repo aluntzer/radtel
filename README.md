@@ -125,12 +125,19 @@ The gui elements should be mostly self-explanatory, here are the key/mouse
 bindings:
 
 *left click and drag* to define a zoom box
+
 *scroll wheel* for two-axis zoom
+
 *shift + scroll* for Y-axis zoom
+
 *ctrl + scroll* for X-axis zoom
+
 *lower case "a"* to autoscale
+
 *Ctrl + left drag* to fit a gaussian to the selected datums
+
 *lower case "u"* deactivates the gaussian fit box
+
 *alt + click* to define new center frequency for spectrometer
 
 There is also a right-click popup-menu for extra functions.
@@ -198,11 +205,17 @@ enter key/changing the field) will result in the immediate reconfiguration
 of the simulated telescope.
 
 *Rbeam* sets the simulated beam radius for the simulated resolution
+
 *TSYS* sets the system temperature
+
 *Sigma* sets the amount of simulated nose
+
 *Eff.*  is the efficiency of the telescope.
+
 *LAT* and *LON* set the geographical location of the telescope
+
 *Rate* sets the simulated spectrae per second
+
 *Sun* sets the current radio flux density from the sun.
 
 
