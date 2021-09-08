@@ -283,3 +283,26 @@ void radio_update_conf_freq_lbl(Radio *p)
 
 	g_free(lbl);
 }
+
+
+/**
+ * @brief display the temperature value of the telescopes hot load
+ */
+
+void radio_update_hot_load_lbl(Radio *p)
+{
+	gchar *lbl;
+
+
+
+	lbl = g_strdup_printf(
+		 "<span foreground='#7AAA7E'"
+		 "	size = 'small'>"
+		 "Hot load temperature: %g K"
+		 "</span>",
+		 0.001 * (gdouble) p->cfg->c.hot_load); /* convert mK to K */
+
+	gtk_label_set_markup(p->cfg->hot_cfg, lbl);
+
+	g_free(lbl);
+}

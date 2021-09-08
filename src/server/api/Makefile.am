@@ -17,4 +17,8 @@ libbackend_a_SOURCES = be_moveto_azel.c \
 		       be_getpos_azel.c \
 		       be_spec_acq_enable.c \
 		       be_get_capabilities_drive.c \
-		       be_get_capabilities_spec.c
+		       be_get_capabilities_spec.c \
+		       be_get_capabilities_drive_load.c \
+		       be_get_capabilities_spec_load.c \
+		       be_hot_load_enable.c \
+		       be_cold_load_enable.c

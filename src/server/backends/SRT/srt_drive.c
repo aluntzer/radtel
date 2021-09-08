@@ -102,6 +102,14 @@ static struct {
 		double el_cnts;		/* elevation sensor counts */
 	} pos;
 
+	/* the SRT's hot load (noise diode, vane calibrator not implemented)
+	 * is part of the drive controls
+	 */
+	gdouble hot_load_temp;		/* hot load temperature */
+	gboolean hot_load_ena;		/* hot load enable/disable */
+	gboolean hot_load_state;	/* last known hot load status */
+
+
 } srt;
 
 
@@ -273,6 +281,11 @@ static void srt_drive_load_keys(GKeyFile *kf)
 		g_error(error->message);
 
 
+	srt.hot_load_temp = g_key_file_get_double(kf, model,
+						  "hot_load_temp", &error);
+	if (error) {
+		g_error(error->message);
+	}
 }
 
 
@@ -700,14 +713,19 @@ static double srt_drive_motor_cmd_eval(gchar *cmd)
 		ret = (double) cnts + (double) f1 * 0.5;
 		break;
 
+	case 'C':
+		g_debug(MSG "CMD OK, diode command was %d", f1);
+		break;
+
 	case 'T':
 		g_warning(MSG "CMD TIMEOUT, %d counts, motor: %d, f2: %d",
 			  cnts, f1, f2);
 		ret = 0.0;
 		break;
+
 	default:
 		/* XXX: issue cmd_drive_error(); */
-		g_warning(MSG, "error in com link response: %s", response);
+		g_warning(MSG "error in com link response: %s", response);
 		ret = 0.0;
 		break;
 	}
@@ -1066,6 +1084,53 @@ static gpointer srt_recal_thread(gpointer data)
 
 
 /**
+ * @brief thread function that toggles the state of the hot load
+ *
+ * @note this drives only the noise diode, just because I'm lazy
+ * and did not add a config option for the calibration vane
+ * (it's just IDs 4: vane out and 5: vane in instead of 6/7)
+ *
+ */
+
+static gpointer srt_hot_load_thread(gpointer data)
+{
+	gchar *cmd;
+
+	g_mutex_lock(&mutex);
+
+	be_shared_comlink_acquire();
+
+
+	g_message(MSG "Changing hot load state to %s",
+		      srt.hot_load_ena ? "ON" : "OFF");
+
+
+	if (srt.hot_load_ena)
+		cmd = "move 7 0\n";	/* id: 7 -> diode on */
+	else
+		cmd = "move 6 0\n";	/* id: 6 -> diode off */
+
+	/* toggle diode */
+	if (srt_drive_motor_cmd_eval(cmd) == 0.0)
+		srt.hot_load_state = srt.hot_load_ena;
+	else
+		g_message(MSG "unexpected response while changing hot load state");
+
+
+	be_shared_comlink_release();
+	g_mutex_unlock(&mutex);
+
+	if (srt.hot_load_state)
+		ack_hot_load_enable(PKT_TRANS_ID_UNDEF);
+	else
+		ack_hot_load_disable(PKT_TRANS_ID_UNDEF);
+
+
+	g_thread_exit(NULL);
+}
+
+
+/**
  * @brief push drive position to server
  */
 
@@ -1085,6 +1150,33 @@ static void srt_drive_notify_pos_update(void)
 	pos.el_arcsec = (typeof(pos.el_arcsec)) el_arcsec;
 	ack_getpos_azel(PKT_TRANS_ID_UNDEF, &pos);
 }
+
+
+/**
+ * @brief azimuth to telescope reference frame
+ */
+
+static void srt_toggle_hot_load(gboolean mode)
+{
+	/* if already in mode, just respond */
+	if (mode == srt.hot_load_state) {
+
+		if (srt.hot_load_state)
+			ack_hot_load_enable(PKT_TRANS_ID_UNDEF);
+		else
+			ack_hot_load_disable(PKT_TRANS_ID_UNDEF);
+
+		return;
+	}
+
+	/* target mode */
+	srt.hot_load_ena = mode;
+
+
+	g_thread_new(NULL, srt_hot_load_thread, NULL);
+}
+
+
 
 
 /**
@@ -1181,6 +1273,66 @@ int be_get_capabilities_drive(struct capabilities *c)
 
 
 /**
+ * @brief get telescope drive capabilities_load
+ */
+
+G_MODULE_EXPORT
+int be_get_capabilities_load_drive(struct capabilities_load *c)
+{
+	double el_drive_min;
+	double el_drive_max;
+	double el_drive_cnt;
+	double el_drive_res;
+
+
+	el_drive_min = srt_drive_el_to_drive_ref(srt.el_limits.lower);
+	el_drive_max = srt_drive_el_to_drive_ref(srt.el_limits.upper);
+
+	el_drive_cnt = srt_drive_cassi_el_counts(el_drive_max)
+		     - srt_drive_cassi_el_counts(el_drive_min);
+
+	el_drive_res = (el_drive_max - el_drive_min) / el_drive_cnt;
+
+
+	c->az_min_arcsec = (int32_t) (3600.0 * srt.az_limits.left);
+	c->az_max_arcsec = (int32_t) (3600.0 * srt.az_limits.right);
+	c->az_res_arcsec = (int32_t) (3600.0 / srt.az_counts_per_deg);
+
+	c->el_min_arcsec = (int32_t) (3600.0 * srt.el_limits.lower);
+	c->el_max_arcsec = (int32_t) (3600.0 * srt.el_limits.upper);
+	c->el_res_arcsec = (int32_t) (3600.0 * el_drive_res);
+
+	c->hot_load = (uint32_t) (srt.hot_load_temp * 1000.0);
+
+	/* push along hot load status, so we ensure that
+	 * any connecting client is informed immediately
+	 */
+	if (srt.hot_load_ena)
+		ack_hot_load_enable(PKT_TRANS_ID_UNDEF);
+	else
+		ack_hot_load_disable(PKT_TRANS_ID_UNDEF);
+
+
+	return 0;
+}
+
+
+
+
+/**
+ * @brief hot load enable/disable
+ */
+
+G_MODULE_EXPORT
+int be_hot_load_enable(gboolean mode)
+{
+	srt_toggle_hot_load(mode);
+
+	return 0;
+}
+
+
+/**
  * @brief extra initialisation function
  *
  * @note if a thread is created in g_module_check_init(), the loader appears
@@ -1198,6 +1350,11 @@ void module_extra_init(void)
 	g_message(MSG "starting drive slewing thread");
 
 	thread = g_thread_new(NULL, srt_drive_thread, NULL);
+
+	/* make sure the hot load is turned off on restart */
+	srt.hot_load_state = TRUE;
+	srt_toggle_hot_load(FALSE);
+
 }
 
 
@@ -1219,5 +1376,6 @@ const gchar *g_module_check_init(void)
 	srt_drive_cassi_set_pushdrod_zero_len_counts();
 	srt_drive_set_az_center();
 
+	
 	return NULL;
 }

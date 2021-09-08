@@ -81,6 +81,7 @@ radtel_SOURCES = main.c \
 
 radtel_SOURCES += pkt_proc.c \
 		  proc/proc_pr_capabilities.c \
+		  proc/proc_pr_capabilities_load.c \
 		  proc/proc_pr_invalid_pkt.c \
 		  proc/proc_pr_fail.c \
 		  proc/proc_pr_success.c \
@@ -96,12 +97,15 @@ radtel_SOURCES += pkt_proc.c \
 		  proc/proc_pr_moveto_azel.c \
 		  proc/proc_pr_nopriv.c \
 		  proc/proc_pr_message.c \
-		  proc/proc_pr_userlist.c
+		  proc/proc_pr_userlist.c \
+		  proc/proc_pr_hot_load_enable.c \
+		  proc/proc_pr_hot_load_disable.c
 
 
 radtel_SOURCES += sig/sig_pr_success.c \
 		  sig/sig_pr_fail.c \
 		  sig/sig_pr_capabilities.c \
+		  sig/sig_pr_capabilities_load.c \
 		  sig/sig_pr_spec_data.c \
 		  sig/sig_pr_getpos_azel.c \
 		  sig/sig_pr_spec_acq_enable.c \
@@ -115,6 +119,8 @@ radtel_SOURCES += sig/sig_pr_success.c \
 		  sig/sig_pr_nopriv.c \
 		  sig/sig_pr_message.c \
 		  sig/sig_pr_userlist.c \
+		  sig/sig_pr_hot_load_enable.c \
+		  sig/sig_pr_hot_load_disable.c \
 		  sig/sig_status_push.c \
 		  sig/sig_tracking.c \
 		  sig/sig_shutdown.c \
@@ -129,7 +135,8 @@ radtel_SOURCES += widgets/radio/radio.c \
 		  widgets/radio/radio_spec_acq_ctrl.c \
 		  widgets/radio/radio_spec_acq_num_ctrl.c \
 		  widgets/radio/radio_spec_cfg_ctrl.c \
-		  widgets/radio/radio_vrest_ctrl.c
+		  widgets/radio/radio_vrest_ctrl.c \
+		  widgets/radio/radio_hot_load_ctrl.c
 
 radtel_SOURCES += widgets/telescope/telescope.c \
 		  widgets/telescope/telescope_update.c \

@@ -29,6 +29,7 @@ GtkWidget *radio_spec_cfg_ctrl_set_new(Radio *p);
 GtkWidget *radio_spec_acq_num_ctrl_new(Radio *p);
 GtkWidget *radio_spec_doppler_ctrl_new(Radio *p);
 GtkWidget *radio_vrest_ctrl_new(Radio *p);
+GtkWidget *radio_hot_load_ctrl_new(Radio *p);
 
 void radio_update_avg_lbl(Radio *p);
 void radio_update_conf_bw_lbl(Radio *p);
@@ -37,9 +38,13 @@ void radio_update_freq_range(Radio *p);
 void radio_update_bin_divider(Radio *p);
 void radio_update_bw_divider(Radio *p);
 void radio_update_avg_range(Radio *p);
+void radio_update_hot_load_lbl(Radio *p);
 
 gboolean radio_spec_acq_cmd_spec_acq_enable(gpointer instance, gpointer data);
 gboolean radio_spec_acq_cmd_spec_acq_disable(gpointer instance, gpointer data);
+
+gboolean radio_hot_load_cmd_hot_load_enable(gpointer instance, gpointer data);
+gboolean radio_hot_load_cmd_hot_load_disable(gpointer instance, gpointer data);
 
 void radio_input_block_signals(Radio *p);
 void radio_input_unblock_signals(Radio *p);

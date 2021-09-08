@@ -43,6 +43,10 @@ void process_pkt(struct packet *pkt)
 		proc_pr_capabilities(pkt);
 		break;
 
+	case PR_CAPABILITIES_LOAD:
+		proc_pr_capabilities_load(pkt);
+		break;
+
 	case PR_SUCCESS:
 		proc_pr_success(pkt);
 		break;
@@ -103,6 +107,13 @@ void process_pkt(struct packet *pkt)
 		proc_pr_userlist(pkt);
 		break;
 
+	case PR_HOT_LOAD_ENABLE:
+		proc_pr_hot_load_enable(pkt);
+		break;
+
+	case PR_HOT_LOAD_DISABLE:
+		proc_pr_hot_load_disable(pkt);
+		break;
 
 	default:
 		g_message("Service command %x not understood\n", pkt->service);

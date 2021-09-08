@@ -38,7 +38,17 @@ G_DEFINE_TYPE_WITH_PRIVATE(Radio, radio, GTK_TYPE_BOX)
 
 static void radio_connected(gpointer instance, gpointer data)
 {
+	Radio *p;
+
+
+	p = RADIO(data);
+
+	/* hide widgets on connect, in case this is an old version server */
+	gtk_widget_set_no_show_all(p->cfg->w_hotload, TRUE);
+	gtk_widget_hide(p->cfg->w_hotload);
+
 	cmd_capabilities(PKT_TRANS_ID_UNDEF);
+	cmd_capabilities_load(PKT_TRANS_ID_UNDEF);
 	cmd_getpos_azel(PKT_TRANS_ID_UNDEF);
 }
 
@@ -46,7 +56,7 @@ static void radio_connected(gpointer instance, gpointer data)
 /**
  * @brief handle capabilities data
  */
-
+#define offset_of(TYPE, MEMBER) ((size_t) &((TYPE *)0)->MEMBER)
 static void radio_handle_pr_capabilities(gpointer instance,
 					 const struct capabilities *c,
 					 gpointer data)
@@ -56,6 +66,41 @@ static void radio_handle_pr_capabilities(gpointer instance,
 
 	p = RADIO(data);
 
+	/* just copy the identical part of struct capabilities into our
+	 * extended struct capabilities load. They are identical up to
+	 * n_stack_max (need to add that size too)
+	 */
+
+	memcpy(&p->cfg->c, c, ((size_t) &((struct capabilities *)0)->n_stack_max)
+					+ sizeof(typeof(c->n_stack_max)));
+
+	p->cfg->lat = p->cfg->c.lat_arcsec / 3600.0;
+	p->cfg->lon = p->cfg->c.lon_arcsec / 3600.0;
+
+	radio_update_bw_divider(p);
+	radio_update_bin_divider(p);
+	radio_update_freq_range(p);
+	radio_update_avg_range(p);
+}
+
+
+/**
+ * @brief handle capabilities_load data
+ */
+
+static void radio_handle_pr_capabilities_load(gpointer instance,
+					      const struct capabilities_load *c,
+					      gpointer data)
+{
+	Radio *p;
+
+
+	p = RADIO(data);
+
+	/* this duplicates only the main part of the structure
+	 * without the variable part, but it is fine as we don't need a copy
+	 * of the horizon profile
+	 */
 	p->cfg->c = (*c);
 
 	p->cfg->lat = p->cfg->c.lat_arcsec / 3600.0;
@@ -65,6 +110,16 @@ static void radio_handle_pr_capabilities(gpointer instance,
 	radio_update_bin_divider(p);
 	radio_update_freq_range(p);
 	radio_update_avg_range(p);
+
+
+	if (p->cfg->c.hot_load) {
+		radio_update_hot_load_lbl(p);
+		gtk_widget_set_no_show_all(p->cfg->w_hotload, FALSE);
+		gtk_widget_show_all(p->cfg->w_hotload);
+	} else {
+		gtk_widget_set_no_show_all(p->cfg->w_hotload, TRUE);
+		gtk_widget_hide(p->cfg->w_hotload);
+	}
 }
 
 
@@ -187,6 +242,10 @@ static void gui_create_radio_controls(Radio *p)
 	w = radio_spec_acq_ctrl_new(p);
 	gtk_box_pack_start(GTK_BOX(p), w, FALSE, FALSE, 0);
 
+	w = radio_hot_load_ctrl_new(p);
+	gtk_box_pack_start(GTK_BOX(p), w, FALSE, FALSE, 0);
+	gtk_widget_set_no_show_all(w, TRUE);
+	p->cfg->w_hotload = w;
 }
 
 
@@ -211,6 +270,9 @@ static gboolean radio_destroy(GtkWidget *w, void *data)
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_dis);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_pos);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_con);
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_load);
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_hot_ena);
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_hot_dis);
 
 	return TRUE;
 }
@@ -286,6 +348,21 @@ static void radio_init(Radio *p)
 	p->cfg->id_con = g_signal_connect(sig_get_instance(), "net-connected",
 			  G_CALLBACK(radio_connected),
 			  (gpointer) p);
+
+
+	p->cfg->id_load = g_signal_connect(sig_get_instance(), "pr-capabilities-load",
+					   G_CALLBACK(radio_handle_pr_capabilities_load),
+					   (void *) p);
+
+	p->cfg->id_hot_ena = g_signal_connect(sig_get_instance(),
+			 "pr-hot-load-enable",
+			 G_CALLBACK(radio_hot_load_cmd_hot_load_enable),
+			 (gpointer) p);
+
+	p->cfg->id_hot_dis = g_signal_connect(sig_get_instance(),
+			 "pr-hot-load-disable",
+			 G_CALLBACK(radio_hot_load_cmd_hot_load_disable),
+			 (gpointer) p);
 
 	g_signal_connect(p, "destroy", G_CALLBACK(radio_destroy), NULL);
 }

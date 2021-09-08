@@ -1,5 +1,5 @@
 /**
- * @file    server/proc/proc_pr_capabilities.c
+ * @file    server/proc/proc_pr_capabilities_load.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -24,7 +24,8 @@
 #include <backend.h>
 #include <cfg.h>
 
-void proc_pr_capabilities(struct packet *pkt)
+
+void proc_pr_capabilities_load(struct packet *pkt)
 {
 	guint32 i;
 	guint32 n;
@@ -32,15 +33,14 @@ void proc_pr_capabilities(struct packet *pkt)
 	gint32 *az;
 	gint32 *el;
 
-	struct capabilities *c;
+	struct capabilities_load *c;
 
 
-
-	g_debug("Client requested capabilites, acknowledging");
+	g_debug("Client requested capabilites_load, acknowledging");
 
 	n = server_cfg_get_hor_limits(&az, &el);
 
-	c = g_malloc0(sizeof(struct capabilities)
+	c = g_malloc0(sizeof(struct capabilities_load)
 		      + n * sizeof(struct local_horizon));
 
 	c->n_hor = n;
@@ -54,14 +54,13 @@ void proc_pr_capabilities(struct packet *pkt)
 	g_free(el);
 
 
-	be_get_capabilities_spec(c);
-	be_get_capabilities_drive(c);
+	be_get_capabilities_load_spec(c);
+	be_get_capabilities_load_drive(c);
 
 	c->lon_arcsec = (int32_t) (3600.0 * server_cfg_get_station_lon());
 	c->lat_arcsec = (int32_t) (3600.0 * server_cfg_get_station_lat());
 
-	ack_capabilities(pkt->trans_id, c);
+	ack_capabilities_load(pkt->trans_id, c);
 
 	g_free(c);
 }
-

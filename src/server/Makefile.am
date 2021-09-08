@@ -56,6 +56,7 @@ radtelsrv_SOURCES = main.c \
 		    net.c \
 		    pkt_proc.c \
 		    proc/proc_pr_capabilities.c \
+		    proc/proc_pr_capabilities_load.c \
 		    proc/proc_pr_invalid_pkt.c \
 		    proc/proc_pr_moveto_azel.c \
 		    proc/proc_pr_recalibrate_pointing.c \
@@ -67,7 +68,9 @@ radtelsrv_SOURCES = main.c \
 		    proc/proc_pr_spec_acq_cfg_get.c \
 		    proc/proc_pr_control.c \
 		    proc/proc_pr_message.c \
-		    proc/proc_pr_nick.c
+		    proc/proc_pr_nick.c \
+		    proc/proc_pr_hot_load_enable.c \
+		    proc/proc_pr_hot_load_disable.c
 
 # cfg to /etc
 sysconf_radteldir = $(sysconfdir)/$(confdir)

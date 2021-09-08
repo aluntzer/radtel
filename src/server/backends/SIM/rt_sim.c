@@ -92,6 +92,9 @@
 #define SIM_SIG_NOISE		12.	/* default noise */
 #define SIM_READOUT_HZ		1	/* default readout frequency */
 #define SIM_SUN_SFU		48.	/* Sun @1415 as of Jun 11 2019 12 UTC */
+#define SIM_HOT_LOAD_TEMP	290.	/* default hot load temperature */
+#define SIM_NOISE_FIG		0.1	/* default amplifier noise figure */
+
 
 #define SKY_GAUSS_INTG_STP	0.10	/* integration step for gaussian */
 #define SKY_BASE_RES		0.5	/* resolution of the underlying data */
@@ -152,6 +155,12 @@ static struct {
 	gdouble sig_n;				/* noise sigma */
 	gdouble readout_hz;			/* spectrum readout frequency */
 	gdouble sun_sfu;			/* sun solar flux units */
+	gdouble hot_load_temp;			/* hot load temperature */
+
+	gboolean hot_load_ena;			/* hot load enable status */
+
+	gdouble noise_fig;			/* noise figure of the amplifier chain */
+	gdouble sig_rms;			/* theoretical rms noise  */
 
 	struct {
 		GdkPixbuf	*pb_sky;
@@ -193,6 +202,10 @@ static struct {
 	.sig_n			= SIM_SIG_NOISE,
 	.readout_hz		= SIM_READOUT_HZ,
 	.sun_sfu		= SIM_SUN_SFU,
+	.hot_load_temp		= SIM_HOT_LOAD_TEMP,
+	.hot_load_ena		= FALSE,
+	.noise_fig		= SIM_NOISE_FIG,
+
 };
 
 /**
@@ -1100,6 +1113,22 @@ static gdouble HI_raw_amp_to_mKelvins(gdouble val)
 	return val * SIM_HI_AMP_CAL;
 }
 
+/**
+ * @brief get theoretical RMS noise sigma
+ *
+ * @param tsys the system temperature
+ * @param tint the integration time
+ * @param bw   the observed bandwith
+ *
+ * @returns the rms noise sigma
+ */
+
+static gdouble rms_noise_sigma(gdouble tsys, gdouble tint, gdouble bw)
+{
+	/* tint can never be 0, so this should be fine */
+	return tsys / sqrt(tint * bw);
+}
+
 
 /**
  * @brief extract and compute get the spectrum for a given galatic lat/lon
@@ -1230,7 +1259,7 @@ static gsize HI_get_spec_idx(struct spec_data *s, struct coord_galactic gal,
 
 
 /**
- * @brief stack a HI spectrum for a give GLAT/GLON and a beam on a base spectrum
+ * @brief stack a HI spectrum for a given GLAT/GLON and a beam on a base spectrum
  *
  * @param s the target spec_data
  *
@@ -1337,6 +1366,30 @@ static void sim_stack_tsys(struct spec_data *s, gdouble tsys)
 	for (i = 0; i < s->n; i++)
 		s->spec[i] = (typeof(*s->spec)) ((gdouble) s->spec[i] + tsys);
 }
+
+/**
+ * @brief stack the amplifier noise temperature on a base spectrum
+ *
+ * @param tsys a system temperature in Kelvins
+ *
+ * @param noise_fig the noise figure in decibels
+ *
+ * @param s the target spec_data
+ */
+
+static void sim_stack_amp_noise(struct spec_data *s, gdouble tsys, gdouble noise_fig)
+{
+	gsize i;
+
+
+	/* noise temperature from noise figure */
+	tsys = tsys * (pow(10., noise_fig * 0.1) - 1.);
+	tsys = tsys * 1000.0; /* to mK */
+
+	for (i = 0; i < s->n; i++)
+		s->spec[i] = (typeof(*s->spec)) ((gdouble) s->spec[i] + tsys);
+}
+
 
 
 /**
@@ -1648,6 +1701,25 @@ static void sim_stack_gnoise(struct spec_data *s, gdouble sig)
 	}
 }
 
+
+/**
+ * @brief stack the hot load temperature on a base spectrum
+ *
+ * @param tload a temperature in Kelvins
+ *
+ * @param s the target spec_data
+ */
+
+static void sim_stack_hot_load(struct spec_data *s, gdouble tload)
+{
+	gsize i;
+
+
+	tload = tload * 1000.0; /* to mK */
+
+	for (i = 0; i < s->n; i++)
+		s->spec[i] = (typeof(*s->spec)) ((gdouble) s->spec[i] + tload);
+}
 
 /**
  * @brief transpose a two-dimensional array of complex doubles
@@ -2279,6 +2351,7 @@ static gboolean sim_spb_lat_value_changed_cb(GtkSpinButton *sb, gpointer data)
 	pkt.trans_id = PKT_TRANS_ID_UNDEF;
 
 	proc_pr_capabilities(&pkt);
+	proc_pr_capabilities_load(&pkt);
 }
 
 static gboolean sim_spb_lon_value_changed_cb(GtkSpinButton *sb, gpointer data)
@@ -2291,6 +2364,7 @@ static gboolean sim_spb_lon_value_changed_cb(GtkSpinButton *sb, gpointer data)
 	pkt.trans_id = PKT_TRANS_ID_UNDEF;
 
 	proc_pr_capabilities(&pkt);
+	proc_pr_capabilities_load(&pkt);
 }
 
 
@@ -2319,7 +2393,22 @@ static gboolean sim_sun_sfu_value_changed_cb(GtkSpinButton *sb, gpointer data)
 	sim.sun_sfu = gtk_spin_button_get_value(sb);
 }
 
+static gboolean sim_noise_fig_value_changed_cb(GtkSpinButton *sb, gpointer data)
+{
+	sim.noise_fig = gtk_spin_button_get_value(sb);
+}
 
+static gboolean sim_hot_load_temp_value_changed_cb(GtkSpinButton *sb, gpointer data)
+{
+	struct packet pkt;
+
+
+	sim.hot_load_temp = gtk_spin_button_get_value(sb);
+
+	pkt.trans_id = PKT_TRANS_ID_UNDEF;
+
+	proc_pr_capabilities_load(&pkt);
+}
 
 
 static void sim_rt_gui_defaults(void)
@@ -2500,8 +2589,50 @@ static GtkWidget *sim_rt_par_gui(void)
 
 
 
+	w = gtk_label_new("Hot Load [K]");
+	gtk_widget_set_halign(w, GTK_ALIGN_START);
+	gtk_widget_set_halign(w, GTK_ALIGN_START);
+	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
+	gtk_grid_attach(GTK_GRID(grid), w, 0, 8, 1, 1);
+
+	w = gtk_spin_button_new_with_range(0.0, 1000., 1.0);
+	gtk_entry_set_alignment(GTK_ENTRY(w), 1.0);
+	gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(w), TRUE);
+	gtk_spin_button_set_digits(GTK_SPIN_BUTTON(w), 1);
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w), SIM_HOT_LOAD_TEMP);
+	gtk_widget_set_halign(w, GTK_ALIGN_FILL);
+	gtk_widget_set_hexpand(w, FALSE);
+	gtk_grid_attach(GTK_GRID(grid), w, 1, 8, 1, 1);
+
+	g_signal_connect(GTK_SPIN_BUTTON(w), "value-changed",
+			 G_CALLBACK(sim_hot_load_temp_value_changed_cb), NULL);
+
+
+	w = gtk_label_new("Noise Fig. [dB]");
+	gtk_widget_set_halign(w, GTK_ALIGN_START);
+	gtk_widget_set_halign(w, GTK_ALIGN_START);
+	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
+	gtk_grid_attach(GTK_GRID(grid), w, 0, 10, 1, 1);
+
+	w = gtk_spin_button_new_with_range(0.1, 4.0, 0.1);
+	gtk_entry_set_alignment(GTK_ENTRY(w), 1.0);
+	gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(w), TRUE);
+	gtk_spin_button_set_digits(GTK_SPIN_BUTTON(w), 1);
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w), SIM_NOISE_FIG);
+	gtk_widget_set_halign(w, GTK_ALIGN_FILL);
+	gtk_widget_set_hexpand(w, FALSE);
+	gtk_grid_attach(GTK_GRID(grid), w, 1, 10, 1, 1);
+
+	g_signal_connect(GTK_SPIN_BUTTON(w), "value-changed",
+			 G_CALLBACK(sim_noise_fig_value_changed_cb), NULL);
+
+
+
+
+
 	return frame;
 }
+
 
 
 void sim_exit_widget_destroy(GtkWidget *w)
@@ -2780,23 +2911,40 @@ static uint32_t sim_spec_acquire(struct observation *obs)
 		return 0;
 	}
 
+
+	/* update theoretical rms sigma */
+	sim.sig_rms = rms_noise_sigma(sim.tsys, 1.0 / sim.readout_hz,
+				      g_obs.acq.freq_stop_hz - g_obs.acq.freq_start_hz);
+
+
 	/* NOTE: values in s->spec must ALWAYS be >0, since it is (usually)
-	 * a uin32_t. Adding the CMB temperature is a good place to start
+	 * a uin32_t. We do this by adding at least the non-zero preamp noise
 	 */
+
+	if (sim.hot_load_ena)
+		sim_stack_hot_load(s, sim.hot_load_temp);
+
+	if (sim.hot_load_ena)
+		sim_stack_hot_load(s, sim.hot_load_temp);
+
 	sim_stack_cmb(s, gal, beam, n_beam, sky_deg);
 
 	sim_stack_moon(s, gal, beam, n_beam, sky_deg);
 
 	sim_stack_sun(s, gal, beam, n_beam, sky_deg);
 
-
-	sim_stack_tsys(s, sim.tsys);
-
 	HI_stack_spec(s, gal, beam, n_beam, sky_deg);
 
 	sim_stack_eff(s, sim.eff);
 
+	sim_stack_tsys(s, sim.tsys);
+
 	sim_stack_gnoise(s, sim.sig_n);
+
+	sim_stack_amp_noise(s, sim.tsys, sim.noise_fig);
+
+	sim_stack_gnoise(s, sim.sig_rms);
+
 
 
 	/* handover for transmission */
@@ -2858,6 +3006,23 @@ static void sim_spec_acq_enable(gboolean mode)
 	return;
 }
 
+
+
+/**
+ * @brief enable/disable hot load
+ *
+ */
+
+static void sim_hot_load_enable(gboolean mode)
+{
+	sim.hot_load_ena = mode;
+
+
+	if (mode)
+		ack_hot_load_enable(PKT_TRANS_ID_UNDEF);
+	else
+		ack_hot_load_disable(PKT_TRANS_ID_UNDEF);
+}
 
 
 /**
@@ -3022,6 +3187,19 @@ int be_spec_acq_enable(gboolean mode)
 
 
 /**
+ * @brief hot load enable/disable
+ */
+
+G_MODULE_EXPORT
+int be_hot_load_enable(gboolean mode)
+{
+	sim_hot_load_enable(mode);
+
+	return 0;
+}
+
+
+/**
  * @brief get telescope spectrometer capabilities
  */
 
@@ -3042,6 +3220,42 @@ int be_get_capabilities_spec(struct capabilities *c)
 
 	return 0;
 }
+
+
+/**
+ * @brief get telescope spectrometer capabilities_load
+ */
+
+G_MODULE_EXPORT
+int be_get_capabilities_load_spec(struct capabilities_load *c)
+{
+	c->freq_min_hz		= (uint64_t) sim.radio.freq_min_hz;
+	c->freq_max_hz		= (uint64_t) sim.radio.freq_max_hz;
+	c->freq_inc_hz		= (uint64_t) sim.radio.freq_inc_hz;
+	c->bw_max_hz		= (uint32_t) sim.radio.freq_if_bw;
+	c->bw_max_div_lin	= 0;
+	c->bw_max_div_rad2	= (uint32_t) sim.radio.freq_bw_div_max;
+	c->bw_max_bins		= (uint32_t) sim.radio.max_bins;
+	c->bw_max_bin_div_lin	= 0;
+	c->bw_max_bin_div_rad2	= 0;
+	c->n_stack_max		= 0; /* stacking not implemented */
+	c->hot_load		= (uint32_t) sim.hot_load_temp * 1000.0;
+
+	/* push along hot load status, so we ensure that
+	 * any connecting client is informed immediately
+	 */
+
+	if (c->hot_load) {
+		if (sim.hot_load_ena)
+			ack_hot_load_enable(PKT_TRANS_ID_UNDEF);
+		else
+			ack_hot_load_disable(PKT_TRANS_ID_UNDEF);
+	}
+
+
+	return 0;
+}
+
 
 
 /**
@@ -3119,6 +3333,26 @@ int be_get_capabilities_drive(struct capabilities *c)
 
 
 /**
+ * @brief get telescope drive capabilities_load
+ */
+
+G_MODULE_EXPORT
+int be_get_capabilities_load_drive(struct capabilities_load *c)
+{
+	c->az_min_arcsec = (int32_t) (3600.0 * sim.az.left);
+	c->az_max_arcsec = (int32_t) (3600.0 * sim.az.right);
+	c->az_res_arcsec = (int32_t) (3600.0 * sim.az.res);
+
+	c->el_min_arcsec = (int32_t) (3600.0 * sim.el.lower);
+	c->el_max_arcsec = (int32_t) (3600.0 * sim.el.upper);
+	c->el_res_arcsec = (int32_t) (3600.0 * sim.el.res);
+
+	return 0;
+}
+
+
+
+/**
  * @brief extra initialisation function
  *
  * @note if a thread is created in g_module_check_init(), the loader appears
@@ -3139,6 +3373,8 @@ void module_extra_init(void)
 
 	/* always start paused */
 	sim_spec_acq_enable(FALSE);
+
+	sim_hot_load_enable(FALSE);
 
 	sim_spec_cfg_defaults();
 

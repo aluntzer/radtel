@@ -22,7 +22,7 @@
 
 struct _RadioConfig {
 	gdouble prec;
-	struct capabilities c;
+	struct capabilities_load c;
 
 	gdouble az;
 	gdouble el;
@@ -52,7 +52,7 @@ struct _RadioConfig {
 	GtkToggleButton *rb_cbw;
 
 
-
+	GtkWidget *w_hotload;
 
 
 	GtkLabel *sb_frq_lo_center_lbl;
@@ -71,9 +71,10 @@ struct _RadioConfig {
 	GtkLabel *freq_cfg;
 	GtkLabel *bw_cfg;
 	GtkLabel *avg_cfg;
+	GtkLabel *hot_cfg;
 
 	GtkSwitch *sw_acq;
-
+	GtkSwitch *sw_hot;
 	GtkSwitch *sw_dpl;
 
 
@@ -91,6 +92,9 @@ struct _RadioConfig {
 	guint id_dis;
 	guint id_pos;
 	guint id_con;
+	guint id_load;
+	guint id_hot_ena;
+	guint id_hot_dis;
 
 
 	guint id_vh;

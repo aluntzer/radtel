@@ -50,6 +50,7 @@
 #include <payload/pr_message.h>
 #include <payload/pr_userlist.h>
 #include <payload/pr_nick.h>
+#include <payload/pr_capabilities_load.h>
 
 
 #define DEFAULT_PORT 1420
@@ -82,6 +83,9 @@
 #define PR_MESSAGE		0xa015	/* an arbitrary message */
 #define PR_USERLIST		0xa016	/* a list of connected users */
 #define PR_NICK			0xa017	/* to set the user's nickname */
+#define PR_CAPABILITIES_LOAD	0xa018	/* PR_CAPABILITIES, extended with hot/cold loads */
+#define PR_HOT_LOAD_ENABLE	0xa019  /* enable hot load */
+#define PR_HOT_LOAD_DISABLE	0xa01a  /* disable hot load */
 
 
 

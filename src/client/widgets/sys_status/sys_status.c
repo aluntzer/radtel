@@ -39,8 +39,25 @@ G_DEFINE_TYPE_WITH_PRIVATE(SysStatus, sys_status, GTK_TYPE_BOX)
 static void sys_status_fetch_config(void)
 {
 	cmd_capabilities(PKT_TRANS_ID_UNDEF);
+	cmd_capabilities_load(PKT_TRANS_ID_UNDEF);
 	cmd_getpos_azel(PKT_TRANS_ID_UNDEF);
 	cmd_spec_acq_cfg_get(PKT_TRANS_ID_UNDEF);
+}
+
+/**
+ * @brief reset hot load label
+ */
+
+static void sys_status_reset_hot(SysStatus *p)
+{
+	gchar *lbl;
+
+
+	lbl = g_strdup_printf("<span foreground='#7AAA7E'> N/A </span>");
+
+	gtk_label_set_markup(p->cfg->lbl_hot_load, lbl);
+
+	g_free(lbl);
 }
 
 
@@ -50,6 +67,7 @@ static void sys_status_fetch_config(void)
 
 static void sys_status_connected(gpointer instance, gpointer data)
 {
+	sys_status_reset_hot(SYS_STATUS(data));
 	sys_status_fetch_config();
 }
 
@@ -165,6 +183,29 @@ static void sys_status_handle_pr_capabilities(gpointer instance,
 	p->cfg->lon = c->lon_arcsec / 3600.0;
 }
 
+/**
+ * @brief handle capabilities_load data
+ */
+
+static void sys_status_handle_pr_capabilities_load(gpointer instance,
+						   const struct capabilities_load *c,
+						   gpointer data)
+{
+	SysStatus *p;
+
+
+	p = SYS_STATUS(data);
+
+	p->cfg->lat = c->lat_arcsec / 3600.0;
+	p->cfg->lon = c->lon_arcsec / 3600.0;
+
+	p->cfg->hot_load_temp = (gdouble) c->hot_load;
+
+	if (!c->hot_load)
+		sys_status_reset_hot(data);
+
+}
+
 
 /**
  * @brief handle spectral acquisition configuration data
@@ -176,23 +217,76 @@ static void sys_status_handle_pr_spec_acq_cfg(gpointer instance,
 {
 	SysStatus *p;
 
+	gchar *lbl = NULL;
+
 
 	p = SYS_STATUS(data);
 
 	p->cfg->frq_lo = (gdouble) acq->freq_start_hz * 1e-6;
 	p->cfg->frq_hi = (gdouble) acq->freq_stop_hz  * 1e-6;
 
-	{
-	/* XXX this gotta go  */
-	gchar *lbl = NULL;
-	lbl = g_strdup_printf("<tt> %06.2f MHz</tt>", p->cfg->frq_lo);
+	lbl = g_strdup_printf("<tt>%06.2f MHz</tt>", p->cfg->frq_lo);
 	gtk_label_set_markup(p->cfg->lbl_frq_lo, lbl);
-	lbl = g_strdup_printf("<tt> %06.2f MHz</tt>", p->cfg->frq_hi);
+	g_free(lbl);
+
+	lbl = g_strdup_printf("<tt>%06.2f MHz</tt>", p->cfg->frq_hi);
 	gtk_label_set_markup(p->cfg->lbl_frq_hi, lbl);
-	}
+	g_free(lbl);
 }
 
 
+/**
+ * @brief handle status hot_load_enable
+ */
+static void sys_status_handle_pr_hot_load_enable(gpointer instance,
+						 gpointer data)
+{
+	SysStatus *p;
+
+	gchar *lbl;
+
+
+	p = SYS_STATUS(data);
+
+
+	/* if hot load turned on, but we don't know it's temperature yet,
+	 * send another request
+	 */
+	if (p->cfg->hot_load_temp == 0.0) {
+		cmd_capabilities_load(PKT_TRANS_ID_UNDEF);
+		return;
+	}
+
+	/* convert mK to K */
+	lbl = g_strdup_printf("<span foreground='#FF0000'> %g K </span>",
+			       0.001 * (gdouble) p->cfg->hot_load_temp);
+
+
+	gtk_label_set_markup(p->cfg->lbl_hot_load, lbl);
+
+	g_free(lbl);
+}
+
+
+/**
+ * @brief handle status hot_load_disable
+ */
+static void sys_status_handle_pr_hot_load_disable(gpointer instance,
+						  gpointer data)
+{
+	SysStatus *p;
+
+	gchar *lbl;
+
+
+	p = SYS_STATUS(data);
+
+	lbl = g_strdup_printf("<span foreground='#7AAA7E'> OFF </span>");
+
+	gtk_label_set_markup(p->cfg->lbl_hot_load, lbl);
+
+	g_free(lbl);
+}
 
 
 static void sys_status_hide_widgets(GtkWidget *w, gpointer data)
@@ -281,19 +375,26 @@ static void gui_create_sys_status_controls(SysStatus *p)
 		gtk_grid_set_column_spacing(GTK_GRID(grid2), 12);
 
 
-		w = gtk_label_new(NULL);
-		gtk_label_set_markup(GTK_LABEL(w), "<span alpha='50%'>F<span size='x-small'>LO</span></span>");
+		w = sys_status_create_align_lbl("<span alpha='50%'>F<span size='x-small'>LO</span></span>", 1.0);
 		gtk_grid_attach(GTK_GRID(grid2), w, 0, 4, 1, 1);
 		w = sys_status_create_align_lbl(NULL, 0.0);
 		gtk_grid_attach(GTK_GRID(grid2), w, 1, 4, 2, 1);
 		p->cfg->lbl_frq_lo = GTK_LABEL(w);
 
-		w = gtk_label_new(NULL);
-		gtk_label_set_markup(GTK_LABEL(w), "<span alpha='50%'>F<span size='x-small'>HI</span></span>");
+		w = sys_status_create_align_lbl("<span alpha='50%'>F<span size='x-small'>HI</span></span>", 1.0);
 		gtk_grid_attach(GTK_GRID(grid2), w, 0, 5, 1, 1);
 		w = sys_status_create_align_lbl(NULL, 0.0);
 		gtk_grid_attach(GTK_GRID(grid2), w, 1, 5, 2, 1);
 		p->cfg->lbl_frq_hi = GTK_LABEL(w);;
+
+		w = sys_status_create_align_lbl("<span alpha='50%'>Hot Load</span>", 1.0);
+		gtk_grid_attach(GTK_GRID(grid2), w, 0, 6, 1, 1);
+		w = sys_status_create_align_lbl(NULL, 0.0);
+		gtk_grid_attach(GTK_GRID(grid2), w, 1, 6, 1, 1);
+		p->cfg->lbl_hot_load = GTK_LABEL(w);
+
+		/* reset label text */
+		sys_status_reset_hot(p);
 
 
 		gtk_grid_attach(GTK_GRID(grid), grid2, 2, 0, 1, 1);
@@ -311,43 +412,41 @@ static void gui_create_sys_status_controls(SysStatus *p)
 		gtk_grid_set_column_spacing(GTK_GRID(grid2), 12);
 
 
-		w = gtk_label_new("ACQ:");
+		w = sys_status_create_align_lbl("<span alpha='50%'>Acquisition</span>", 1.0);
 		gtk_grid_attach(GTK_GRID(grid2), w, 0, 0, 1, 1);
 		w = gtk_spinner_new();
 		gtk_grid_attach(GTK_GRID(grid2), w, 1, 0, 1, 1);
 		p->cfg->spin_acq = w;
-		w = gtk_label_new("");
+		w = sys_status_create_align_lbl(NULL, 0.0);
 		gtk_grid_attach(GTK_GRID(grid2), w, 2, 0, 1, 1);
 		p->cfg->lbl_eta_acq = GTK_LABEL(w);
 
-		w = gtk_label_new("REC:");
+		w = sys_status_create_align_lbl("<span alpha='50%'>Recording</span>", 1.0);
 		gtk_grid_attach(GTK_GRID(grid2), w, 0, 1, 1, 1);
 		w = gtk_spinner_new();
 		gtk_grid_attach(GTK_GRID(grid2), w, 1, 1, 1, 1);
 		p->cfg->spin_rec = w;
-		w = gtk_label_new("");
+		w = sys_status_create_align_lbl(NULL, 0.0);
 		gtk_grid_attach(GTK_GRID(grid2), w, 2, 1, 1, 1);
 		p->cfg->lbl_eta_rec = GTK_LABEL(w);
 
-		w = gtk_label_new("SLEW:");
+		w = sys_status_create_align_lbl("<span alpha='50%'>Slewing</span>", 1.0);
 		gtk_grid_attach(GTK_GRID(grid2), w, 0, 2, 1, 1);
 		w = gtk_spinner_new();
 		gtk_grid_attach(GTK_GRID(grid2), w, 1, 2, 1, 1);
 		p->cfg->spin_slew = w;
-		w = gtk_label_new("");
+		w = sys_status_create_align_lbl(NULL, 0.0);
 		gtk_grid_attach(GTK_GRID(grid2), w, 2, 2, 1, 1);
 		p->cfg->lbl_eta_slew = GTK_LABEL(w);
 
-		w = gtk_label_new("MOVE:");
+		w = sys_status_create_align_lbl("<span alpha='50%'>Moving</span>", 1.0);
 		gtk_grid_attach(GTK_GRID(grid2), w, 0, 3, 1, 1);
 		w = gtk_spinner_new();
 		gtk_grid_attach(GTK_GRID(grid2), w, 1, 3, 1, 1);
 		p->cfg->spin_move = w;
-		w = gtk_label_new("");
+		w = sys_status_create_align_lbl(NULL, 0.0);
 		gtk_grid_attach(GTK_GRID(grid2), w, 2, 3, 1, 1);
 		p->cfg->lbl_eta_move = GTK_LABEL(w);
-
-
 
 		gtk_grid_attach(GTK_GRID(grid), grid2, 4, 0, 1, 1);
 	}
@@ -413,6 +512,7 @@ static gboolean sys_status_destroy(GtkWidget *w, void *data)
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_pos);
 
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_cap);
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_lod);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_acq);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_slw);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_mov);
@@ -421,6 +521,9 @@ static gboolean sys_status_destroy(GtkWidget *w, void *data)
 
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_msg);
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_con);
+
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_hot_ena);
+	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_hot_dis);
 
 
 	return TRUE;
@@ -466,6 +569,12 @@ static void sys_status_init(SysStatus *p)
 				 G_CALLBACK(sys_status_handle_pr_capabilities),
 				 (void *) p);
 
+	p->cfg->id_lod = g_signal_connect(sig_get_instance(), "pr-capabilities-load",
+				  G_CALLBACK(sys_status_handle_pr_capabilities_load),
+				  (void *) p);
+
+
+
 	p->cfg->id_acq = g_signal_connect(sig_get_instance(), "pr-status-acq",
 				 G_CALLBACK(sys_status_handle_pr_status_acq),
 				 (void *) p);
@@ -493,6 +602,17 @@ static void sys_status_init(SysStatus *p)
 	p->cfg->id_con = g_signal_connect(sig_get_instance(), "net-connected",
 				 G_CALLBACK(sys_status_connected),
 				 (void *) p);
+
+	p->cfg->id_hot_ena = g_signal_connect(sig_get_instance(),
+			 "pr-hot-load-enable",
+			 G_CALLBACK(sys_status_handle_pr_hot_load_enable),
+			 (gpointer) p);
+
+	p->cfg->id_hot_dis = g_signal_connect(sig_get_instance(),
+			 "pr-hot-load-disable",
+			 G_CALLBACK(sys_status_handle_pr_hot_load_disable),
+			 (gpointer) p);
+
 
 	g_signal_connect(p, "destroy", G_CALLBACK(sys_status_destroy), NULL);
 

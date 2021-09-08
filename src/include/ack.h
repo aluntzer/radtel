@@ -26,6 +26,7 @@
 
 struct packet *ack_invalid_pkt_gen(uint16_t trans_id);
 struct packet *ack_capabilities_gen(uint16_t trans_id, struct capabilities *c);
+struct packet *ack_capabilities_load_gen(uint16_t trans_id, struct capabilities_load *c);
 struct packet *ack_getpos_azel_gen(uint16_t trans_id, struct getpos *pos);
 struct packet *ack_spec_data_gen(uint16_t trans_id, struct spec_data *s);
 struct packet *ack_spec_acq_enable_gen(uint16_t trans_id);
@@ -42,6 +43,10 @@ struct packet *ack_moveto_azel_gen(uint16_t trans_id, double az, double el);
 struct packet *ack_nopriv_gen(uint16_t trans_id);
 struct packet *ack_userlist_gen(uint16_t trans_id, const uint8_t *userlist,
 				uint16_t len);
+struct packet *ack_hot_load_enable_gen(uint16_t trans_id);
+struct packet *ack_hot_load_disable_gen(uint16_t trans_id);
+struct packet *ack_cold_load_enable_gen(uint16_t trans_id);
+struct packet *ack_cold_load_disable_gen(uint16_t trans_id);
 
 
 
@@ -50,6 +55,7 @@ struct packet *ack_userlist_gen(uint16_t trans_id, const uint8_t *userlist,
 
 void ack_invalid_pkt(uint16_t trans_id);
 void ack_capabilities(uint16_t trans_id, struct capabilities *c);
+void ack_capabilities_load(uint16_t trans_id, struct capabilities_load *c);
 void ack_getpos_azel(uint16_t trans_id, struct getpos *pos);
 void ack_spec_data(uint16_t trans_id, struct spec_data *s);
 void ack_spec_acq_enable(uint16_t trans_id);
@@ -64,6 +70,10 @@ void ack_status_rec(uint16_t trans_id, struct status *s);
 void ack_moveto_azel(uint16_t trans_id, double az, double el);
 void ack_nopriv(uint16_t trans_id, gpointer ref);
 void ack_userlist(uint16_t trans_id, const uint8_t *users, uint16_t len);
+void ack_hot_load_enable(uint16_t trans_id);
+void ack_hot_load_disable(uint16_t trans_id);
+void ack_cold_load_enable(uint16_t trans_id);
+void ack_cold_load_disable(uint16_t trans_id);
 
 #endif /* _INCLUDE_ACK_H_ */
 

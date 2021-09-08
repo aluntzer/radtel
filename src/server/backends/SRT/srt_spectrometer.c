@@ -1682,6 +1682,30 @@ int be_get_capabilities_spec(struct capabilities *c)
 
 
 /**
+ * @brief get telescope spectrometer capabilities_load
+ * @note this is identical to be_get_capabilities_load, as
+ *	 the hot load is part of the SRT's drive controller
+ */
+
+G_MODULE_EXPORT
+int be_get_capabilities_load_spec(struct capabilities_load *c)
+{
+	c->freq_min_hz		= (uint64_t) srt.freq_min_hz;
+	c->freq_max_hz		= (uint64_t) srt.freq_max_hz;
+	c->freq_inc_hz		= (uint64_t) srt.freq_inc_hz;
+	c->bw_max_hz		= (uint32_t) srt.freq_if_bw;
+	c->bw_max_div_lin	= 0;
+	c->bw_max_div_rad2	= (uint32_t) srt.freq_bw_div_max;
+	c->bw_max_bins		= (uint32_t) srt.bins;
+	c->bw_max_bin_div_lin	= 0;
+	c->bw_max_bin_div_rad2	= 0;
+	c->n_stack_max		= 0; /* stacking not implemented */
+
+	return 0;
+}
+
+
+/**
  * @brief extra initialisation function
  *
  * @note if a thread is created in g_module_check_init(), the loader appears

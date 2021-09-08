@@ -27,6 +27,7 @@
 
 struct packet *cmd_invalid_pkt_gen(uint16_t trans_id);
 struct packet *cmd_capabilities_gen(uint16_t trans_id);
+struct packet *cmd_capabilities_load_gen(uint16_t trans_id);
 struct packet *cmd_success_gen(uint16_t trans_id);
 struct packet *cmd_fail_gen(uint16_t trans_id);
 struct packet *cmd_moveto_azel_gen(uint16_t trans_id, double az, double el);
@@ -46,12 +47,17 @@ struct packet *cmd_message_gen(uint16_t trans_id, const uint8_t *message,
 			       uint16_t len);
 struct packet *cmd_nick_gen(uint16_t trans_id, const uint8_t *nick,
 			    uint16_t len);
+struct packet *cmd_hot_load_enable_gen(uint16_t trans_id);
+struct packet *cmd_hot_load_disable_gen(uint16_t trans_id);
+struct packet *cmd_cold_load_enable_gen(uint16_t trans_id);
+struct packet *cmd_cold_load_disable_gen(uint16_t trans_id);
 
 
 /* command generation and sending functions */
 
 void cmd_invalid_pkt(uint16_t trans_id);
 void cmd_capabilities(uint16_t trans_id);
+void cmd_capabilities_load(uint16_t trans_id);
 void cmd_success(uint16_t trans_id);
 void cmd_fail(uint16_t trans_id);
 void cmd_moveto_azel(uint16_t trans_id, double az, double el);
@@ -67,6 +73,10 @@ void cmd_spec_acq_cfg_get(uint16_t trans_id);
 void cmd_control(uint16_t trans_id, const uint8_t *digest, uint16_t len);
 void cmd_message(uint16_t trans_id, const uint8_t *message, uint16_t len);
 void cmd_nick(uint16_t trans_id, const uint8_t *nick, uint16_t len);
+void cmd_hot_load_enable(uint16_t trans_id);
+void cmd_hot_load_disable(uint16_t trans_id);
+void cmd_cold_load_enable(uint16_t trans_id);
+void cmd_cold_load_disable(uint16_t trans_id);
 
 
 #endif /* _INCLUDE_CMD_H_ */

@@ -21,7 +21,7 @@ static int (*p_be_get_capabilities_spec)(struct capabilities *c);
 
 
 /**
- * @brief executes the AZEL move command on a backend
+ * @brief gets spectrometer capabilities from a backend
  *
  * @returns -1 on failure, 0 on success
  */

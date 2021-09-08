@@ -40,6 +40,8 @@ static gboolean cmd_is_priv(struct packet *pkt)
 	case PR_SPEC_ACQ_CFG:
 	case PR_SPEC_ACQ_ENABLE:
 	case PR_SPEC_ACQ_DISABLE:
+	case PR_HOT_LOAD_ENABLE:
+	case PR_HOT_LOAD_DISABLE:
 		return TRUE;
 	default:
 		break;
@@ -64,6 +66,10 @@ static int process_pkt_other(struct packet *pkt, gpointer ref)
 
 	case PR_CAPABILITIES:
 		proc_pr_capabilities(pkt);
+		break;
+
+	case PR_CAPABILITIES_LOAD:
+		proc_pr_capabilities_load(pkt);
 		break;
 
 	case PR_GETPOS_AZEL:
@@ -137,6 +143,14 @@ static int process_pkt_priv(struct packet *pkt, gpointer ref)
 
 	case PR_SPEC_ACQ_DISABLE:
 		proc_pr_spec_acq_disable(pkt, ref);
+		break;
+
+	case PR_HOT_LOAD_ENABLE:
+		proc_pr_hot_load_enable(pkt, ref);
+		break;
+
+	case PR_HOT_LOAD_DISABLE:
+		proc_pr_hot_load_disable(pkt, ref);
 		break;
 
 	default:

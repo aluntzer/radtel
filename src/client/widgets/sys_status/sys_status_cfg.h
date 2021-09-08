@@ -54,11 +54,15 @@ struct _SysStatusConfig {
 	GtkLabel  *lbl_frq_lo;
 	GtkLabel  *lbl_frq_hi;
 
+	GtkLabel  *lbl_hot_load;
+
 
 	gdouble eta_acq;
 	gdouble eta_slew;
 	gdouble eta_move;
 	gdouble eta_rec;
+
+	gdouble hot_load_temp;
 
 	gdouble frq_lo;
 	gdouble frq_hi;
@@ -72,6 +76,7 @@ struct _SysStatusConfig {
 	guint id_pos;
 
 	guint id_cap;
+	guint id_lod;
 	guint id_acq;
 	guint id_slw;
 	guint id_mov;
@@ -79,6 +84,9 @@ struct _SysStatusConfig {
 	guint id_cfg;
 	guint id_msg;
 	guint id_con;
+
+	guint id_hot_ena;
+	guint id_hot_dis;
 };
 
 

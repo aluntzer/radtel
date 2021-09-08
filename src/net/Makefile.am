@@ -9,6 +9,7 @@ noinst_LIBRARIES = libproto.a
 libproto_a_SOURCES = protocol.c \
 		     cmds/cmd_invalid_pkt.c \
 		     cmds/cmd_capabilities.c \
+		     cmds/cmd_capabilities_load.c \
 		     cmds/cmd_success.c \
 		     cmds/cmd_fail.c \
 		     cmds/cmd_recalibrate_pointing.c \
@@ -22,7 +23,10 @@ libproto_a_SOURCES = protocol.c \
 		     cmds/cmd_control.c \
 		     cmds/cmd_message.c \
 		     cmds/cmd_nick.c \
+		     cmds/cmd_hot_load_enable.c \
+		     cmds/cmd_hot_load_disable.c \
 		     acks/ack_capabilities.c \
+		     acks/ack_capabilities_load.c \
 		     acks/ack_getpos_azel.c \
 		     acks/ack_spec_data.c \
 		     acks/ack_spec_acq_enable.c \
@@ -37,4 +41,6 @@ libproto_a_SOURCES = protocol.c \
 		     acks/ack_status_rec.c \
 		     acks/ack_moveto_azel.c \
 		     acks/ack_nopriv.c \
-		     acks/ack_userlist.c
+		     acks/ack_userlist.c \
+		     acks/ack_hot_load_enable.c \
+		     acks/ack_hot_load_disable.c

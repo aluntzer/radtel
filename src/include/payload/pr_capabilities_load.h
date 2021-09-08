@@ -12,16 +12,16 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * @brief payload structure for PR_CAPABILITIES
+ * @brief payload structure for PR_CAPABILITIES_LOAD
  *
  */
 
-#ifndef _INCLUDE_PAYLOAD_PR_CAPABILITIES_H_
-#define _INCLUDE_PAYLOAD_PR_CAPABILITIES_H_
+#ifndef _INCLUDE_PAYLOAD_PR_CAPABILITIES_LOAD_H_
+#define _INCLUDE_PAYLOAD_PR_CAPABILITIES_LOAD_H_
 
 #include <payload/common.h>
 
-struct capabilities {
+struct capabilities_load {
 
 	/* given that the earch has a circumference of about 40075161.2 meters
 	 * at the equator, latitude and longitude in arcseconds should be
@@ -77,6 +77,8 @@ struct capabilities {
 
 	uint32_t n_stack_max;		/* max spec averaging */
 
+	uint32_t hot_load;		/* hot load temp. [mK], 0 == absent */
+
 	/* local horizon profile defined in pairs of
 	 * azimuth and elevation.
 	 * NOTE: coordinate units are in degrees. If absolutely, required, this
@@ -86,9 +88,9 @@ struct capabilities {
 	 */
 
 	uint32_t n_hor;			/* number of az/el coordinate pairs */
-	struct local_horizon hor[];		/* azimuth/elevation coordinate pairs */
+	struct local_horizon hor[];	/* azimuth/elevation coordinate pairs */
 
 }__attribute__((packed));
 
 
-#endif /* _INCLUDE_PAYLOAD_PR_CAPABILITIES_H_ */
+#endif /* _INCLUDE_PAYLOAD_PR_CAPABILITIES_LOAD_H_ */

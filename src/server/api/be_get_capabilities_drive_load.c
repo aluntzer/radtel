@@ -1,5 +1,5 @@
 /**
- * @file    server/api/be_get_capabilities_drive.c
+ * @file    server/api/be_get_capabilities_load_drive.c
  * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
  *
  * @copyright GPLv2
@@ -12,12 +12,15 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
+ * NOTE: this should be removed when PR_CAPABILITIES is removed, for now
+ * we need it to ensure compatibility
+ *
  */
 
 #include <backend.h>
 
 
-static int (*p_be_get_capabilities_drive)(struct capabilities *c);
+static int (*p_be_get_capabilities_load_drive)(struct capabilities_load *c);
 
 
 /**
@@ -26,10 +29,10 @@ static int (*p_be_get_capabilities_drive)(struct capabilities *c);
  * @returns -1 on failure, 0 on success
  */
 
-int be_get_capabilities_drive(struct capabilities *c)
+int be_get_capabilities_load_drive(struct capabilities_load *c)
 {
-	if (p_be_get_capabilities_drive)
-		return p_be_get_capabilities_drive(c);
+	if (p_be_get_capabilities_load_drive)
+		return p_be_get_capabilities_load_drive(c);
 
 	g_message("BACKEND: function %s not available\n", __func__);
 
@@ -38,21 +41,21 @@ int be_get_capabilities_drive(struct capabilities *c)
 
 
 /**
- * @brief try to load the be_be_get_capabilities_drive symbol in a backend plugin
+ * @brief try to load the be_be_get_capabilities_load_drive symbol in a backend plugin
  */
 
-int be_get_capabilities_drive_load(GModule *mod)
+int be_get_capabilities_load_drive_load(GModule *mod)
 {
 	gboolean ret;
 
 	gpointer func;
 
 
-	ret = g_module_symbol(mod, "be_get_capabilities_drive", &func);
+	ret = g_module_symbol(mod, "be_get_capabilities_load_drive", &func);
 	if(!ret)
 		return -1;
 
         g_message("BACKEND: found symbol %s", __func__);
 
-	p_be_get_capabilities_drive = (typeof(p_be_get_capabilities_drive)) func;
+	p_be_get_capabilities_load_drive = (typeof(p_be_get_capabilities_load_drive)) func;
 }

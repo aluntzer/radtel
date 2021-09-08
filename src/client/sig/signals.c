@@ -92,10 +92,17 @@ static void setup_sig_pr_fail(void)
 		     G_TYPE_NONE, 1, G_TYPE_UINT);
 }
 
-
 static void setup_sig_pr_capabilities(void)
 {
 	g_signal_new("pr-capabilities",
+		     G_TYPE_OBJECT, G_SIGNAL_RUN_FIRST,
+		     0, NULL, NULL, NULL,
+		     G_TYPE_NONE, 1, G_TYPE_POINTER);
+}
+
+static void setup_sig_pr_capabilities_load(void)
+{
+	g_signal_new("pr-capabilities-load",
 		     G_TYPE_OBJECT, G_SIGNAL_RUN_FIRST,
 		     0, NULL, NULL, NULL,
 		     G_TYPE_NONE, 1, G_TYPE_POINTER);
@@ -205,6 +212,22 @@ static void setup_sig_pr_userlist(void)
 		     G_TYPE_NONE, 1, G_TYPE_POINTER);
 }
 
+static void setup_sig_pr_hot_load_enable(void)
+{
+	g_signal_new("pr-hot-load-enable",
+		     G_TYPE_OBJECT, G_SIGNAL_RUN_FIRST,
+		     0, NULL, NULL, NULL,
+		     G_TYPE_NONE, 0);
+}
+
+static void setup_sig_pr_hot_load_disable(void)
+{
+	g_signal_new("pr-hot-load-disable",
+		     G_TYPE_OBJECT, G_SIGNAL_RUN_FIRST,
+		     0, NULL, NULL, NULL,
+		     G_TYPE_NONE, 0);
+}
+
 
 gpointer *sig_get_instance(void)
 {
@@ -225,6 +248,7 @@ void sig_init(void)
 	setup_sig_pr_success();
 	setup_sig_pr_fail();
 	setup_sig_pr_capabilities();
+	setup_sig_pr_capabilities_load();
 	setup_sig_pr_spec_data();
 	setup_sig_pr_getpos_azel();
 	setup_sig_pr_spec_acq_enable();
@@ -238,4 +262,6 @@ void sig_init(void)
 	setup_sig_pr_nopriv();
 	setup_sig_pr_message();
 	setup_sig_pr_userlist();
+	setup_sig_pr_hot_load_enable();
+	setup_sig_pr_hot_load_disable();
 }
