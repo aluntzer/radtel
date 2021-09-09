@@ -833,6 +833,8 @@ static int srt_drive_move(void)
 	double d_az_cnt;
 	double d_el_cnt;
 
+	struct status s;
+
 
 	/* absolute sensor counts */
 	az_cnt = srt_drive_az_counts(srt.pos.az_tgt);
@@ -869,6 +871,17 @@ static int srt_drive_move(void)
 	/* update current drive reference coordinates */
 	srt.pos.az_cur = srt_drive_az_from_counts(srt.pos.az_cnts);
 	srt.pos.el_cur = srt_drive_el_from_cassi_counts(srt.pos.el_cnts);
+
+
+	/* push updated ETA to clients
+	 * XXX notification in srt_drive_thread is redundant, consider removing
+	 */
+	az_cnt = fabs(srt_drive_az_counts(srt.pos.az_tgt) - srt.pos.az_cnts);
+	el_cnt = fabs(srt_drive_cassi_el_counts(srt.pos.el_tgt) - srt.pos.el_cnts);
+	s.busy = 1;
+	s.eta_msec = (typeof(s.eta_msec)) 174.1202 * az_cnt + 304.33578 * el_cnt; /** XXX config file! **/
+	ack_status_move(PKT_TRANS_ID_UNDEF, &s);
+
 
 	srt_drive_notify_pos_update();
 
