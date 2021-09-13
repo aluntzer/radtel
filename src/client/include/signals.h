@@ -22,6 +22,7 @@
 void sig_pr_success(void);
 void sig_pr_fail(uint16_t trans_id);
 void sig_pr_capabilities(const struct capabilities *c);
+void sig_pr_capabilities_load(const struct capabilities_load *c);
 void sig_pr_spec_data(const struct spec_data *c);
 void sig_pr_getpos_azel(const struct getpos *pos);
 void sig_pr_spec_acq_enable(void);
