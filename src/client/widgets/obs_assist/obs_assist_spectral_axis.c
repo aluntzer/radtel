@@ -173,8 +173,8 @@ static gboolean spectral_axis_measure(ObsAssist *p)
 
 	if (!sp) {
 		sp    = (struct spectrum *) g_malloc(sizeof(struct spectrum));
-		sp->x = g_memdup(p->cfg->spec.x, p->cfg->spec.n * sizeof(gdouble));
-		sp->y = g_memdup(p->cfg->spec.y, p->cfg->spec.n * sizeof(gdouble));
+		sp->x = g_memdup2(p->cfg->spec.x, p->cfg->spec.n * sizeof(gdouble));
+		sp->y = g_memdup2(p->cfg->spec.y, p->cfg->spec.n * sizeof(gdouble));
 		sp->n = p->cfg->spec.n;
 	}
 

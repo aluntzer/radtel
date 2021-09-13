@@ -338,9 +338,9 @@ static void cross_draw_graph_az(ObsAssist *p)
 
 	/* update graph */
 	xyplot_drop_all_graphs(p->cfg->cross.plt_az);
-	x = g_memdup(p->cfg->cross.az.off->data,
+	x = g_memdup2(p->cfg->cross.az.off->data,
 		     p->cfg->cross.az.off->len * sizeof(gdouble));
-	y = g_memdup(p->cfg->cross.az.amp->data,
+	y = g_memdup2(p->cfg->cross.az.amp->data,
 		     p->cfg->cross.az.amp->len * sizeof(gdouble));
 
 	ref = xyplot_add_graph(p->cfg->cross.plt_az, x, y, NULL,
@@ -366,9 +366,9 @@ static void cross_draw_graph_el(ObsAssist *p)
 
 	/* update graph */
 	xyplot_drop_all_graphs(p->cfg->cross.plt_el);
-	x = g_memdup(p->cfg->cross.el.off->data,
+	x = g_memdup2(p->cfg->cross.el.off->data,
 		     p->cfg->cross.el.off->len * sizeof(gdouble));
-	y = g_memdup(p->cfg->cross.el.amp->data,
+	y = g_memdup2(p->cfg->cross.el.amp->data,
 		     p->cfg->cross.el.amp->len * sizeof(gdouble));
 
 	ref = xyplot_add_graph(p->cfg->cross.plt_el, x, y, NULL,

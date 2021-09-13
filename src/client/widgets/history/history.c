@@ -243,10 +243,10 @@ static void history_append_hst(History *p, const gdouble *amp, gsize len)
 	g_array_append_val(p->cfg->hst_pwr, pwr);
 
 	/* create new graph */
-	x = (gdouble *) g_memdup(p->cfg->hst_idx->data,
-				 p->cfg->hst_idx->len * sizeof(gdouble));
-	y = (gdouble *) g_memdup(p->cfg->hst_pwr->data,
-				 p->cfg->hst_pwr->len * sizeof(gdouble));
+	x = (gdouble *) g_memdup2(p->cfg->hst_idx->data,
+				  p->cfg->hst_idx->len * sizeof(gdouble));
+	y = (gdouble *) g_memdup2(p->cfg->hst_pwr->data,
+				  p->cfg->hst_pwr->len * sizeof(gdouble));
 
 	prv = (gint64 *) p->cfg->hst_idx->data;
 	for (i = 0; i < p->cfg->hst_idx->len; i++)
@@ -571,10 +571,10 @@ static gboolean history_hst_value_changed_cb(GtkSpinButton *sb, History *p)
 	}
 
 	/* create new graph */
-	x = (gdouble *) g_memdup(p->cfg->hst_idx->data,
-				 p->cfg->hst_idx->len * sizeof(gdouble));
-	y = (gdouble *) g_memdup(p->cfg->hst_pwr->data,
-				 p->cfg->hst_pwr->len * sizeof(gdouble));
+	x = (gdouble *) g_memdup2(p->cfg->hst_idx->data,
+				  p->cfg->hst_idx->len * sizeof(gdouble));
+	y = (gdouble *) g_memdup2(p->cfg->hst_pwr->data,
+				  p->cfg->hst_pwr->len * sizeof(gdouble));
 
 	xyplot_drop_graph(p->cfg->plot, p->cfg->r_hst);
 	p->cfg->r_hst = xyplot_add_graph(p->cfg->plot, x, y, NULL,

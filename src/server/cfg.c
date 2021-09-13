@@ -173,10 +173,10 @@ void server_cfg_set_station_lon(double lon)
 gsize server_cfg_get_hor_limits(gint32 **hor_az, gint32 **hor_el)
 {
 
-	(*hor_az) = g_memdup(server_cfg->hor_az,
+	(*hor_az) = g_memdup2(server_cfg->hor_az,
 			     server_cfg->n_hor * sizeof(gint32));
 
-	(*hor_el) = g_memdup(server_cfg->hor_el,
+	(*hor_el) = g_memdup2(server_cfg->hor_el,
 			     server_cfg->n_hor * sizeof(gint32));
 
 	return server_cfg->n_hor;

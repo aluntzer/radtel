@@ -158,8 +158,6 @@ static struct observation g_obs;
 
 static void srt_spec_load_keys(GKeyFile *kf)
 {
-	gsize len;
-
 	gchar *model;
 
 	double tmp;
@@ -603,7 +601,7 @@ static guint16 *srt_spec_acquire_raw(guint32 refdiv, int mode, gsize *len)
  *
  * @return the usable bandwidth in HZ
  */
-
+__attribute__((unused))
 static double srt_get_actual_bw(guint bw_div)
 {
 	double used_bins;
@@ -701,7 +699,7 @@ static guint32 srt_get_refdiv_low(double freq, int bw_div)
  *
  * @return the reference divider
  */
-
+__attribute__((unused))
 static guint32 srt_get_refdiv_high(double freq, int bw_div)
 {
 	double f_0;
@@ -792,7 +790,7 @@ static double srt_get_max_freq(guint32 refdiv, guint bw_div)
  *
  * @returns the frequency of the bin in Hz or 0.0 on error
  */
-
+__attribute__((unused))
 static double srt_get_bin_freq(guint32 refdiv, guint bw_div, guint bin)
 {
 	double f_0;
@@ -1043,7 +1041,7 @@ static gdouble srt_find_calibration(gdouble frq)
 static void srt_determine_bin_calibration(struct spec_acq_cfg  *acq,
 					  struct acq_strategy **acs, gsize n)
 {
-	gsize i, j, k;
+	gsize i, j;
 
 	struct acq_strategy *p = (*acs);
 
@@ -1076,14 +1074,12 @@ static void srt_determine_bin_selection(struct spec_acq_cfg  *acq,
 {
 	gsize i;
 
-	double f_inc;
 	double f_max_prev;
 
 
 	struct acq_strategy *p = (*acs);
 
 
-	f_inc = srt_get_bin_bw(acq->bw_div);
 
 	/* first spectrum, lower bound frequency bin */
 
@@ -1153,10 +1149,8 @@ static void srt_determine_bin_selection(struct spec_acq_cfg  *acq,
 static gsize srt_comp_obs_strategy(struct spec_acq_cfg  *acq,
 				   struct acq_strategy **acs)
 {
-	gsize i;
 	gsize n;
 
-	struct acq_strategy *p;
 
 
 	if (!acs)
@@ -1225,14 +1219,10 @@ static void srt_apply_temp_calibration(struct spec_data *s)
 static uint32_t srt_spec_acquire(struct observation *obs)
 {
 	int i, j;
-	guint refdiv;
-	guint rd0, rd1;
 
-	gchar *cmd;
 
 	struct status st;
 
-	gdouble cal;
 
 
 	const struct acq_strategy *acs = obs->acs;

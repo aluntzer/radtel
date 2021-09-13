@@ -920,8 +920,8 @@ static void spectrum_append_avg(Spectrum *p, struct spectrum *sp)
 
 
 	/* compute new average */
-	x = g_memdup(sp->x, sp->n * sizeof(gdouble));
-	y = g_memdup(sp->y, sp->n * sizeof(gdouble));
+	x = g_memdup2(sp->x, sp->n * sizeof(gdouble));
+	y = g_memdup2(sp->y, sp->n * sizeof(gdouble));
 
 	for (elem = p->cfg->avg; elem; elem = elem->next) {
 		s = (struct spectrum *) elem->data;
@@ -995,8 +995,8 @@ static void spectrum_handle_pr_spec_data(gpointer instance,
 	/* everyone gets a copy of the data */
 	if (p->cfg->n_per) {
 		sp    = (struct spectrum *) g_malloc(sizeof(struct spectrum));
-		sp->x = g_memdup(frq, s->n * sizeof(gdouble));
-		sp->y = g_memdup(amp, s->n * sizeof(gdouble));
+		sp->x = g_memdup2(frq, s->n * sizeof(gdouble));
+		sp->y = g_memdup2(amp, s->n * sizeof(gdouble));
 		sp->n = s->n;
 		spectrum_append_data(p, sp);
 	}

@@ -117,11 +117,11 @@ static void npoint_draw_graph(ObsAssist *p)
 
 	/* update graph */
 	xyplot_drop_all_graphs(p->cfg->npoint.plt);
-	x = g_memdup(p->cfg->npoint.glon->data,
+	x = g_memdup2(p->cfg->npoint.glon->data,
 		     p->cfg->npoint.glon->len * sizeof(gdouble));
-	y = g_memdup(p->cfg->npoint.glat->data,
+	y = g_memdup2(p->cfg->npoint.glat->data,
 		     p->cfg->npoint.glat->len * sizeof(gdouble));
-	c = g_memdup(p->cfg->npoint.amp->data,
+	c = g_memdup2(p->cfg->npoint.amp->data,
 		     p->cfg->npoint.amp->len * sizeof(gdouble));
 
 	xyplot_add_graph(p->cfg->npoint.plt, x, y, c,

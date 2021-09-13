@@ -136,10 +136,10 @@ static void bswitch_draw_continuum(ObsAssist *p)
 
 	/* update graph */
 	xyplot_drop_all_graphs(p->cfg->bswitch.plt_cont);
-	x = g_memdup(p->cfg->bswitch.idx->data,
-		     p->cfg->bswitch.idx->len * sizeof(gdouble));
-	y = g_memdup(p->cfg->bswitch.amp->data,
-		     p->cfg->bswitch.amp->len * sizeof(gdouble));
+	x = g_memdup2(p->cfg->bswitch.idx->data,
+		      p->cfg->bswitch.idx->len * sizeof(gdouble));
+	y = g_memdup2(p->cfg->bswitch.amp->data,
+		      p->cfg->bswitch.amp->len * sizeof(gdouble));
 
 
 	for (i = 0; i < p->cfg->bswitch.amp->len; i++)
@@ -175,8 +175,8 @@ static void bswitch_add_graph(GtkWidget *plt, struct spectrum *sp)
 
 
 	/* update graph */
-	x = g_memdup(sp->x, sp->n * sizeof(gdouble));
-	y = g_memdup(sp->y, sp->n * sizeof(gdouble));
+	x = g_memdup2(sp->x, sp->n * sizeof(gdouble));
+	y = g_memdup2(sp->y, sp->n * sizeof(gdouble));
 
 	ref = xyplot_add_graph(plt, x, y, NULL, sp->n,
 			       g_strdup_printf("Sample"));
@@ -201,8 +201,8 @@ static void bswitch_draw_avg_graph(GtkWidget *plt, struct bswitch_pos *pos)
 
 	/* update graph */
 	xyplot_drop_graph(plt, pos->ref);
-	x = g_memdup(pos->sp.x, pos->sp.n * sizeof(gdouble));
-	y = g_memdup(pos->sp.y, pos->sp.n * sizeof(gdouble));
+	x = g_memdup2(pos->sp.x, pos->sp.n * sizeof(gdouble));
+	y = g_memdup2(pos->sp.y, pos->sp.n * sizeof(gdouble));
 
 
 	for (i = 0; i < pos->sp.n; i++)
@@ -298,8 +298,8 @@ static gboolean bswitch_measure(ObsAssist *p)
 
 	if (!sp) {
 		sp    = (struct spectrum *) g_malloc(sizeof(struct spectrum));
-		sp->x = g_memdup(p->cfg->spec.x, p->cfg->spec.n * sizeof(gdouble));
-		sp->y = g_memdup(p->cfg->spec.y, p->cfg->spec.n * sizeof(gdouble));
+		sp->x = g_memdup2(p->cfg->spec.x, p->cfg->spec.n * sizeof(gdouble));
+		sp->y = g_memdup2(p->cfg->spec.y, p->cfg->spec.n * sizeof(gdouble));
 		sp->n = p->cfg->spec.n;
 	}
 
@@ -350,9 +350,9 @@ static gboolean bswitch_measure(ObsAssist *p)
 
 	/* set current */
 	if (!obs->n) {
-		obs->x = g_memdup(p->cfg->spec.x,
+		obs->x = g_memdup2(p->cfg->spec.x,
 				 p->cfg->spec.n * sizeof(gdouble));
-		obs->y = g_memdup(p->cfg->spec.y,
+		obs->y = g_memdup2(p->cfg->spec.y,
 				 p->cfg->spec.n * sizeof(gdouble));
 		obs->n = p->cfg->spec.n;
 	} else {
@@ -362,9 +362,9 @@ static gboolean bswitch_measure(ObsAssist *p)
 
 	/* initialize if necessary */
 	if (!pos->sp.n) {
-		pos->sp.x = g_memdup(p->cfg->spec.x,
+		pos->sp.x = g_memdup2(p->cfg->spec.x,
 				     p->cfg->spec.n * sizeof(gdouble));
-		pos->sp.y = g_memdup(p->cfg->spec.y,
+		pos->sp.y = g_memdup2(p->cfg->spec.y,
 				     p->cfg->spec.n * sizeof(gdouble));
 		pos->sp.n = p->cfg->spec.n;
 	} else {
@@ -503,9 +503,9 @@ static gboolean bswitch_obs_pos(ObsAssist *p)
 
 		/* initialize if necessary */
 		if (!cavg->sp.n) {
-			cavg->sp.x = g_memdup(p->cfg->bswitch.tgt.x,
+			cavg->sp.x = g_memdup2(p->cfg->bswitch.tgt.x,
 				      p->cfg->bswitch.tgt.n * sizeof(gdouble));
-			cavg->sp.y = g_memdup(p->cfg->bswitch.tgt.y,
+			cavg->sp.y = g_memdup2(p->cfg->bswitch.tgt.y,
 				      p->cfg->bswitch.tgt.n * sizeof(gdouble));
 			cavg->sp.n = p->cfg->bswitch.tgt.n;
 		} else {

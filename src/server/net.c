@@ -518,7 +518,7 @@ static gboolean net_send_internal(struct con_data *c, const char *pkt, gsize nby
 	th = g_malloc(sizeof(struct thread));
 
 	th->bytes = nbytes;
-	th->buf   = g_memdup(pkt, nbytes);
+	th->buf   = g_memdup2(pkt, nbytes);
 
 	ret = g_thread_pool_push(c->pool, (gpointer) th, &error);
 

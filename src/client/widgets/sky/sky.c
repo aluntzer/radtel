@@ -204,8 +204,8 @@ static void sky_handle_pr_capabilities(gpointer instance,
 		g_free(p->cfg->local_hor);
 
 	p->cfg->n_local_hor = c->n_hor;
-	p->cfg->local_hor = g_memdup(c->hor,
-				     c->n_hor * sizeof(struct local_horizon));
+	p->cfg->local_hor = g_memdup2(c->hor,
+				      c->n_hor * sizeof(struct local_horizon));
 
 	sky_try_plot(GTK_WIDGET(p));
 }

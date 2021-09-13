@@ -79,7 +79,7 @@ static int srt_com_serial_open_port(const char *tty)
 	return fd;
 }
 
-
+#if 0
 /**
  * @brief close a serial tty
  * @param fd the file descriptor to close
@@ -90,7 +90,7 @@ static int srt_com_serial_close_port(int fd)
 {
 	return close(fd);
 }
-
+#endif
 
 /**
  * @brief set the serial link parameters (for the SRT)
@@ -140,7 +140,7 @@ static int srt_com_serial_set_comm_param(int fd)
 	return tcsetattr (fd, TCSANOW, &cfg);
 }
 
-
+#if 0
 /**
  * @brief read from the serial port
  *
@@ -166,7 +166,7 @@ static int srt_com_serial_read(int fd, char *buf, size_t nbyte)
 
 	return n;
 }
-
+#endif
 
 /**
  * @brief write to the serial port

@@ -531,17 +531,13 @@ static void sim_render_sky(const gdouble *amp, gsize len)
 {
 
 	int i;
-       	int w, h;
 	int rs, nc;
 
 	gdouble min = DBL_MAX;
 	gdouble max = DBL_MIN;
-	gdouble n, n1;
 
 	guchar *wf;
 	guchar *pix;
-
-	gdouble (*func)(double) = NULL;
 
 
 
@@ -568,9 +564,6 @@ static void sim_render_sky(const gdouble *amp, gsize len)
 
 
 	wf = gdk_pixbuf_get_pixels(pb);
-
-	w = gdk_pixbuf_get_width(pb);
-	h = gdk_pixbuf_get_height(pb);
 
 	rs = gdk_pixbuf_get_rowstride(pb);
 
@@ -766,7 +759,6 @@ static gpointer sim_spec_extract_HI_survey(gdouble glat, gdouble glon)
 
 		if (!data) {
 				GtkWidget *dia;
-				GtkWindow * win;
 
 				dia = gtk_message_dialog_new(NULL,
 							     GTK_DIALOG_MODAL,
@@ -1422,8 +1414,6 @@ static void sim_stack_amp_noise(struct spec_data *s, gdouble tsys, gdouble noise
 static gdouble sim_sun(struct coord_galactic gal, gdouble freq,
 		       const gdouble *beam, gint n, gdouble w)
 {
-	gsize i;
-
 	gssize x, y;
 
 	gdouble res;
@@ -1525,8 +1515,6 @@ static void sim_stack_sun(struct spec_data *s, struct coord_galactic gal,
 static gdouble sim_moon(struct coord_galactic gal, const gdouble *beam,
 			gint n, gdouble w)
 {
-	gsize i;
-
 	gssize x, y;
 
 	gdouble res;
@@ -1997,10 +1985,7 @@ static gdouble *gauss_2d(gdouble sigma, gdouble r, gdouble res, gint *n)
 
 	gdouble x;
 
-	gdouble binw;
-
 	gdouble sum;
-	gdouble norm;
 
 	gdouble *ker;
 
@@ -2055,7 +2040,7 @@ static double complex *it;
 #define SKY1_WIDTH  1024
 #define SKY1_HEIGHT 1024
 
-
+#if 0
 
 static gdouble *sky_convolve(const gdouble *sky, gdouble *kernel, gint n)
 {
@@ -2105,7 +2090,7 @@ static gdouble *sky_convolve(const gdouble *sky, gdouble *kernel, gint n)
 	return csky;
 }
 
-
+#endif
 
 
 
@@ -2120,10 +2105,6 @@ static gdouble *kernel;
 static void sim_gen_sky(void)
 {
 	int i;
-
-	gdouble lat, lon;
-	gdouble sig;
-	gdouble *rawspec;
 
 	static gint vmin, vmax;
 	gint v1, v2;
@@ -2237,7 +2218,6 @@ static void sim_gen_sky(void)
 
 
 		csky  = g_malloc0(SKY1_WIDTH * SKY1_HEIGHT * sizeof(double complex));
-		double complex *tmp = g_malloc0(SKY1_WIDTH * SKY1_HEIGHT * sizeof(double complex));
 
 
 		put_matrix(csky, SKY1_WIDTH, SKY1_HEIGHT, raw_sky, SKY_WIDTH, SKY_HEIGHT, 0, 0);
@@ -2310,24 +2290,6 @@ static gboolean sky_spb_value_changed_cb(GtkSpinButton *sb, gpointer data)
 	sim.r_beam = gtk_spin_button_get_value(sim.gui.sb_beam);
 	sim_gen_sky();
 }
-static void sim_gui_scale_mode_changed(GtkComboBox *cb, gpointer data)
-{
-	sim.gui.scale = gtk_combo_box_get_active(cb);
-	sim_gui_redraw_sky();
-}
-
-static void sim_gui_beam_slide_value_changed(GtkRange *range, gpointer data)
-{
-	gdouble *val;
-
-
-	val = (gdouble *) data;
-
-	(*val) = gtk_range_get_value(range);
-	gtk_spin_button_set_value(sim.gui.sb_beam, sim.r_beam);
-
-}
-
 
 static void sim_gui_slide_value_changed(GtkRange *range, gpointer data)
 {
@@ -2843,8 +2805,6 @@ static void sim_rt_create_gui(void)
 
 static uint32_t sim_spec_acquire(struct observation *obs)
 {
-	int i;
-
 	struct status st;
 
 
@@ -2853,7 +2813,6 @@ static uint32_t sim_spec_acquire(struct observation *obs)
 	struct coord_horizontal hor;
 	struct coord_galactic gal;
 
-	gint16 *rawu;
 
 
 #if 0
@@ -2874,7 +2833,6 @@ static uint32_t sim_spec_acquire(struct observation *obs)
 	static gdouble *beam;
 	static gdouble r;
 	static gdouble sky_deg;
-	static gsize n_vel;
 	static gint n_beam;
 
 	static gdouble glat;
@@ -2954,7 +2912,6 @@ static uint32_t sim_spec_acquire(struct observation *obs)
 
 	obs->acq.acq_max--;
 
-cleanup:
 	g_free(s);
 
 	g_usleep(G_USEC_PER_SEC / sim.readout_hz);

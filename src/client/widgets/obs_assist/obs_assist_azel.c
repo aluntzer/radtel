@@ -161,9 +161,9 @@ static void azel_draw_graph(ObsAssist *p)
 	if (!len)
 		return;
 
-	x = g_memdup(&p->cfg->azel.az->data[i0],  len * sizeof(gdouble));
-	y = g_memdup(&p->cfg->azel.el->data[i0],  len * sizeof(gdouble));
-	c = g_memdup(&p->cfg->azel.amp->data[i0], len * sizeof(gdouble));
+	x = g_memdup2(&p->cfg->azel.az->data[i0],  len * sizeof(gdouble));
+	y = g_memdup2(&p->cfg->azel.el->data[i0],  len * sizeof(gdouble));
+	c = g_memdup2(&p->cfg->azel.amp->data[i0], len * sizeof(gdouble));
 
 	ref = xyplot_add_graph(p->cfg->azel.plt, x, y, c,len,
 			       g_strdup_printf("AZEL Scan EL %g", el));
