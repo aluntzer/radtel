@@ -120,8 +120,8 @@ the object and deactivate tracking.
 
 ![Spectrum](./screenshots/spectrum.png)
 
-If acquisiton is enabled, shows current and cumulative average spectrae.
-The gui elements should be mostly self-explanatory, here are the key/mouse
+If acquisition is enabled, shows current and cumulative average spectra.
+The GUI elements should be mostly self-explanatory, here are the key/mouse
 bindings:
 
 *left click and drag* to define a zoom box
@@ -130,13 +130,13 @@ bindings:
 
 *shift + scroll* for Y-axis zoom
 
-*ctrl + scroll* for X-axis zoom
+*Ctrl + scroll* for X-axis zoom
 
 *lower case "a"* to autoscale
 
-*Ctrl + left drag* to fit a gaussian to the selected datums
+*Ctrl + left drag* to fit a Gaussian to the selected data
 
-*lower case "u"* deactivates the gaussian fit box
+*lower case "u"* deactivates the Gaussian fit box
 
 *alt + click* to define new center frequency for spectrometer
 
@@ -157,13 +157,13 @@ Configure the spectrometer. Click *Get Configuration* to update the
 control fields in this tab with the current status of the remote telescope.
 
 The remaining functions will be described in more detail at a later date, but
-be warned of one thing: do not set the acqusition frequency range too wide.
+be warned of one thing: do not set the acquisition frequency range too wide.
 This will work without problems with the simulated radio telescope, but
-in real systems, spectral acquisiton takes time and extreme configurations
+in real systems, spectral acquisition takes time and extreme configurations
 can lead to hours of wait time. See the *REC* status field for the ETA
 of the next spectrum. If it is excessive, you may have misconfigured the system.
 In such a situation, you should scroll/go to the bottom of the tab and
-deactivate *Spectral Acquisiton*, then reconfigure the *Acquisiton Frequency Range*
+deactivate *Spectral Acquisition*, then reconfigure the *Acquisition Frequency Range*
 to a much smaller (typically a few MHz) bandwidth and re-enable.
 
 
@@ -214,9 +214,13 @@ of the simulated telescope.
 
 *LAT* and *LON* set the geographical location of the telescope
 
-*Rate* sets the simulated spectrae per second
+*Rate* sets the simulated spectra per second
 
 *Sun* sets the current radio flux density from the sun.
+
+*Hot Load* sets the temperature of the simulated hot load calibrator
+
+*Noise Fig.* sets the noise figure of the simulated amplifier chain
 
 
 ## Actual Hardware
