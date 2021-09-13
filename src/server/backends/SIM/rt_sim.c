@@ -2924,9 +2924,6 @@ static uint32_t sim_spec_acquire(struct observation *obs)
 	if (sim.hot_load_ena)
 		sim_stack_hot_load(s, sim.hot_load_temp);
 
-	if (sim.hot_load_ena)
-		sim_stack_hot_load(s, sim.hot_load_temp);
-
 	sim_stack_cmb(s, gal, beam, n_beam, sky_deg);
 
 	sim_stack_moon(s, gal, beam, n_beam, sky_deg);
