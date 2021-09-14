@@ -1026,7 +1026,7 @@ static void obs_assist_cross_setup_cb(GtkWidget *w, ObsAssist *p)
 	g_return_if_fail(as);
 
 	p->cfg->abort = FALSE;
-	bzero(&p->cfg->cross, sizeof(p->cfg->cross));
+	memset(&p->cfg->cross, 0, sizeof(p->cfg->cross));
 
 	/* info page */
 	obs_assist_cross_create_page_1(GTK_ASSISTANT(as));

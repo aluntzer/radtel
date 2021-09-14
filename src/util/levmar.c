@@ -174,8 +174,8 @@ static void lm_H_J(struct lm_ctrl *ctrl, double *J, double *H,
 	if (!g)
 		return;
 
-	bzero(J, ctrl->n_par * sizeof(double));
-	bzero(H, ctrl->n_par * ctrl->n_par * sizeof(double));
+	memset(J, 0, ctrl->n_par * sizeof(double));
+	memset(H, 0, ctrl->n_par * ctrl->n_par * sizeof(double));
 
 	for (i = 0; i < n; i++) {
 
@@ -466,7 +466,7 @@ void lm_set_fit_param(struct lm_ctrl *ctrl,
 
 void lm_init(struct lm_ctrl *ctrl)
 {
-	bzero(ctrl, sizeof(struct lm_ctrl));
+	memset(ctrl, 0, sizeof(struct lm_ctrl));
 
 
 	ctrl->max_iter	 = LM_DEFAULT_MAX_ITER;

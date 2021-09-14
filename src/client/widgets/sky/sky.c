@@ -2276,7 +2276,7 @@ static void sky_init(Sky *p)
 
 	p->cfg = sky_get_instance_private(p);
 
-	bzero(p->cfg, sizeof(struct _SkyConfig));
+	memset(p->cfg, 0, sizeof(struct _SkyConfig));
 
 	p->cfg->tgt.el = -90.0; /* do not draw target position on init */
 

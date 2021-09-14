@@ -713,7 +713,7 @@ static void obs_assist_gal_plane_setup_cb(GtkWidget *w, ObsAssist *p)
 	g_return_if_fail(as);
 
 	p->cfg->abort = FALSE;
-	bzero(&p->cfg->gal_plane, sizeof(p->cfg->gal_plane));
+	memset(&p->cfg->gal_plane, 0, sizeof(p->cfg->gal_plane));
 
 	/* info page */
 	obs_assist_gal_plane_create_page_1(GTK_ASSISTANT(as));

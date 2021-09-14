@@ -23,8 +23,8 @@ static void import_spec(FILE *f, FILE *data)
 
 
 
-	bzero(n, sizeof(int) * VEL);
-	bzero(a, sizeof(float) * VEL);
+	memset(n, 0, sizeof(int) * VEL);
+	memset(a, sizeof(float) * VEL);
 
 
 	while (fgets(line, 256, f)) {

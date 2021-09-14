@@ -608,7 +608,7 @@ static void obs_assist_spectral_axis_setup_cb(GtkWidget *w, ObsAssist *p)
 	g_return_if_fail(as);
 
 	p->cfg->abort = FALSE;
-	bzero(&p->cfg->spectral_axis, sizeof(p->cfg->spectral_axis));
+	memset(&p->cfg->spectral_axis, 0, sizeof(p->cfg->spectral_axis));
 
 	/* info page */
 	obs_assist_spectral_axis_create_page_1(GTK_ASSISTANT(as));

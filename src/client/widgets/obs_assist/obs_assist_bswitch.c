@@ -790,9 +790,9 @@ static void obs_assist_on_prepare_bswitch(GtkWidget *as, GtkWidget *pg,
 
 	p->cfg->bswitch.rpt_cur = 0;
 
-	bzero(&p->cfg->bswitch.pos1, sizeof(struct spectrum));
-	bzero(&p->cfg->bswitch.pos2, sizeof(struct spectrum));
-	bzero(&p->cfg->bswitch.tgt,  sizeof(struct spectrum));
+	memset(&p->cfg->bswitch.pos1, 0, sizeof(struct spectrum));
+	memset(&p->cfg->bswitch.pos2, 0, sizeof(struct spectrum));
+	memset(&p->cfg->bswitch.tgt,  0, sizeof(struct spectrum));
 
 
 	cp  = gtk_assistant_get_current_page(GTK_ASSISTANT(as));
@@ -1011,7 +1011,7 @@ static void obs_assist_bswitch_setup_cb(GtkWidget *w, ObsAssist *p)
 	g_return_if_fail(as);
 
 	p->cfg->abort = FALSE;
-	bzero(&p->cfg->bswitch, sizeof(p->cfg->bswitch));
+	memset(&p->cfg->bswitch, 0, sizeof(p->cfg->bswitch));
 
 	/* info page */
 	obs_assist_bswitch_create_page_1(GTK_ASSISTANT(as));

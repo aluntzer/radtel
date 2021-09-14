@@ -773,7 +773,7 @@ static void obs_assist_azel_setup_cb(GtkWidget *w, ObsAssist *p)
 	g_return_if_fail(as);
 
 	p->cfg->abort = FALSE;
-	bzero(&p->cfg->azel, sizeof(p->cfg->azel));
+	memset(&p->cfg->azel, 0, sizeof(p->cfg->azel));
 
 	/* info page */
 	obs_assist_azel_create_page_1(GTK_ASSISTANT(as));

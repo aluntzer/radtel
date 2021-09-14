@@ -1,4 +1,4 @@
-SUBDIRS = ../util ../net api backends
+SUBDIRS = ../util ../net api . backends
 
 
 confdir = radtel

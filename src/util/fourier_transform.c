@@ -259,7 +259,7 @@ double complex *fft(const double complex *data, double complex *coeff,
 		return NULL;
 
 	memcpy(pad, data, len * sizeof(double complex));
-	bzero(&pad[len],  (n - len) * sizeof(double complex));
+	memset(&pad[len], 0, (n - len) * sizeof(double complex));
 
 	if (fft2(pad, coeff, n, inv) < 0) {
 		free(pad);
