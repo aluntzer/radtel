@@ -267,8 +267,14 @@ static GIOChannel *srt_com_serial_init_glib_poll(int fd)
 
 	/* explicitly set line terminator, autodetection does not appear
 	 * to work properly here
+	 *
+	 * WARNING: if the plugin does not work (correctly), make sure to
+	 * try a line terminator of both \r and \n, as this appears to
+	 * randomly change for different versions of glib
+	 * The nominal terminator char for the device is \r, but we're
+	 * not using the tty directly
 	 */
-	g_io_channel_set_line_term(g_io_ch, "\r", 1);
+	g_io_channel_set_line_term(g_io_ch, "\n", 1);
 
 	/* set to raw encoding */
 	g_io_channel_set_encoding(g_io_ch, NULL, NULL);
