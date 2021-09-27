@@ -4,6 +4,11 @@ SUBDIRS = ../util ../net api . backends
 confdir = radtel
 plugdir = radtel
 
+
+if OS_WINDOWS
+libdir = lib
+endif
+
 AM_CPPFLAGS := \-DCONFDIR=\"$(confdir)\" \
 	       \-DPLUGDIR=\"$(plugdir)\" \
 	       \-DSYSCONFDIR=\"$(sysconfdir)\" \

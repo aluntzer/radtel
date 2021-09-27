@@ -1,0 +1,232 @@
+#!/bin/bash
+
+_wixdir="/c/Program Files (x86)/WiX Toolset v3.11"
+_thisdir="$(dirname $0)"
+test "${_thisdir}" = "." && _thisdir=${PWD}
+_installer_root="${_thisdir}"/installer
+_arch=$(uname -m)
+_date=$(date +'%Y%m%d')
+_dateqif=$(date +'%Y-%m-%d')
+_version=0.0.27
+_filename=radtel-${_arch}-${_version}.msi
+_log=/tmp/installer.log
+if [ "${_arch}" = "x86_64" ]; then
+  _bitness=64
+else
+  _bitness=32
+fi
+
+declare -a undo_commands
+
+_exitcode=5
+
+usage() {
+  echo "Usage: $0 stage#"
+  exit 1
+}
+
+if [ "$#" != "1" ]; then
+  usage
+fi
+
+_stage="$1"
+case "${_stage}" in
+  stage1 | stage2)
+    ;;
+  *)
+    usage
+    ;;
+esac
+
+exit_with_undo() {
+  for _cmd in ${undo_commands[@]}; do
+    eval "$_cmd"
+  done
+  exit ${_exitcode}
+}
+
+exit_cleanly() {
+  _exitcode=$1; shift;
+  local _message=$1; shift;
+  echo "${_message}"
+  exit_with_undo
+}
+
+do_seds() {
+  find "${_installer_root}" \( -name "defines.wxi" \) -exec sed -i "s|@VERSION@|${_version}|g" "{}" \;
+  undo_commands+=("undo_seds")
+}
+
+undo_seds() {
+  find "${_installer_root}" \( -name "defines.wxi" \) -exec sed -i "s|ProductVersion = \"${_version}\"|ProductVersion = \"@VERSION@\"|g" "{}" \;
+}
+
+_newradtel=/tmp/radtel
+
+remove_useless_stuff() {
+  # remove .a files not needed for the installer
+  find installer/SourceDir -name "*.a" -exec rm -f {} \;
+
+  # remove unneeded executables
+  find installer/SourceDir -not -name "radtel*.exe" -name "*.exe" -exec rm -f {} \;
+
+  # remove unneeded stuff from bin/ (including executables not ending in .exe)
+  find installer/SourceDir/bin -not -name "radtel*.exe" -not -name "*.dll" -type f -exec rm -f {} \;
+
+  rm -rf installer/SourceDir/bin/gtk3-demo*.exe
+  rm -rf installer/SourceDir/bin/gdbm*.exe
+  rm -rf installer/SourceDir/bin/py*
+  rm -rf installer/SourceDir/bin/*-config
+  # remove other useless folders
+  rm -rf installer/SourceDir/var
+  rm -rf installer/SourceDir/ssl
+  rm -rf installer/SourceDir/include
+  rm -rf installer/SourceDir/share/man
+  rm -rf installer/SourceDir/share/readline
+  rm -rf installer/SourceDir/share/info
+  rm -rf installer/SourceDir/share/aclocal
+  rm -rf installer/SourceDir/share/gnome-common
+  rm -rf installer/SourceDir/share/glade
+  rm -rf installer/SourceDir/share/gettext
+  rm -rf installer/SourceDir/share/terminfo
+  rm -rf installer/SourceDir/share/tabset
+  rm -rf installer/SourceDir/share/pkgconfig
+  rm -rf installer/SourceDir/share/bash-completion
+  rm -rf installer/SourceDir/share/appdata
+  rm -rf installer/SourceDir/share/gdb
+  rm -rf installer/SourceDir/libexec
+  # help files
+  rm -rf installer/SourceDir/share/help
+  rm -rf installer/SourceDir/share/gtk-doc
+  rm -rf installer/SourceDir/share/doc
+  # remove  stuff in lib folder
+  rm -rf installer/SourceDir/lib/terminfo
+  rm -rf installer/SourceDir/lib/python2*
+  rm -rf installer/SourceDir/lib/pkgconfig
+  rm -rf installer/SourceDir/lib/peas-demo
+
+  # gir
+  rm -rf installer/Sourcedir/share/gir
+
+
+  rm -f installer/Sourcedir/bin/autopoint
+  rm -f installer/Sourcedir/bin/autopoint
+
+
+  # strip the binaries to reduce the size
+  find installer/SourceDir -name *.dll | xargs strip
+  find installer/SourceDir -name *.exe | xargs strip
+
+  # there are no translations, remove all but en
+  pushd installer/SourceDir/share/
+  find locale -not -name "en" -not -name "locale" -type d | xargs rm -rf
+  popd
+  
+  #find installer/SourceDir/share/locale/ -type f | grep -v atk10.mo | grep -v libpeas.mo | grep -v gsettings-desktop-schemas.mo | grep -v json-glib-1.0.mo | grep -v glib20.mo | grep -v radtel.mo | grep -v gdk-pixbuf.mo | grep -v gtk30.mo | grep -v gtk30-properties.mo | grep -v gtksourceview-3.0.mo | grep -v iso_*.mo | xargs rm
+  #find installer/SourceDir/share/locale -type d | xargs rmdir -p --ignore-fail-on-non-empty
+}
+
+setup_source_dir() 
+{
+  [ -d installer/SourceDir ] && rm -rf installer/SourceDir
+
+  mkdir -p installer/SourceDir/bin
+  mkdir -p installer/SourceDir/etc/radtel/data
+  mkdir -p installer/SourceDir/etc/radtel/backends
+  mkdir -p installer/SourceDir/lib/radtel/SIM
+  mkdir -p installer/SourceDir/share/glib-2.0/schemas
+
+  cp ../src/client/.libs/radtel.exe installer/SourceDir/bin
+  cp ../src/server/.libs/radtelsrv.exe installer/SourceDir/bin
+  cp ../src/server/config/backends/rt_sim.cfg installer/SourceDir/etc/radtel/backends/
+  cp ../src/server/config/server.cfg installer/SourceDir/etc/radtel/
+  cp ../src/client/data/sky_objects.cfg installer/SourceDir/etc/radtel/data/
+  cp ../src/server/backends/SIM/rt_sim.dll installer/SourceDir/lib/radtel/SIM/
+
+  cp ../src/client/data/org.uvie.radtel.config.gschema.xml installer/SourceDir/share/glib-2.0/schemas
+
+
+  cp -R "${_newradtel}/mingw${_bitness}" "installer/SourceDir"
+  pushd "installer/SourceDir/mingw${_bitness}"
+  find . -maxdepth 1 -type d | xargs cp -t ../ -R
+  popd
+  rm -rf "installer/SourceDir/mingw${_bitness}"
+
+  remove_useless_stuff
+
+  pushd "installer/SourceDir/share/glib-2.0/schemas"
+  glib-compile-schemas .
+  popd
+}
+
+# Add -v to get more information.
+make_installer() {
+  setup_source_dir
+
+  _platform="x86"
+  if [ "${_arch}" = "x86_64" ]; then
+    _platform="x64"
+  fi
+
+  pushd "installer" > /dev/null
+  "${_wixdir}/bin/heat.exe" dir SourceDir -gg -dr INSTALLDIR -cg binaries -sfrag -sreg -srd -suid -template fragment -out binaries.wxs
+  "${_wixdir}/bin/candle.exe" -arch ${_platform} radtel.wxs binaries.wxs
+  "${_wixdir}/bin/light.exe" -ext WixUtilExtension -ext WixUIExtension radtel.wixobj binaries.wixobj -o "/tmp/${_filename}"
+  popd
+}
+
+trap exit_with_undo 1 2 15
+
+create_chroot_system() {
+  [ -d ${_newradtel} ] && rm -rf ${_newradtel}
+  mkdir -p "${_newradtel}"
+  pushd "${_newradtel}" > /dev/null
+
+  mkdir -p var/lib/pacman
+  mkdir -p var/log
+  mkdir -p tmp
+
+  pacman -Syu --root "${_newradtel}"
+  pacman -S filesystem bash pacman --noconfirm --root "${_newradtel}"
+  _result=$?
+  if [ "$_result" -ne "0" ]; then
+    exit_cleanly "1" "failed to create base data via command 'pacman -S filesystem bash pacman --noconfirm --root ${_newradtel}'"
+  fi
+  popd > /dev/null
+}
+
+install_radtel_packages() {
+  pacman -S mingw-w64-${_arch}-gtk3 mingw-w64-${_arch}-adwaita-icon-theme --noconfirm --root "${_newradtel}"
+  _result=$?
+  if [ "$_result" -ne "0" ]; then
+    exit_cleanly "1" "failed to create ${_newradtel} via command 'pacman -S radtel --noconfirm --root ${_newradtel}'"
+  fi
+
+  # some packages are pulled by the deps but we do not need
+  pacman -Rdd mingw-w64-${_arch}-zstd --noconfirm --root "${_newradtel}"
+  pacman -Rdd mingw-w64-${_arch}-ncurses --noconfirm --root "${_newradtel}"
+  pacman -Rdd mingw-w64-${_arch}-sqlite3 --noconfirm --root "${_newradtel}"
+  pacman -Rdd mingw-w64-${_arch}-python --noconfirm --root "${_newradtel}"
+  pacman -Rdd mingw-w64-${_arch}-tk --noconfirm --root "${_newradtel}"
+  pacman -Rdd mingw-w64-${_arch}-tcl --noconfirm --root "${_newradtel}"
+  pacman -Rdd mingw-w64-${_arch}-xz --noconfirm --root "${_newradtel}"
+  pacman -Rdd mingw-w64-${_arch}-lzo2 --noconfirm --root "${_newradtel}"
+  pacman -Rdd mingw-w64-${_arch}-libdeflate --noconfirm --root "${_newradtel}"
+  pacman -Rdd mingw-w64-${_arch}-ca-certificates --noconfirm --root "${_newradtel}"
+}
+
+if [ "${_stage}" = "stage1" ]; then
+  echo "Creating radtel chroot system ${_newradtel}"
+  create_chroot_system
+  exit 0
+fi
+
+echo "Installing radtel packages into ${_newradtel}"
+install_radtel_packages
+
+echo "Creating radtel installer /tmp/$_filename"
+[ -f /tmp/$_filename ] && rm -f /tmp/$_filename
+
+do_seds
+make_installer
+exit_cleanly "0" "All done, see ${_filename}"

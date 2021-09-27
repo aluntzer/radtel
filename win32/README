@@ -1,0 +1,6 @@
+To create the installer you need the following prerequisites
+ - install the latest version of msys2: follow instructions on website
+ - install mingw-w64-x86_64-toolchain, mingw-w64-x86_64-gtk3 
+ - build software in this repository
+ - edit make-installer and update the version number
+ - ./make-installer.bat
