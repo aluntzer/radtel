@@ -203,15 +203,15 @@ install_radtel_packages() {
   fi
 
   # some packages are pulled by the deps but we do not need
-  pacman -Rdd mingw-w64-${_arch}-zstd --noconfirm --root "${_newradtel}"
+ # pacman -Rdd mingw-w64-${_arch}-zstd --noconfirm --root "${_newradtel}"
   pacman -Rdd mingw-w64-${_arch}-ncurses --noconfirm --root "${_newradtel}"
   pacman -Rdd mingw-w64-${_arch}-sqlite3 --noconfirm --root "${_newradtel}"
   pacman -Rdd mingw-w64-${_arch}-python --noconfirm --root "${_newradtel}"
   pacman -Rdd mingw-w64-${_arch}-tk --noconfirm --root "${_newradtel}"
   pacman -Rdd mingw-w64-${_arch}-tcl --noconfirm --root "${_newradtel}"
-  pacman -Rdd mingw-w64-${_arch}-xz --noconfirm --root "${_newradtel}"
-  pacman -Rdd mingw-w64-${_arch}-lzo2 --noconfirm --root "${_newradtel}"
-  pacman -Rdd mingw-w64-${_arch}-libdeflate --noconfirm --root "${_newradtel}"
+ # pacman -Rdd mingw-w64-${_arch}-xz --noconfirm --root "${_newradtel}"
+ # pacman -Rdd mingw-w64-${_arch}-lzo2 --noconfirm --root "${_newradtel}"
+ # pacman -Rdd mingw-w64-${_arch}-libdeflate --noconfirm --root "${_newradtel}"
   pacman -Rdd mingw-w64-${_arch}-ca-certificates --noconfirm --root "${_newradtel}"
 }
 
