@@ -37,7 +37,7 @@ static void sswdnd_enable_dnd_on_last(GtkWidget *p);
 static gboolean sswdnd_drag_failed(GtkWidget *w, GdkDragContext *c,
 				   GtkDragResult res, gpointer data);
 static void sswdnd_catch(gpointer instance, GtkWidget *ostack, gpointer data);
-
+static gboolean sswdnd_rescue_me(GtkWidget *w, gpointer data);
 
 
 static gpointer *sswdnd_sig_get_instance(void)
@@ -239,8 +239,18 @@ static void sswdnd_drag_data_received(GtkWidget *w, GdkDragContext *ctx,
 	gtk_container_child_set(GTK_CONTAINER(nstack), GTK_WIDGET(button),
 				"position", drop_pos, NULL);
 
-	if (!gtk_container_get_children(GTK_CONTAINER(ostack)))
+	if (!gtk_container_get_children(GTK_CONTAINER(ostack))) {
+
+		/* this stack is empty, so disconnect the collect signal,
+		 * then destroy the toplevel container
+		 */
+		g_signal_handlers_disconnect_matched(sswdnd_sig_get_instance(),
+						     G_SIGNAL_MATCH_DATA,
+						     0, 0, NULL,
+						     sswdnd_collect, ostack);
+
 		gtk_widget_destroy(gtk_widget_get_toplevel(ostack));
+	}
 }
 
 
@@ -290,6 +300,31 @@ static gboolean sswdnd_drag_failed(GtkWidget *w, GdkDragContext *c,
 	if (!gtk_container_get_children(GTK_CONTAINER(parent))) {
 
 		GtkWidget *top = gtk_widget_get_toplevel(parent);
+
+		GList *l = gtk_container_get_children(GTK_CONTAINER(gtk_widget_get_parent(GTK_WIDGET(parent))));
+
+		if (l) {
+
+			/* the first child should always be the SSWDND,
+			 * otherwise we're in trouble
+			 */
+
+			if (IS_SSWDND(l->data))
+				g_signal_handlers_disconnect_matched(sswdnd_sig_get_instance(),
+								     G_SIGNAL_MATCH_DATA,
+								     0, 0, NULL,
+								     sswdnd_rescue_me, l->data);
+			else
+				g_warning("%s:%d data is not stack switcher, cannot disconnect\n", __func__, __LINE__);
+		}
+
+
+		g_signal_handlers_disconnect_matched(sswdnd_sig_get_instance(),
+						     G_SIGNAL_MATCH_DATA,
+						     0, 0, NULL,
+						     sswdnd_collect, parent);
+
+		gtk_widget_destroy(parent);
 
 		if (GTK_IS_WINDOW(top))
 			gtk_window_close(GTK_WINDOW(top));
@@ -427,8 +462,15 @@ static void sswdnd_catch(gpointer instance, GtkWidget *ostack, gpointer data)
 
 		GtkWidget *top = gtk_widget_get_toplevel(ostack);
 
+
+		g_signal_handlers_disconnect_matched(sswdnd_sig_get_instance(),
+							     G_SIGNAL_MATCH_DATA,
+							     0, 0, NULL,
+							     sswdnd_collect,
+							     ostack);
 		if (GTK_IS_WINDOW(top))
 			gtk_widget_destroy(top);
+
 	}
 
 
@@ -443,6 +485,11 @@ static gboolean sswdnd_rescue_me(GtkWidget *w, gpointer data)
 {
 	/* we were disconnected from the parent window */
 	g_ref_count_dec(&sswdnd_ref);
+
+	g_signal_handlers_disconnect_matched(sswdnd_sig_get_instance(),
+					     G_SIGNAL_MATCH_DATA,
+					     0, 0, NULL,
+					     sswdnd_rescue_me, data);
 
 	g_signal_emit_by_name(sswdnd_sig_get_instance(), "rescue-me", w);
 
