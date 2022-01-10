@@ -13,9 +13,12 @@ Currently, the only hardware plugins supplied here are for used with the
 you update the STAMP controller with the firmware with fractional count support
 [SRT Memo 22](https://www.haystack.mit.edu/wp-content/uploads/2020/07/memo_SRT_022.pdf).
 
-Plugins for the SPID Elektronik Big RAS drive and MD01 controller, as well
-as the Measurement Computing PCI-DAS4020/12 A/D converter are currently in a
+Plugins for the Measurement Computing PCI-DAS4020/12 A/D converter are currently in a
 rudimentary state and will be added some time in the future.
+
+A plugin for the SPID Elektronik Big RAS drive and MD01 controller using the
+ROT2PROG protocol is available as a preliminary release and supports essential
+pointing functionality.
 
 A radio telescope simulator plugin is available and the default configuration
 when the software is installed.
@@ -226,6 +229,21 @@ of the simulated telescope.
 ## Actual Hardware
 The server configuration for actual hardware can be a bit tricky. If you own
 one of the Haystack SRTs, you're welcome to mail me for some help.
+
+The configuration files for the server can be found in your configured
+$SYSCONFDIR path, typically */etc/radtel/*.
+
+The configuration files should be fairly self-explanatory. To enable a
+particular set of plugins, specify them at the *plugins=* line in *server.cfg*
+following their naming/directory scheme, e.g. SRT/srt_spectrometer, MD01/md01_rot2prog, etc.
+
+The available plugins can be found in your configured $LIBDIR after installation,
+typically */usr/lib/radtel*.
+
+The plugin configuration files exist in the *backends* subdirectory of your
+configuration file path, i.e. */etc/radtel/backends*. Make sure to adapt
+the parameters as needed.
+
 
 
 # Experimental Features

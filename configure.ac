@@ -62,5 +62,7 @@ AC_CONFIG_FILES([src/server/backends/Makefile])
 AC_OUTPUT
 AC_CONFIG_FILES([src/server/backends/SRT/Makefile])
 AC_OUTPUT
+AC_CONFIG_FILES([src/server/backends/MD01/Makefile])
+AC_OUTPUT
 AC_CONFIG_FILES([src/server/backends/SIM/Makefile])
 AC_OUTPUT
