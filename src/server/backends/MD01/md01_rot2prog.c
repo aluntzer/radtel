@@ -730,5 +730,9 @@ const gchar *g_module_check_init(void)
 
         g_message(MSG "initialising module");
 
+	if (md01_rot2prog_load_config())
+		g_warning(MSG "Error loading module configuration, this plugin may not function properly.");
+
+
 	return NULL;
 }
