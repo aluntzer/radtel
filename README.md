@@ -8,7 +8,7 @@ The software is made of two parts: a server and a client. The server is
 plugin-based and must be supplied with the implementation of the control logic
 for the particular hardware configuration.
 
-Currently, the only hardware plugins supplied here are for used with the
+Currently, the only production-grade hardware plugins supplied here are for used with the
 *Old SRT* (CASSI mount, digital receiver model). It is highly recommended
 you update the STAMP controller with the firmware with fractional count support
 [SRT Memo 22](https://www.haystack.mit.edu/wp-content/uploads/2020/07/memo_SRT_022.pdf).
@@ -22,6 +22,11 @@ pointing functionality.
 
 A radio telescope simulator plugin is available and the default configuration
 when the software is installed.
+
+
+For more a more in-depth description of the software, basics of radio
+astronomy and an assortment of lab projects and exercises, have a
+look at [this document](doc/control_sw_for_small_radtel_v1_1.pdf).
 
 
 
