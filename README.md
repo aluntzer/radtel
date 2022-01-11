@@ -249,6 +249,9 @@ The plugin configuration files exist in the *backends* subdirectory of your
 configuration file path, i.e. */etc/radtel/backends*. Make sure to adapt
 the parameters as needed.
 
+**NOTE:** beware of trailing whitespaces, in particular regarding
+plugin file names, as they are not being pruned. If in doubt, add a semicolon
+to explicitly delimit the parameter.
 
 
 # Experimental Features
