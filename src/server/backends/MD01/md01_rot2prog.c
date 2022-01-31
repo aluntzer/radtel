@@ -77,6 +77,13 @@ static struct {
 		double upper;
 	} el_limits;
 
+	/* park position */
+	struct {
+		double az;
+		double el;
+		gboolean is_conf;
+	} park;
+
 
 	/* coordinates */
 	struct {
@@ -197,6 +204,25 @@ static void md01_rot2prog_load_keys(GKeyFile *kf)
 		g_error(error->message);
 
 	md01.res.v = 1.0 / ((double) md01.res.vdiv);
+
+
+	/* this key is optional */
+	if (g_key_file_has_key(kf, "Drive", "park_pos", &error)) {
+
+		tmp = g_key_file_get_double_list(kf, "Drive", "park_pos",
+						 &len, &error);
+
+		if (len == 2) {
+			md01.park.az = tmp[0];
+			md01.park.el = tmp[1];
+			md01.park.is_conf = TRUE;
+			g_free(tmp);
+		} else if (len && len != 2) {
+			g_error(MSG "Error, park position format is AZ;EL");
+		}
+	}
+
+
 
 }
 
@@ -537,8 +563,8 @@ static int md01_rot2prog_moveto(double az, double el)
 	el = md01.pos.el_cur;
 
 
-	ack_moveto_azel(PKT_TRANS_ID_UNDEF, az, el);
 #endif
+	ack_moveto_azel(PKT_TRANS_ID_UNDEF, az, el);
 
 	g_debug(MSG "rotating to AZ/EL %g/%g", az, el);
 
@@ -610,12 +636,18 @@ static void md01_rot2prog_notify_pos_update(void)
 G_MODULE_EXPORT
 void be_park_telescope(void)
 {
-	net_server_broadcast_message("Moving telescope to park position.",
-				     NULL);
+	if (!md01.park.is_conf) {
+		net_server_broadcast_message("Cannot park telescpe, "
+				     "no parking position configured.", NULL);
+		return;
+	}
 
+	net_server_broadcast_message("Initiating move to park position.", NULL);
+
+
+	/* go to configured position */
 	g_message(MSG "parking telescope");
-
-	/* go to position */
+	be_moveto_azel(md01.park.az, md01.park.el);
 }
 
 
@@ -626,7 +658,8 @@ void be_park_telescope(void)
 G_MODULE_EXPORT
 void be_recalibrate_pointing(void)
 {
-	g_warning(MSG "recalibration not implemented");
+	g_warning(MSG "Automatic drive recalibration is not available "
+		      "for this backend device");
 }
 
 
