@@ -1,0 +1,85 @@
+we do not provide a dmg, so for now, to build it from source (from your terminal):
+
+install homebrew:
+
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+install packages prerequisites:
+
+brew install automake
+brew install libtool
+brew install pkgconfig
+brew install gtk+3
+brew install adwaita-icon-theme
+
+
+either get the sources (this or newer version) from:
+
+https://www.univie.ac.at/radio/files/radtel-src-v0.0.27.tar.gz
+
+and unpack:
+
+cd Downloads
+tar zxvf radtel-v0.0.27.tar.gz
+cd radtel
+
+
+or clone repository from github https://github.com/aluntzer/radtel
+and enter the directory.
+
+
+To build, first, export a missing path for pkgconfig:
+
+export PKG_CONFIG_PATH=/usr/local/opt/libffi/lib/pkgconfig
+
+now configure build:
+
+./autogen.sh
+./configure --prefix=/usr/local
+
+and make:
+
+make -j8
+
+on success:
+
+sudo make install
+
+to run the client, issue
+
+radtel
+
+from the command line
+
+
+to run the server with the simulator plugin (default configuration),
+first download a data pack:
+
+https://www.univie.ac.at/radio/files/sky_vel.dat.gz
+
+OSX appears to unpack the file by itself (at least when downloaded with safari),
+if you find there is still the .gz suffix, go to the files location and unpack:
+
+gunzip sky_vel.dat.gz
+
+
+To start the server/simulator run
+
+radtelsrv
+
+from the comand line in the directory sky_vel.dat is located
+
+
+NOTES:
+
+- if you accidentially miss the "--prefix..." argument to "configure", and
+  re-issued the command, sure to "make clean" before continuing at "make -j8"
+- if you run into errors like
+  GLib-GIO-ERROR **: Settings schema 'org.uvie.radtel.config' is not installed,
+  try the previous point, otherwise start radtel with:
+  XDG_DATA_DIRS=/usr/local/share radtel
+  
+
+
+
+
