@@ -312,9 +312,10 @@ static void try_disconnect_socket(struct con_data *c)
 			g_clear_error(&error);
 		}
 	}
-
+#if 0
 	/* drop initial reference */
 	g_clear_object(&c->con);
+#endif
 }
 
 
