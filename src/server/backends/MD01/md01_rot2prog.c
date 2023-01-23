@@ -387,8 +387,9 @@ static int md01_rot2prog_serial_set_comm_param(int fd)
 	/* enable receiver and set local mode */
 	cfg.c_cflag |= (CLOCAL | CREAD);
 
-	cfg.c_cc[VMIN] = 13;
-	cfg.c_cc[VTIME] = 0;
+	/* cfg.c_cc[VMIN] = ROT2PROG_ACK_BYTES; */
+	cfg.c_cc[VMIN] = 0;
+	cfg.c_cc[VTIME] = 500;
 
 	/* set configuration */
 	return tcsetattr (fd, TCSANOW, &cfg);
@@ -583,10 +584,10 @@ static void md01_rot2prog_get_position(double *az, double *el)
 
 	char buf[ROT2PROG_ACK_BYTES];
 
-	char get[] = "\x57\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x1F\x20";
+	char get[ROT2PROG_CMD_BYTES] = "\x57\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x1F\x20";
 
 
-	md01_rot2prog_serial_write(fd, get, sizeof(get), 0);
+	md01_rot2prog_serial_write(fd, get, ROT2PROG_CMD_BYTES, 0);
 
 	n = md01_rot2prog_serial_read(fd, buf, ROT2PROG_ACK_BYTES);
 
@@ -724,7 +725,7 @@ static gpointer md01_rot2prog_pos_push_thread(gpointer data)
 {
 	while (1) {
 		md01_rot2prog_notify_pos_update();
-		g_usleep(1.0 * G_USEC_PER_SEC);
+		g_usleep(0.1 * G_USEC_PER_SEC);
 	}
 
 
@@ -746,9 +747,10 @@ void module_extra_init(void)
 	if (md01_rot2prog_serial_set_comm_param(fd))
 		g_error(MSG "Error setting parameters for serial port %s\n",
 			md01_tty);
-
+#if 1
 	/* dummy */
 	g_thread_new(NULL, md01_rot2prog_pos_push_thread, NULL);
+#endif
 }
 
 
