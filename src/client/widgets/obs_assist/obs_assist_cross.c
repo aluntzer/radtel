@@ -498,8 +498,15 @@ static gboolean cross_obs_az(ObsAssist *p)
 	/* is azimuth done?  */
 	az_lim = p->cfg->cross.az_max + p->cfg->cross.az_stp;
 
-	if ((p->cfg->cross.az_cur + p->cfg->cross.az_stp) > az_lim)
+	if ((p->cfg->cross.az_cur + p->cfg->cross.az_stp) > az_lim) {
+		/* clear to prevent edge case where tracking is enabled
+		 * and the drive has high enough resolution so that the
+		 * az limit changes and the obs program tries to re-observe
+		 * the last azimuth position
+		 */
+		p->cfg->cross.az_pt = FALSE;
 		return FALSE;
+	}
 
 	cross_update_pbar_az(p);
 
