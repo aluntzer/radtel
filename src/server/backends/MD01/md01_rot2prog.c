@@ -354,6 +354,7 @@ static int md01_rot2prog_serial_close_port(int fd)
 
 static int md01_rot2prog_serial_set_comm_param(int fd)
 {
+#if 0
 	struct termios cfg;
 
 
@@ -389,11 +390,29 @@ static int md01_rot2prog_serial_set_comm_param(int fd)
 
 	/* cfg.c_cc[VMIN] = ROT2PROG_ACK_BYTES; */
 	cfg.c_cc[VMIN] = 0;
-	cfg.c_cc[VTIME] = 500;
+	cfg.c_cc[VTIME] = 10;
 
 	/* set configuration */
 	return tcsetattr (fd, TCSANOW, &cfg);
+
+#else
+        struct termios cfg = {0};
+
+
+        /* we start from a cleared struct, so we need only set our config */
+        cfg.c_cflag = CS8 | CLOCAL | CREAD;
+        cfg.c_iflag = IGNPAR;
+
+        cfsetispeed(&cfg, B460800);
+        cfsetospeed(&cfg, B460800);
+
+        cfg.c_cc[VTIME] = 1;
+
+        /* set configuration */
+        return tcsetattr (fd, TCSANOW, &cfg);
+#endif
 }
+
 
 /**
  * @brief write to the serial port
@@ -424,6 +443,49 @@ static int md01_rot2prog_serial_write(int fd, const char *buf,
 }
 
 
+
+
+
+static int myread(int fd, uint8_t *p, size_t left)
+{
+        size_t n = 0;
+        while (left > 0)
+        {
+                ssize_t nr = read(fd, p, left);
+                if (nr <= 0)    {
+                        if (nr < 0)
+                                perror("read");  /* Error! */
+                        break;
+                }
+                else {
+                        n += nr;     /* We have read some more data */
+                        left -= nr;     /* Less data left to read */
+                        p += nr; /* So we don't read over already read data */
+                }
+        }
+
+	return n;
+}
+
+
+
+/**
+ * @brief flush pending bytes
+ */
+
+static void md01_rot2prog_serial_flush(int fd)
+{
+        int n;
+        unsigned char c;
+	return;
+        printf("flushing...");
+        while ((n = read(fd, &c, sizeof(c))) > 0);
+        printf("done\n");
+}
+
+
+
+
 /**
  * @brief read from the serial port
  *
@@ -440,7 +502,7 @@ static int md01_rot2prog_serial_read(int fd, char *buf, size_t nbyte)
 {
 	int n;
 
-	n = read(fd, buf, nbyte);
+	n = myread(fd, buf, nbyte);
 
 	if (n < 0)
 		perror("serial port read failed");
@@ -472,15 +534,20 @@ static void md01_rot2prog_eval_response(const char *msg, gsize len)
 				+ msg[9] * md01.res.v
 				- 360.0;
 
+		/* XXX round to resolution */
+		md01.pos.az_cur = round(md01.pos.az_cur * 10.0) * 0.1;
+		md01.pos.el_cur = round(md01.pos.el_cur * 10.0) * 0.1;
+
 	} else if (len == ROT2PROG_ACK_CONFIG) {
 		g_message(MSG "configuration data received:");
-
+#if 1
 		for (i = 0; i < len; i++) {
 			g_print("%x ", msg[i]);
 			if (i && (i % 16 == 0))
 			    g_print("\n");
 		}
 		g_print("\n");
+#endif
 
 	} else {
 		g_message(MSG "unknown message of lenght %d received:", len);
@@ -541,22 +608,36 @@ static int md01_rot2prog_moveto(double az, double el)
 				g_print("\n");
 		}
 		g_print("\n");
-		g_message("write!");
+		g_message("moveto write!");
 	}
 #endif
 
 	md01_rot2prog_serial_write(fd, cmdstr, ROT2PROG_CMD_BYTES, 0);
 
-#if 0
-	g_message("read!");
+#if 1
 	int n;
 	n = md01_rot2prog_serial_read(fd, buf, ROT2PROG_ACK_BYTES);
 
 	if (n != ROT2PROG_ACK_BYTES) {
-		g_warning(MSG "mismatch in message length. expected %d, got %d",
-			  n, ROT2PROG_ACK_BYTES);
-		return -1;
+		g_warning(MSG "moveto mismatch in message length. expected %d, got %d",
+			  ROT2PROG_ACK_BYTES, n);
+
+
+	{
+		int i;
+		for (i = 0; i < n; i++) {
+			g_print("%x ", buf[i]);
+		}
+		g_print("\n");
+
+		md01_rot2prog_serial_flush(fd);
 	}
+
+
+
+
+		return -1;
+	} else
 
 	md01_rot2prog_eval_response(buf, n);
 
@@ -585,6 +666,7 @@ static void md01_rot2prog_get_position(double *az, double *el)
 	char buf[ROT2PROG_ACK_BYTES];
 
 	char get[ROT2PROG_CMD_BYTES] = "\x57\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x1F\x20";
+	char poll[ROT2PROG_CMD_BYTES] = "\x57\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x3F\x20";
 
 
 	md01_rot2prog_serial_write(fd, get, ROT2PROG_CMD_BYTES, 0);
@@ -593,14 +675,32 @@ static void md01_rot2prog_get_position(double *az, double *el)
 
 	if (n != ROT2PROG_ACK_BYTES) {
 		g_warning(MSG "mismatch in message length. expected %d, got %d",
-			       n, ROT2PROG_ACK_BYTES);
+			       ROT2PROG_ACK_BYTES, n);
 		return;
 	}
+
+
+
 
 	md01_rot2prog_eval_response(buf, n);
 
 	(*az) = md01.pos.az_cur;
 	(*el) = md01.pos.el_cur;
+
+
+
+	md01_rot2prog_serial_write(fd, poll, ROT2PROG_CMD_BYTES, 0);
+
+	n = md01_rot2prog_serial_read(fd, buf, 2);
+
+	if (n != 2) {
+		g_warning(MSG "mismatch in message length. expected %d, got %d",
+			       ROT2PROG_ACK_BYTES, n);
+		return;
+	}
+
+
+
 }
 
 
@@ -747,6 +847,8 @@ void module_extra_init(void)
 	if (md01_rot2prog_serial_set_comm_param(fd))
 		g_error(MSG "Error setting parameters for serial port %s\n",
 			md01_tty);
+
+         md01_rot2prog_serial_flush(fd);
 #if 1
 	/* dummy */
 	g_thread_new(NULL, md01_rot2prog_pos_push_thread, NULL);
