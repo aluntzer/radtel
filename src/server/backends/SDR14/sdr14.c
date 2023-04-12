@@ -47,11 +47,11 @@
 
 
 
-static char *sdr14_tty = "/dev/ttyUSB0";
+static char *sdr14_tty = "/dev/ttyUSB1";
 static int sdr14_fd;
 
 
-#define AVG 1
+#define AVG 100
 #define SDR14_NSAM  2048	/* 2048 16 bit I/Q pairs (in AD66220 mode)  */
 
 
@@ -64,7 +64,7 @@ static int sdr14_fd;
 #define SDR14_DECIMATION	(10 * 17)
 #define SDR14_ADC_FREQ		66666667
 #define SDR14_RT_BW		(SDR14_ADC_FREQ / SDR14_DECIMATION / 2)
-#define SDR14_DISCARD_HZ	3000
+#define SDR14_DISCARD_HZ	6200
 
 
 
@@ -407,7 +407,7 @@ static uint32_t sdr14_spec_acquire(void)
 	struct sdr14_data_pkt pkt;
 
 	uint32_t discard;
-#define SEQ 3
+#define SEQ 7
 
 	timer = g_timer_new();
 	g_timer_start(timer);
@@ -428,18 +428,18 @@ static uint32_t sdr14_spec_acquire(void)
 	fft_init(blsiz, &p0, &reamin0, &reamout0);
 
 	/* XXX fixme, these are just random values */
-	s->freq_min_hz = (typeof(s->freq_min_hz)) 5000000 - (uint32_t) (bw_eff / 2) * SEQ/2;
-	s->freq_max_hz = (typeof(s->freq_max_hz)) 5000000 + (uint32_t) (bw_eff / 2) * SEQ/2;
-	s->freq_inc_hz = (typeof(s->freq_inc_hz)) (uint32_t) (bw_eff / s->n);
+	s->freq_min_hz = (typeof(s->freq_min_hz)) 5500000 - (uint32_t) (bw_eff / 2) * SEQ/2;
+	s->freq_max_hz = (typeof(s->freq_max_hz)) 5500000 + (uint32_t) (bw_eff / 2) * SEQ/2;
+	s->freq_inc_hz = (typeof(s->freq_inc_hz)) (uint32_t) (bw_eff * SEQ / (s->n) );
 
-	uint8_t oneshot_cmd[8] = {0x08, 0x00, 0x18, 0x00, 0x81, 0x02, 0x02, 0x0a};
+	uint8_t oneshot_cmd[8] = {0x08, 0x00, 0x18, 0x00, 0x81, 0x02, 0x02, AVG};
 	uint8_t stp_cmd[8] = {0x08, 0x00, 0x18, 0x00, 0x81, 0x01, 0x00, 0x01};
 	uint8_t ack[8];
 
 	uint8_t hbeat[3] = {0x03,0x60,0x00};
 
 
-	uint32_t f0 = 5000000 - bw_eff;
+	uint32_t f0 = 5500000 - bw_eff*3;
 
 
 	float rre, aam, aam2, rre2;
