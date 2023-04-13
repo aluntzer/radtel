@@ -16,6 +16,7 @@
  */
 
 #include <gtk/gtk.h>
+#include <gst/gst.h>
 
 #include <signals.h>
 #include <sswdnd.h>
@@ -28,6 +29,7 @@
 #include <sys_status.h>
 #include <obs_assist.h>
 #include <chatlog.h>
+#include <video.h>
 #include <default_grid.h>
 #include <cmd.h>
 #include <net.h>
@@ -546,6 +548,13 @@ static GtkWidget *gui_create_stack_switcher(void)
 	gtk_container_add(GTK_CONTAINER(w), obs_assist_new());
 	sswdnd_add_named(sswdnd, w, "Observation");
 
+	w = gtk_scrolled_window_new(NULL, NULL);
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(w),
+				       GTK_POLICY_AUTOMATIC,
+				       GTK_POLICY_AUTOMATIC);
+	gtk_container_add(GTK_CONTAINER(w), video_new());
+	sswdnd_add_named(sswdnd, w, "Video");
+
 
 
 	return sswdnd;
@@ -565,6 +574,7 @@ int gui_client(int argc, char *argv[])
 
 
 	gtk_init(&argc, &argv);
+	gst_init(&argc, &argv);
 
 	g_object_set(gtk_settings_get_default(),
 		     "gtk-application-prefer-dark-theme", TRUE,

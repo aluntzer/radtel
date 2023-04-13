@@ -14,6 +14,8 @@ AM_CFLAGS += $(GTHREAD_CFLAGS)
 AM_CFLAGS += $(GLIB_CFLAGS)
 AM_CFLAGS += $(GTK3_CFLAGS)
 AM_CFLAGS += $(GIO_CFLAGS)
+AM_CFLAGS += $(GSTREAMER_CFLAGS)
+AM_CFLAGS += $(GSTREAMER_VIDEO_CFLAGS)
 AM_CFLAGS += -I$(top_srcdir)/src/include
 AM_CFLAGS += -Iwidgets/include
 AM_CFLAGS += -Iwidgets/radio/
@@ -25,6 +27,7 @@ AM_CFLAGS += -Iwidgets/sys_status
 AM_CFLAGS += -Iwidgets/obs_assist
 AM_CFLAGS += -Iwidgets/sky
 AM_CFLAGS += -Iwidgets/chatlog
+AM_CFLAGS += -Iwidgets/vid
 AM_CFLAGS += -Iinclude
 AM_CFLAGS += -Wunused
 
@@ -36,6 +39,8 @@ radtel_LDADD := $(GTK3_LIBS)
 radtel_LDADD += $(GTHREAD_LIBS)
 radtel_LDADD += $(GLIB_LIBS)
 radtel_LDADD += $(GIO_LIBS)
+radtel_LDADD += $(GSTREAMER_LIBS)
+radtel_LDADD += $(GSTREAMER_VIDEO_LIBS)
 radtel_LDADD += -L$(top_builddir)/src/net/ -lproto
 radtel_LDADD += -L$(top_builddir)/src/util -lutil
 
@@ -163,6 +168,8 @@ radtel_SOURCES += widgets/obs_assist/obs_assist.c \
 
 
 radtel_SOURCES += widgets/chatlog/chatlog.c
+
+radtel_SOURCES += widgets/vid/vid.c
 
 
 
