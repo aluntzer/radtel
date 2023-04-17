@@ -34,12 +34,12 @@ typedef struct _VideoConfig	VideoPrivate;
 
 
 struct _Video {
-	GtkDrawingArea parent;
+	GtkBox parent;
 	VideoPrivate *cfg;
 };
 
 struct _VideoClass {
-	GtkDrawingAreaClass parent_class;
+	GtkBoxClass parent_class;
 };
 
 

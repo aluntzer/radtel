@@ -19,14 +19,7 @@
 #include <gtk/gtk.h>
 #include <gdk/gdk.h>
 #include <gst/gst.h>
-#include <gst/video/videooverlay.h>
-#if defined (GDK_WINDOWING_X11)
-#include <gdk/gdkx.h>
-#elif defined (GDK_WINDOWING_WIN32)
-#include <gdk/gdkwin32.h>
-#elif defined (GDK_WINDOWING_QUARTZ)
-#include <gdk/gdkquartz.h>
-#endif
+
 
 #include <sswdnd.h>
 
@@ -34,7 +27,7 @@
 #include <cmd.h>
 #include <signals.h>
 
-G_DEFINE_TYPE_WITH_PRIVATE(Video, video, GTK_TYPE_DRAWING_AREA)
+G_DEFINE_TYPE_WITH_PRIVATE(Video, video, GTK_TYPE_BOX)
 
 
 
@@ -195,38 +188,6 @@ static gboolean video_draw_cb(GtkWidget *w, cairo_t *cr, gpointer data)
 }
 
 
-static void video_realize_cb(GtkWidget *w, gpointer data)
-{
-	Video *p;
-	GdkWindow *win;
-	guintptr handle;
-
-
-	p = VIDEO(data);
-
-       	win = gtk_widget_get_window(w);
-
-	printf("mmmmeeeeeh!\n");
-	if (!gdk_window_ensure_native(win)) {
-		g_error("VIDEO: not a native window!");
-		return;
-	}
-
-#if defined (GDK_WINDOWING_WIN32)
-	handle = (guintptr) GDK_WINDOW_HWND(win);
-#elif defined (GDK_WINDOWING_QUARTZ)
-	handle = gdk_quartz_window_get_nsview(win);
-#elif defined (GDK_WINDOWING_X11)
-	handle = GDK_WINDOW_XID(win);
-#endif
-
-
-	gst_element_set_state(p->cfg->playbin, GST_STATE_READY);
-
-	gst_video_overlay_set_window_handle(GST_VIDEO_OVERLAY(p->cfg->playbin), handle);
-}
-
-
 /**
  * @brief destroy signal handler
  */
@@ -295,7 +256,6 @@ static gboolean video_visible(gpointer data)
 
 
 		if (GST_STATE(p->cfg->playbin) != GST_STATE_PLAYING) {
-		printf("play!\n");
 			gst_element_set_state(p->cfg->playbin, GST_STATE_PLAYING);
 			/* Start playing */
 			if (gst_element_set_state(p->cfg->playbin, GST_STATE_PLAYING) == GST_STATE_CHANGE_FAILURE) {
@@ -305,10 +265,8 @@ static gboolean video_visible(gpointer data)
 		}
 
 
-	} else if (GST_STATE(p->cfg->playbin) == GST_STATE_PLAYING) {
-		printf("STOP!\n");
+	} else if (GST_STATE(p->cfg->playbin) == GST_STATE_PLAYING)
 		gst_element_set_state(p->cfg->playbin, GST_STATE_READY);
-	}
 
 	return G_SOURCE_CONTINUE;
 }
@@ -338,6 +296,9 @@ static void video_init(Video *p)
 	GstBus *bus;
 	gpointer sig;
 
+	GtkWidget *area;
+	GstElement *videosink;
+
 
 	g_return_if_fail(p != NULL);
 	g_return_if_fail(IS_VIDEO(p));
@@ -352,13 +313,10 @@ static void video_init(Video *p)
 	/* connect the relevant signals of the DrawingArea */
 	g_signal_connect(G_OBJECT(&p->parent), "destroy",
 			 G_CALLBACK(video_destroy), (gpointer) p);
-
-	g_signal_connect(G_OBJECT(&p->parent), "realize",
-			 G_CALLBACK(video_realize_cb), (gpointer) p);
-
-	g_signal_connect(G_OBJECT(&p->parent), "draw",
+#if 0
+	g_signal_connect(G_OBJECT(p), "draw",
 			 G_CALLBACK(video_draw_cb), (gpointer) p);
-
+#endif
 
 #if 0
 	p->cfg->id_uri = g_signal_connect(sig, "pr-video-uri",
@@ -374,6 +332,21 @@ static void video_init(Video *p)
 		return;
 	}
 	g_object_set(p->cfg->playbin, "uri", p->cfg->uri, NULL);
+
+	videosink = gst_element_factory_make ("gtksink", "gtksink");
+
+	g_object_set(p->cfg->playbin, "video-sink", videosink, NULL);
+
+	/* set force-aspect-ratio to false to shut up
+	 * gst_video_center_rect: assertion 'src->h != 0' failed
+	 * while video size is not yet known during loading of the stream
+	 */
+	g_object_set (videosink, "force-aspect-ratio", FALSE, NULL);
+	g_object_get (videosink, "widget", &area, NULL);
+
+	gtk_box_pack_start(GTK_BOX(p), area, TRUE, TRUE, 0);
+	g_object_unref (area);
+
 
 	bus = gst_element_get_bus (p->cfg->playbin);
 	gst_bus_add_signal_watch (bus);
