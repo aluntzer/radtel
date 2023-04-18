@@ -534,9 +534,9 @@ static void md01_rot2prog_eval_response(const char *msg, gsize len)
 				+ msg[9] * md01.res.v
 				- 360.0;
 
-		/* XXX round to resolution */
-		md01.pos.az_cur = round(md01.pos.az_cur * 10.0) * 0.1;
-		md01.pos.el_cur = round(md01.pos.el_cur * 10.0) * 0.1;
+		/* fold into 0-360, 0-90 */
+		md01.pos.az_cur = fmod(md01.pos.az_cur, 360.0);
+		md01.pos.el_cur = fmod(md01.pos.el_cur, 90.0);
 
 	} else if (len == ROT2PROG_ACK_CONFIG) {
 		g_message(MSG "configuration data received:");
@@ -584,6 +584,10 @@ static int md01_rot2prog_moveto(double az, double el)
 
 	u_az = (int) (md01.res.hdiv * (360 + az));
 	u_el = (int) (md01.res.vdiv * (360 + el));
+
+	md01.pos.az_tgt = az;
+	md01.pos.el_tgt = el;
+
 
 	cmdstr[0]  = 0x57;                       /* S   */
 	cmdstr[1]  = 0x30 +  u_az / 1000;        /* H1  */
@@ -646,9 +650,9 @@ static int md01_rot2prog_moveto(double az, double el)
 
 
 #endif
-	ack_moveto_azel(PKT_TRANS_ID_UNDEF, az, el);
+	ack_moveto_azel(PKT_TRANS_ID_UNDEF, md01.pos.az_tgt, md01.pos.el_tgt);
 
-	g_debug(MSG "rotating to AZ/EL %g/%g", az, el);
+	g_debug(MSG "rotating to AZ/EL %g/%g", md01.pos.az_tgt, md01.pos.el_tgt);
 
 	/* TODO eval response and return -1 on errro */
 
