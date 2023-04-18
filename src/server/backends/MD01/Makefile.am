@@ -28,5 +28,7 @@ md01_rot2prog_la_LIBADD += -L$(top_builddir)/src/net/ -lutil
 
 plugin_LTLIBRARIES = md01_rot2prog.la
 
+if !OS_DARWIN
 md01_rot2prog_la_SOURCES = md01_rot2prog.c
+endif
 

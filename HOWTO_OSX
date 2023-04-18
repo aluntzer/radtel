@@ -11,26 +11,30 @@ brew install libtool
 brew install pkgconfig
 brew install gtk+3
 brew install adwaita-icon-theme
+brew install gst-plugins-good
+brew install fftw
 
 
 either get the sources (this or newer version) from:
 
-https://www.univie.ac.at/radio/files/radtel-src-v0.0.27.tar.gz
+https://radio.univie.ac.at/
+	-> radtel-src-v0.0.28
 
-and unpack:
+then:
 
 cd Downloads
-tar zxvf radtel-v0.0.27.tar.gz
+
+the sources may have been unpacked automatically, otherwise:
+
+unzip radtel-src-v0.0.28.zip
+
+then:
 cd radtel
 
+alternatively, you can also clone the repository from github:
+	 https://github.com/aluntzer/radtel
+and enter the directory
 
-or clone repository from github https://github.com/aluntzer/radtel
-and enter the directory.
-
-
-To build, first, export a missing path for pkgconfig:
-
-export PKG_CONFIG_PATH=/usr/local/opt/libffi/lib/pkgconfig
 
 now configure build:
 

@@ -40,6 +40,7 @@
 #include <sys/mman.h>
 #include <poll.h>
 #include <fftw3.h>
+#include <math.h>
 
 #include <ad6620.h>
 
