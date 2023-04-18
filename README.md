@@ -188,6 +188,11 @@ to somewhat adjust the colour cutoff.
 These are automated observation programs. Their function will be described at
 a later date. You're welcome to find out yourself tho.
 
+## Video
+
+If a (webcam) video URI is configured on the server, the stream will be shown
+whenever this tab is visible. Note that streaming will be automatically
+chancelled after 1 second when the tab is hidden in order to save bandwidth.
 
 
 # How to use the server software
