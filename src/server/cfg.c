@@ -95,6 +95,19 @@ static void server_cfg_load_motd(GKeyFile *kf, struct server_settings *s)
 
 
 /**
+ * @brief load configuration keys in the webcam group
+ */
+
+static void server_cfg_load_video_uri(GKeyFile *kf, struct server_settings *s)
+{
+	const char *grp = "Webcam";
+
+
+	s->video_uri = g_key_file_get_string(kf, grp, "uri", NULL);
+}
+
+
+/**
  * @brief get the configured server port
  */
 
@@ -195,6 +208,34 @@ gchar *server_cfg_get_motd(void)
 	return g_strdup(server_cfg->motd);
 }
 
+
+/**
+ * @brief update the webcam video URI at run time
+ *
+ * @note does not update the configuration file
+ */
+
+void server_cfg_set_video_uri(const gchar *video_uri)
+{
+	g_free(server_cfg->video_uri);
+
+	server_cfg->video_uri = g_strdup(video_uri);
+}
+
+
+/**
+ * @brief get the webcam video URI
+ *
+ * @returns a copy of the video_uri, cleanup using g_free()
+ *
+ */
+
+gchar *server_cfg_get_video_uri(void)
+{
+	return g_strdup(server_cfg->video_uri);
+}
+
+
 /**
  * @brief update the message of the day at run time
  *
@@ -207,6 +248,11 @@ void server_cfg_set_motd(const gchar *motd)
 
 	server_cfg->motd = g_strdup(motd);
 }
+
+
+
+
+
 
 
 /**
@@ -261,6 +307,7 @@ static int server_load_config_from_prefix(const gchar *prefix, GError **err)
 	server_cfg_load_backend(kf, server_cfg);
 	server_cfg_load_location(kf, server_cfg);
 	server_cfg_load_motd(kf, server_cfg);
+	server_cfg_load_video_uri(kf, server_cfg);
 
 	g_key_file_free(kf);
 	g_free(cfg);

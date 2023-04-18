@@ -41,6 +41,7 @@ void proc_pr_message(struct packet *pkt);
 void proc_pr_userlist(struct packet *pkt);
 void proc_pr_hot_load_enable(struct packet *pkt);
 void proc_pr_hot_load_disable(struct packet *pkt);
+void proc_pr_video_uri(struct packet *pkt);
 
 
 #endif /* _CLIENT_INCLUDE_PKT_PROC_H_ */

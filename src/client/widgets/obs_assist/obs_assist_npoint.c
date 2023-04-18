@@ -141,7 +141,6 @@ static void npoint_draw_graph(ObsAssist *p)
  * @param el the actual target Elevation
  *
  * @returns TRUE if in position
- * @note we use 2x the axis resolution for tolerance to avoid sampling issues
  */
 
 static gboolean npoint_in_position(ObsAssist *p, gdouble az, gdouble el)

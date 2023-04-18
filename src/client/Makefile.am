@@ -27,7 +27,7 @@ AM_CFLAGS += -Iwidgets/sys_status
 AM_CFLAGS += -Iwidgets/obs_assist
 AM_CFLAGS += -Iwidgets/sky
 AM_CFLAGS += -Iwidgets/chatlog
-AM_CFLAGS += -Iwidgets/vid
+AM_CFLAGS += -Iwidgets/video
 AM_CFLAGS += -Iinclude
 AM_CFLAGS += -Wunused
 
@@ -104,7 +104,8 @@ radtel_SOURCES += pkt_proc.c \
 		  proc/proc_pr_message.c \
 		  proc/proc_pr_userlist.c \
 		  proc/proc_pr_hot_load_enable.c \
-		  proc/proc_pr_hot_load_disable.c
+		  proc/proc_pr_hot_load_disable.c \
+		  proc/proc_pr_video_uri.c
 
 
 radtel_SOURCES += sig/sig_pr_success.c \
@@ -126,6 +127,7 @@ radtel_SOURCES += sig/sig_pr_success.c \
 		  sig/sig_pr_userlist.c \
 		  sig/sig_pr_hot_load_enable.c \
 		  sig/sig_pr_hot_load_disable.c \
+		  sig/sig_pr_video_uri.c \
 		  sig/sig_status_push.c \
 		  sig/sig_tracking.c \
 		  sig/sig_shutdown.c \
@@ -169,7 +171,7 @@ radtel_SOURCES += widgets/obs_assist/obs_assist.c \
 
 radtel_SOURCES += widgets/chatlog/chatlog.c
 
-radtel_SOURCES += widgets/vid/vid.c
+radtel_SOURCES += widgets/video/video.c
 
 
 

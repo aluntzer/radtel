@@ -228,6 +228,14 @@ static void setup_sig_pr_hot_load_disable(void)
 		     G_TYPE_NONE, 0);
 }
 
+static void setup_sig_pr_video_uri(void)
+{
+	g_signal_new("pr-video-uri",
+		     G_TYPE_OBJECT, G_SIGNAL_RUN_FIRST,
+		     0, NULL, NULL, NULL,
+		     G_TYPE_NONE, 1, G_TYPE_POINTER);
+}
+
 
 gpointer *sig_get_instance(void)
 {
@@ -264,4 +272,5 @@ void sig_init(void)
 	setup_sig_pr_userlist();
 	setup_sig_pr_hot_load_enable();
 	setup_sig_pr_hot_load_disable();
+	setup_sig_pr_video_uri();
 }

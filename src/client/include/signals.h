@@ -38,6 +38,7 @@ void sig_pr_message(const gchar *msg);
 void sig_pr_userlist(const gchar *msg);
 void sig_pr_hot_load_enable(void);
 void sig_pr_hot_load_disable(void);
+void sig_pr_video_uri(const gchar *msg);
 
 void sig_status_push(const gchar *msg);
 void sig_tracking(gboolean track, double ra, double de);

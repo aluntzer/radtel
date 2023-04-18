@@ -47,6 +47,7 @@ struct packet *ack_hot_load_enable_gen(uint16_t trans_id);
 struct packet *ack_hot_load_disable_gen(uint16_t trans_id);
 struct packet *ack_cold_load_enable_gen(uint16_t trans_id);
 struct packet *ack_cold_load_disable_gen(uint16_t trans_id);
+struct packet *ack_video_uri_gen(uint16_t trans_id, const uint8_t *uri, uint16_t len);
 
 
 
@@ -74,6 +75,7 @@ void ack_hot_load_enable(uint16_t trans_id);
 void ack_hot_load_disable(uint16_t trans_id);
 void ack_cold_load_enable(uint16_t trans_id);
 void ack_cold_load_disable(uint16_t trans_id);
+void ack_video_uri(uint16_t trans_id, const uint8_t *uri, uint16_t len);
 
 #endif /* _INCLUDE_ACK_H_ */
 

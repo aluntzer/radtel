@@ -115,6 +115,10 @@ void process_pkt(struct packet *pkt)
 		proc_pr_hot_load_disable(pkt);
 		break;
 
+	case PR_VIDEO_URI:
+		proc_pr_video_uri(pkt);
+		break;
+
 	default:
 		g_message("Service command %x not understood\n", pkt->service);
 		break;

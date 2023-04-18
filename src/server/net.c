@@ -201,6 +201,23 @@ static void net_push_motd_update(void)
 }
 
 
+static void net_push_video_uri_single(void)
+{
+	gchar *uri;
+
+
+	uri = server_cfg_get_video_uri();
+	if (!uri)
+		return;
+
+
+	ack_video_uri(PKT_TRANS_ID_UNDEF, uri, strlen(uri));
+
+	g_free(uri);
+}
+
+
+
 /**
  * @brief distribute a list of users to all clients
  */
@@ -832,6 +849,8 @@ static gboolean net_incoming(GSocketService    *service,
 	g_mutex_lock(&listlock);
 	con_list = g_list_append(con_list, c);
 	g_mutex_unlock(&listlock);
+
+	net_push_video_uri_single();
 
 	/* push usernames and messages after 1 seconds, so the incoming
 	 * connections have time to configure theirs

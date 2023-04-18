@@ -30,6 +30,7 @@ struct server_settings {
 	gsize     n_hor;	/* number of profile values */
 	gchar    *motd;		/* a message of the day */
 	gchar    *masterkey;	/* guess */
+	gchar    *video_uri;	/* webcam URI */
 };
 
 
@@ -38,6 +39,7 @@ gchar **server_cfg_get_plugins(void);
 gchar *server_cfg_get_station(void);
 double server_cfg_get_station_lon(void);
 double server_cfg_get_station_lat(void);
+gchar *server_cfg_get_video_uri(void);
 
 void server_cfg_set_station_lat(double lat);
 void server_cfg_set_station_lon(double lon);
@@ -48,6 +50,7 @@ int server_cfg_load(void);
 
 gchar *server_cfg_get_motd(void);
 void server_cfg_set_motd(const gchar *motd);
+void server_cfg_set_video_uri(const gchar *video_uri);
 
 const gchar *server_cfg_get_masterkey(void);
 

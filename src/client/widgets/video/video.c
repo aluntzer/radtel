@@ -23,7 +23,7 @@
 
 #include <sswdnd.h>
 
-#include <vid_cfg.h>
+#include <video_cfg.h>
 #include <cmd.h>
 #include <signals.h>
 
@@ -143,6 +143,12 @@ static void video_handle_pr_video_uri(gpointer instance,
 	if (p->cfg->uri)
 		g_free(p->cfg->uri);
 
+	if (!uri) {
+		p->cfg->uri = g_strdup("testbin://video,pattern=smpte-rp-219");
+		return;
+	}
+
+
 	p->cfg->uri = g_strdup(uri);
 
 	if (p->cfg->uri) {
@@ -158,7 +164,7 @@ static void video_handle_pr_video_uri(gpointer instance,
 /**
  * @brief clear drawing area when the stream is stopped or not available
  */
-
+__attribute__((unused))
 static gboolean video_draw_cb(GtkWidget *w, cairo_t *cr, gpointer data)
 {
 	GtkAllocation allocation;
@@ -225,13 +231,13 @@ static gboolean video_visible(gpointer data)
 
 
 	if (!gtk_widget_get_realized(GTK_WIDGET(&p->parent)))
-		return G_SOURCE_CONTINUE;
+		goto stop;
 
 	if (!p->cfg->playbin)
-		return G_SOURCE_CONTINUE;
+		goto stop;
 
 	if (!p->cfg->uri)
-		return G_SOURCE_CONTINUE;
+		goto stop;
 
 	/* apparently there is no reliable way to check whether a
 	 * widget is ACTUALLY visible in a GTK context (I'm not talking about
@@ -249,13 +255,12 @@ static gboolean video_visible(gpointer data)
 	sw = gtk_widget_get_parent(ch);
 
 	if (!GTK_IS_STACK(sw))
-	    return G_SOURCE_CONTINUE;
+		goto stop;
 
 	if (gtk_stack_get_visible_child(GTK_STACK(sw)) == ch) {
 
-
-
 		if (GST_STATE(p->cfg->playbin) != GST_STATE_PLAYING) {
+
 			gst_element_set_state(p->cfg->playbin, GST_STATE_PLAYING);
 			/* Start playing */
 			if (gst_element_set_state(p->cfg->playbin, GST_STATE_PLAYING) == GST_STATE_CHANGE_FAILURE) {
@@ -265,9 +270,15 @@ static gboolean video_visible(gpointer data)
 		}
 
 
-	} else if (GST_STATE(p->cfg->playbin) == GST_STATE_PLAYING)
-		gst_element_set_state(p->cfg->playbin, GST_STATE_READY);
+	} else if (GST_STATE(p->cfg->playbin) == GST_STATE_PLAYING) {
 
+		goto stop;
+	}
+
+	return G_SOURCE_CONTINUE;
+
+stop:
+	gst_element_set_state(p->cfg->playbin, GST_STATE_READY);
 	return G_SOURCE_CONTINUE;
 }
 
@@ -318,13 +329,11 @@ static void video_init(Video *p)
 			 G_CALLBACK(video_draw_cb), (gpointer) p);
 #endif
 
-#if 0
 	p->cfg->id_uri = g_signal_connect(sig, "pr-video-uri",
 			  G_CALLBACK(video_handle_pr_video_uri),
 			  (gpointer) p);
-#else
-	p->cfg->uri = g_strdup("rtsp://radio:Telescope@radvis.astro.univie.ac.at:553/Streaming/channels/103/profile?token=media_profile1&SessionTimeout=600000");
-#endif
+
+	p->cfg->uri = g_strdup("testbin://video,pattern=smpte-rp-219");
 
 	p->cfg->playbin = gst_element_factory_make("playbin", "playbin");
 	if (!p->cfg->playbin) {

@@ -57,6 +57,11 @@ G_DEFINE_TYPE(XYPlot, xyplot, GTK_TYPE_DRAWING_AREA)
 #define GRAPH_G	0.592
 #define GRAPH_B	0.047
 
+#define GRAPH_IMP_R 0.878
+#define GRAPH_IMP_G 0.066
+#define GRAPH_IMP_B 0.066
+
+
 
 struct graph {
 	gdouble *data_x;	/* the data to plot */
@@ -333,7 +338,10 @@ static void xyplot_import_graph_xy_asc(const gchar *fname, XYPlot *p)
 
 	GArray *gx, *gy, *gc;
 
+	struct graph *grph;
+
 	gint n;
+	gint cnt = 0;
 
 	gchar *t;
 	gchar line[1024];
@@ -372,38 +380,51 @@ static void xyplot_import_graph_xy_asc(const gchar *fname, XYPlot *p)
 		t = strtok(line, "\n\t ");
 
 		n = 0;
+
+		if (!t && gx->len) {
+
+			/* XXX refactor */
+			n = gx->len;
+
+			if (gc->len) {
+				if (n > gc->len) {
+					g_warning("Mixed XY and XYZ data. Will stupidly clamp "
+						  "number of input samples to %d with "
+						  "unpredictable results. Have fun.", gc->len);
+					n = gc->len;
+				}
+			}
+
+			grph = xyplot_add_graph(GTK_WIDGET(p),
+						(gdouble *) gx->data,
+						(gdouble *) gy->data,
+						(gdouble *) gc->data,
+						n, g_strdup_printf("%s-%d", fname, cnt++));
+
+
+			grph->colour.red   = GRAPH_IMP_R;
+			grph->colour.green = GRAPH_IMP_G;
+			grph->colour.blue  = GRAPH_IMP_B;
+			grph->colour.alpha = 1.0;
+
+			xyplot_set_graph_style(GTK_WIDGET(p), grph, SQUARES);
+
+
+
+			xyplot_redraw(GTK_WIDGET(p));
+
+			g_array_free(gx, FALSE);
+			g_array_free(gy, FALSE);
+			g_array_free(gc, FALSE);
+
+			gx = g_array_new(FALSE, FALSE, sizeof(gdouble));
+			gy = g_array_new(FALSE, FALSE, sizeof(gdouble));
+			gc = g_array_new(FALSE, FALSE, sizeof(gdouble));
+		}
+
 		while (t) {
 
-			if (t[0] == '\n') {
 
-				/* XXX refactor */
-				n = gx->len;
-
-				if (gc->len) {
-					if (n > gc->len) {
-						g_warning("Mixed XY and XYZ data. Will stupidly clamp "
-							  "number of input samples to %d with "
-							  "unpredictable results. Have fun.", gc->len);
-						n = gc->len;
-					}
-				}
-
-				xyplot_add_graph(GTK_WIDGET(p),
-						 (gdouble *) gx->data,
-						 (gdouble *) gy->data,
-						 (gdouble *) gc->data,
-						 n, g_strdup(fname));
-
-				xyplot_redraw(GTK_WIDGET(p));
-
-				g_array_free(gx, FALSE);
-				g_array_free(gy, FALSE);
-				g_array_free(gc, FALSE);
-
-				gx = g_array_new(FALSE, FALSE, sizeof(gdouble));
-				gy = g_array_new(FALSE, FALSE, sizeof(gdouble));
-				gc = g_array_new(FALSE, FALSE, sizeof(gdouble));
-			}
 
 			if (t[0] == '#')
 				break; /* comment, go to next line */
@@ -424,6 +445,12 @@ static void xyplot_import_graph_xy_asc(const gchar *fname, XYPlot *p)
 			g_array_append_val(gx, a[0]);
 			g_array_append_val(gy, a[1]);
 		}
+
+
+
+
+
+
 	}
 
 	fclose(f);
@@ -440,11 +467,19 @@ static void xyplot_import_graph_xy_asc(const gchar *fname, XYPlot *p)
 		}
 	}
 
-	xyplot_add_graph(GTK_WIDGET(p),
-			 (gdouble *) gx->data,
-			 (gdouble *) gy->data,
-			 (gdouble *) gc->data,
-			 n, g_strdup(fname));
+	grph = xyplot_add_graph(GTK_WIDGET(p),
+			       (gdouble *) gx->data,
+			       (gdouble *) gy->data,
+			       (gdouble *) gc->data,
+			       n, g_strdup_printf("%s-%d", fname, cnt++));
+
+
+	grph->colour.red   = GRAPH_IMP_R;
+	grph->colour.green = GRAPH_IMP_G;
+	grph->colour.blue  = GRAPH_IMP_B;
+	grph->colour.alpha = 1.0;
+
+	xyplot_set_graph_style(GTK_WIDGET(p), grph, SQUARES);
 
 	xyplot_redraw(GTK_WIDGET(p));
 

@@ -51,6 +51,7 @@
 #include <payload/pr_userlist.h>
 #include <payload/pr_nick.h>
 #include <payload/pr_capabilities_load.h>
+#include <payload/pr_video_uri.h>
 
 
 #define DEFAULT_PORT 1420
@@ -86,6 +87,7 @@
 #define PR_CAPABILITIES_LOAD	0xa018	/* PR_CAPABILITIES, extended with hot/cold loads */
 #define PR_HOT_LOAD_ENABLE	0xa019  /* enable hot load */
 #define PR_HOT_LOAD_DISABLE	0xa01a  /* disable hot load */
+#define PR_VIDEO_URI		0xa01b  /* URI of webcam stream */
 
 
 

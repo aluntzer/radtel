@@ -43,4 +43,5 @@ libproto_a_SOURCES = protocol.c \
 		     acks/ack_nopriv.c \
 		     acks/ack_userlist.c \
 		     acks/ack_hot_load_enable.c \
-		     acks/ack_hot_load_disable.c
+		     acks/ack_hot_load_disable.c \
+		     acks/ack_video_uri.c
