@@ -3815,8 +3815,8 @@ static void xyplot_plot(XYPlot *p)
 	}
 
 	/* make a sensible choice */
-	if ((fs < 5) || (fs > 20))
-		fs = 10;
+	if ((fs < 12) || (fs > 20))
+		fs = 12;
 
 	cairo_set_font_size(cr, (double) fs);
 

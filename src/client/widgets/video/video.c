@@ -143,12 +143,6 @@ static void video_handle_pr_video_uri(gpointer instance,
 	if (p->cfg->uri)
 		g_free(p->cfg->uri);
 
-	if (!uri) {
-		p->cfg->uri = g_strdup("testbin://video,pattern=smpte-rp-219");
-		return;
-	}
-
-
 	p->cfg->uri = g_strdup(uri);
 
 	if (p->cfg->uri) {
@@ -207,11 +201,9 @@ static gboolean video_destroy(GtkWidget *w, gpointer data)
 
 	g_signal_handler_disconnect(sig_get_instance(), p->cfg->id_uri);
 
-	printf("stop!\n");
 
-	 if (GST_STATE(p->cfg->playbin) == GST_STATE_PLAYING) {
+	if (GST_STATE(p->cfg->playbin) == GST_STATE_PLAYING)
 		gst_element_set_state(p->cfg->playbin, GST_STATE_READY);
-	}
 
 
 	return TRUE;
@@ -332,8 +324,6 @@ static void video_init(Video *p)
 	p->cfg->id_uri = g_signal_connect(sig, "pr-video-uri",
 			  G_CALLBACK(video_handle_pr_video_uri),
 			  (gpointer) p);
-
-	p->cfg->uri = g_strdup("testbin://video,pattern=smpte-rp-219");
 
 	p->cfg->playbin = gst_element_factory_make("playbin", "playbin");
 	if (!p->cfg->playbin) {

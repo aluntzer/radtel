@@ -1798,6 +1798,7 @@ static void sky_plot(GtkWidget *w)
 
 	cr = cairo_create(p->cfg->plot);
 
+	cairo_set_font_size(cr, (double) 12);
 
 	p->cfg->width  = gtk_widget_get_allocated_width(w);
 	p->cfg->height = gtk_widget_get_allocated_height(w);
