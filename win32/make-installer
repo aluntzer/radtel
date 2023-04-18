@@ -7,7 +7,7 @@ _installer_root="${_thisdir}"/installer
 _arch=$(uname -m)
 _date=$(date +'%Y%m%d')
 _dateqif=$(date +'%Y-%m-%d')
-_version=0.0.27
+_version=0.0.28
 _filename=radtel-${_arch}-${_version}.msi
 _log=/tmp/installer.log
 if [ "${_arch}" = "x86_64" ]; then
@@ -78,9 +78,24 @@ remove_useless_stuff() {
   rm -rf installer/SourceDir/bin/py*
   rm -rf installer/SourceDir/bin/*-config
   # remove other useless folders
+  rm -rf installer/SourceDir/etc/pkcs11
+  rm -rf installer/SourceDir/etc/ssl
+  rm -rf installer/SourceDir/etc/xml
+  rm -rf installer/SourceDir/etc/fonts
+
   rm -rf installer/SourceDir/var
   rm -rf installer/SourceDir/ssl
   rm -rf installer/SourceDir/include
+  rm -rf installer/SourceDir/share/applications
+  rm -rf installer/SourceDir/share/cmake
+  rm -rf installer/SourceDir/share/dbus-1
+  rm -rf installer/SourceDir/share/gettext*
+  rm -rf installer/SourceDir/share/gir-1.0
+  rm -rf installer/SourceDir/share/graphite2
+  rm -rf installer/SourceDir/share/installed-tests
+  rm -rf installer/SourceDir/share/metainfo
+  rm -rf installer/SourceDir/share/p11-kit
+  rm -rf installer/SourceDir/share/vala
   rm -rf installer/SourceDir/share/man
   rm -rf installer/SourceDir/share/readline
   rm -rf installer/SourceDir/share/info
@@ -104,6 +119,19 @@ remove_useless_stuff() {
   rm -rf installer/SourceDir/lib/python2*
   rm -rf installer/SourceDir/lib/pkgconfig
   rm -rf installer/SourceDir/lib/peas-demo
+  rm -rf installer/SourceDir/lib/ckport
+  rm -rf installer/SourceDir/lib/ckmake
+  rm -rf installer/SourceDir/lib/engines-1_1
+  rm -rf installer/SourceDir/lib/engines-3
+  rm -rf installer/SourceDir/lib/gettext
+  rm -rf installer/SourceDir/lib/girepository-1.0
+  rm -rf installer/SourceDir/lib/gio
+  rm -rf installer/SourceDir/lib/graphene-1.0
+  rm -rf installer/SourceDir/lib/pkcs11
+  rm -rf installer/SourceDir/lib/python*
+  rm -rf installer/SourceDir/lib/xml2Conf.sh
+
+
 
   # gir
   rm -rf installer/Sourcedir/share/gir
@@ -196,7 +224,7 @@ create_chroot_system() {
 }
 
 install_radtel_packages() {
-  pacman -S mingw-w64-${_arch}-gtk3 mingw-w64-${_arch}-adwaita-icon-theme --noconfirm --root "${_newradtel}"
+  pacman -S mingw-w64-${_arch}-gtk3 mingw-w64-${_arch}-adwaita-icon-theme  mingw-w64-${_arch}-gstreamer mingw-w64-${_arch}-gst-plugins-base   mingw-w64-${_arch}-gst-plugins-good --noconfirm --root "${_newradtel}"
   _result=$?
   if [ "$_result" -ne "0" ]; then
     exit_cleanly "1" "failed to create ${_newradtel} via command 'pacman -S radtel --noconfirm --root ${_newradtel}'"
