@@ -30,6 +30,8 @@
 #include <cmd.h>
 #include <ack.h>
 
+#include <math.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -47,47 +49,8 @@
 #include <termios.h>
 
 
-
-static char *sdr14_tty = "/dev/ttyUSB1";
-static int sdr14_fd;
-
-
-#define AVG 100
-#define SDR14_NSAM  2048	/* 2048 16 bit I/Q pairs (in AD66220 mode)  */
-
-
-/* when using the AD6620 modes, the total decimation is 170, see
- * M_CICx in the sdr14_ad6620_data setup block
- * this results in an effective real-time bandwidth of
- * 66666667 / 170 / 2 = 196078 Hz of which <= 3000 Hz are discarded on
- * either side of the spectrum to remove effect of the filter curve
- */
-#define SDR14_DECIMATION	(10 * 17)
-#define SDR14_ADC_FREQ		66666667
-#define SDR14_RT_BW		(SDR14_ADC_FREQ / SDR14_DECIMATION / 2)
-#define SDR14_DISCARD_HZ	6200
-
-
-
-
-int Status;
-int freq_A2D = 66666667; /* this is only relevant in real non-AD6620 mode */
-
-
-
-
-double *reamin0, *reamout0;
-fftw_plan p0;
-
-/* I'm beginning to suspect that we use too many locks :D */
-static GThread *thread;
-static GCond	acq_cond;
-static GMutex   acq_lock;
-static GMutex   acq_pause;
-static GRWLock  obs_rwlock;
-
-
 #define MSG "SDR14 SPEC: "
+
 
 #define SDR14_HDR_LEN	2
 /* SDR14 data items are fixed for type 0 data items (I/Q or real samples) */
@@ -99,36 +62,120 @@ struct sdr14_data_pkt {
 };
 
 
+#define SDR14_NSAM  2048	/* 2048 16 bit I/Q pairs (in AD66220 mode)  */
+
+
+/* when using the AD6620 modes, the total decimation is 170, see
+ * M_CICx in the sdr14_ad6620_data setup block
+ * this results in an effective real-time bandwidth of
+ * 66666667 / 170 / 2 = 196078 Hz of which <= 6300 Hz are discarded on
+ * either side of the spectrum to remove effect of the filter curve and
+ * digital down conversion effects
+ */
+#define SDR14_DECIMATION	(10 * 17)
+#define SDR14_ADC_FREQ		66666667
+#define SDR14_RT_BW		(SDR14_ADC_FREQ / SDR14_DECIMATION / 2)
+#define SDR14_SIDE_DISCARD_HZ	6300
+
+
+/* XXX need to implement the receiver as separate plugin
+ * since the values are fixed for now, I define it here
+ */
+#define RECV_LO_FREQ		  1414000000
+#define RECV_IF_HZ		     6500000
+#define RECV_IF_BW		    10700000	/* nominal output low pass */
+
+/* default allowed HW ranges */
+#define SDR_14_LOW_SKIP_HZ	500000		/* lower bound skip */
+#define SDR14_FREQ_MIN_HZ	(RECV_LO_FREQ + SDR_14_LOW_SKIP_HZ)
+#define SDR14_FREQ_MAX_HZ	(RECV_LO_FREQ + RECV_IF_BW)
+#define SDR14_IF_BW_HZ		SDR14_RT_BW
+#define SDR14_DIGITAL_BINS	SDR14_NSAM
+#define SDR14_SPEC_STACK_MAX	128		/* internal fifo queue limit for contiguous sampling */
+#define SDR14_TUNING_STEP_HZ	1
+#define SDR14_BIN_DIV_MAX	7		/* allow resolutions down to
+						 * SDR14_RT_BW / SDR14_NSAM / SDR14_BW_DIV_MAX HZ
+						 */
+
+/* initial receiver configuration */
+#define SDR14_INIT_FREQ_START_HZ	1420042187
+#define SDR14_INIT_FREQ_STOP_HZ		1420970312
+#define SDR14_INIT_BIN_DIV		         6
+#define SDR14_INIT_NSTACK		        64
+
 
 
 /**
- * @brief the strategy for raw spectrum acquisition
+ * @brief the configuration of the digital spectrometer
  */
 
-struct acq_strategy {
-	guint32 refdiv;		/* reference divider */
-	guint offset;		/* first bin to extract */
-	guint nbins;		/* number of bins to extract */
-	double *fq;		/* bin frequencies */
-	double *cal;		/* spectral response calibration */
-	gsize  n_elem;		/* total number of spectral bins */
-};
+static struct {
+	double freq_min_hz;		/* lower frequency limit */
+	double freq_max_hz;		/* upper frequency limit */
+
+	double freq_inc_hz;		/* PLL tuning step */
+
+	double freq_if_hz;		/* intermediate frequency */
+
+	double freq_if_bw;		/* IF bandwidth */
+
+	int freq_bin_div_max;		/* maximum bandwidth divider */
+
+	int bins;			/* number of bins in a raw spectrum */
+
+	double temp_cal_factor;		/* calibration for temp conversion */
+
+	struct {			/* spectral response calibration */
+		gdouble *frq;
+		gdouble *amp;
+		gsize n;
+	} cal;
+
+} sdr14 = {
+	 .freq_min_hz      = SDR14_FREQ_MIN_HZ,
+	 .freq_max_hz      = SDR14_FREQ_MAX_HZ,
+	 .freq_inc_hz      = SDR14_TUNING_STEP_HZ,
+	 .freq_if_hz       = RECV_IF_HZ,
+	 .freq_if_bw       = SDR14_IF_BW_HZ,
+	 .freq_bin_div_max = SDR14_BIN_DIV_MAX,
+	 .bins	           = SDR14_DIGITAL_BINS,
+	 .temp_cal_factor   = 2.0,
+	};
+
+
+double *reamin0, *reamout0;
+fftw_plan p0;
+
+
+static char *sdr14_tty = "/dev/ttyUSB1";
+static int sdr14_fd;
+
+/* I'm beginning to suspect that we use too many locks :D */
+static GThread *thread;
+static GCond	acq_cond;
+static GMutex   acq_lock;
+static GMutex   acq_abort;
+static GMutex   acq_pause;
+static GRWLock  obs_rwlock;
+
+
 
 /**
  * @brief an observation
  */
 
 struct observation {
-	struct spec_acq_cfg  acq;
-	struct acq_strategy *acs;
-	gsize  n_acs;
+	struct spec_acq_cfg acq;
+	gsize blsize;
+	int disc_raw;
+	int disc_fin;
+	gsize n_seq;
+	double f0;
+	double f1;
+	double bw_eff;
 };
 
 static struct observation g_obs;
-
-
-
-
 
 
 
@@ -141,9 +188,7 @@ static void sdr14_serial_flush(int fd)
 	int n;
 	unsigned char c;
 
-	printf("flushing...");
 	while ((n = read(fd, &c, sizeof(c))) > 0);
-	printf("done\n");
 }
 
 
@@ -198,7 +243,7 @@ static int sdr14_serial_set_comm_param(int fd)
 
 
 
-static int myread(size_t left, uint8_t *p)
+static int read_bytes(size_t left, uint8_t *p)
 {
 	size_t n = 0;
 	while (left > 0)
@@ -221,24 +266,7 @@ static int myread(size_t left, uint8_t *p)
 
 static int sdr14_read(struct sdr14_data_pkt *pkt)
 {
-	uint8_t ack[8];
 	uint8_t *p;
-#if 0
-	uint8_t oneshot_cmd[8] = {0x08, 0x00, 0x18, 0x00, 0x81, 0x02, 0x02, 0x01};
-
-
-
-
-
-	write(sdr14_fd, oneshot_cmd, sizeof(oneshot_cmd));
-
-	/*  read ack */
-	n = read(sdr14_fd, ack, sizeof(ack));
-#endif
-	/*  read data sample */
-
-
-
 
 	size_t n = 0;
 	size_t left = sizeof(struct sdr14_data_pkt);  /* The total size of the buffer */
@@ -258,30 +286,16 @@ static int sdr14_read(struct sdr14_data_pkt *pkt)
 		}
 	}
 
-
-#if 0
-	/*  read unsolicited receive state */
-	read(sdr14_fd, ack, sizeof(ack));
-
-	/*  read unsolicited receive state idle */
-	read(sdr14_fd, ack, sizeof(ack));
-#endif
-
 	return 0;
 }
 
+__attribute__((unused))
 static void sdr14_get_mode(void)
 {
 	uint8_t cmd[6] = {0x50, 0x20, 0x18, 0x00, 0x00};
 
-	printf("reading mode\n");
-
 	write(sdr14_fd, cmd, sizeof(cmd));
-
 	read(sdr14_fd, cmd, sizeof(cmd));
-
-	printf("ack was %x\n", cmd[5]);
-
 }
 
 
@@ -316,16 +330,11 @@ static void sdr14_set_freq(uint32_t hz)
 	uint8_t cmd2[6] = {0x06, 0x00, 0x40, 0x00, 0x00, 0x18};
 	uint8_t cmd3[6] = {0x06, 0x00, 0x38, 0x00, 0x00, 0x0};
 	uint8_t ack[10] = {0};
-	int n;
 
-#if 1
+
 	write(sdr14_fd, smpl, sizeof(smpl));
-	n = read(sdr14_fd, smpl, sizeof(smpl));
-	printf("acked %d %d\n", n == sizeof(smpl), n);
-#endif
+	read(sdr14_fd, smpl, sizeof(smpl));
 
-
-	printf("setting 5 MHz NCO freq: %x\n", hz);
 
 	/* NOTE: the SDR14 expects the frequency in little endian
 	 * since this is pretty much the exclusive condition of any platform
@@ -334,54 +343,97 @@ static void sdr14_set_freq(uint32_t hz)
 	 */
 
 	memcpy(&cmd[5], &hz, 4);
-	n = write(sdr14_fd, &cmd[0], 10);
-	printf("wrote %d\n", n);
+	write(sdr14_fd, &cmd[0], 10);
+	read_bytes(10, ack);
 
-	n = myread(10, ack);
-
-	printf("acked %d %x %x %x\n", n, ack[0], ack[1], ack[2],  ack[3]);
-#if 1
 	write(sdr14_fd, cmd2, sizeof(cmd2));
-	n =read(sdr14_fd, cmd2, sizeof(cmd2));
-	printf("acked %d %d\n", n == sizeof(cmd2), n);
+	read(sdr14_fd, cmd2, sizeof(cmd2));
 
 	write(sdr14_fd, cmd3, sizeof(cmd3));
-	n = read(sdr14_fd, cmd3, sizeof(cmd3));
-	printf("acked %d\n", n == sizeof(cmd3));
-#endif
+	read(sdr14_fd, cmd3, sizeof(cmd3));
 }
 
 
-
-
-
-static void fft_init(int n, fftw_plan * p, float **reamin0, float **reamout0)
+static void fft_init(int n, fftw_plan * p, double **reamin0, double **reamout0)
 {
-	fftw_complex *in, *out;
-	//printf("entering fft_init\n");
-	in = (fftw_complex *) fftw_malloc(sizeof(fftw_complex) * n);
-	out = (fftw_complex *) fftw_malloc(sizeof(fftw_complex) * n);
-	// printf("entering fft_init after malloc %p\n",in);
-	*p = fftw_plan_dft_1d(n, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
-	*reamin0 = (float *) in;
-	*reamout0 = (float *) out;
+	fftw_complex *in;
+	fftw_complex *out;
 
-	// printf("reamin0 %p reamout0 %p\n",reamin0,reamout0);
+
+	in  = (fftw_complex *) fftw_malloc(sizeof(fftw_complex) * n);
+	out = (fftw_complex *) fftw_malloc(sizeof(fftw_complex) * n);
+
+	(*p) = fftw_plan_dft_1d(n, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
+
+	(*reamin0)  = (double *) in;
+	(*reamout0) = (double *) out;
 }
 
-__attribute__((unused))
-static void fft_free(fftw_plan * p, float **reamin0, float **reamout0)
+
+static void fft_free(fftw_plan * p, double **reamin0, double **reamout0)
 {
 	fftw_destroy_plan(*p);
 	fftw_free((fftw_complex *) * reamin0);
 	fftw_free((fftw_complex *) * reamout0);
 }
 
+
 static void cfft(fftw_plan * p)
 {
 	fftw_execute(*p);
 }
-	static int once;
+
+
+/**
+ * @brief computes the observing strategy
+ *
+ * @param acq the acquisition configuration
+ * @param acs the allocated array of observation steps
+ *
+ */
+
+static void sdr14_comp_obs_strategy(struct observation *obs)
+{
+	g_message(MSG "computing acquisition strategy for requested parameters");
+
+	/* we use radix-2 divs */
+	obs->blsize   = sdr14.bins >> obs->acq.bin_div;
+	printf("div is %d blsize %d\n", obs->acq.bin_div, obs->blsize);
+	/* bins to discard on either side of a "raw" spectrum */
+	obs->disc_raw = (int) ((double) SDR14_SIDE_DISCARD_HZ / (SDR14_RT_BW / obs->blsize));
+	obs->bw_eff   = (double) SDR14_RT_BW - (double) obs->disc_raw * 2.0 * SDR14_RT_BW / obs->blsize;
+	obs->f0	      = obs->acq.freq_start_hz - SDR14_SIDE_DISCARD_HZ + SDR14_RT_BW / 2;
+	obs->f1	      = obs->acq.freq_stop_hz  + SDR14_SIDE_DISCARD_HZ + SDR14_RT_BW / 2;
+	obs->n_seq    = (gsize) ceil((obs->f1 - obs->f0) / obs->bw_eff);
+	/* bins to discard on last spectrum in sequence so the cut out is proper */
+	obs->disc_fin = (int) (obs->n_seq * obs->bw_eff -
+			      (obs->acq.freq_stop_hz - obs->acq.freq_start_hz)) / (SDR14_RT_BW / obs->blsize);
+
+	if (obs->disc_fin < 0) {
+		g_warning("discard bins is %d, setting to 0\n", obs->disc_fin);
+		obs->disc_fin = 0;
+	}	
+
+	g_message(MSG "observation requires acquisition of %u raw spectrae", obs->n_seq);
+}
+
+
+/**
+ * @brief apply temperature calibration
+ *
+ * @note converts data to integer milliKelvins (see payload/pr_spec_data.h)
+ *
+ * @todo polynomial preamp/inputfilter curve calibration
+ */
+
+static void sdr14_apply_temp_calibration(struct spec_data *s)
+{
+	gsize i;
+
+	for (i = 0; i < s->n; i++)
+		s->spec[i] = (uint32_t) ((double) s->spec[i] * 1000.0) * sdr14.temp_cal_factor;
+}
+
 
 /**
  * @brief acquire spectrea
@@ -391,143 +443,174 @@ static void cfft(fftw_plan * p)
  *
  */
 
-static uint32_t sdr14_spec_acquire(void)
+static uint32_t sdr14_spec_acquire(struct observation *obs)
 {
 	int i, j, k, l;
-	int blsiz = 32;
 
-	int blsiz2 = blsiz / 2;
+	uint8_t oneshot_cmd[8] = {0x08, 0x00, 0x18, 0x00, 0x81, 0x02, 0x02, 0};
+	uint8_t ack[8];
+#if 0
+	uint8_t hbeat[3] = {0x03,0x60,0x00};
+#endif
 
 	GTimer *timer;
 
 	double spec[SDR14_NSAM] = {0};
 
-	double bw_eff;
 
 	struct spec_data *s = NULL;
 	struct sdr14_data_pkt pkt;
 
-	uint32_t discard;
-#define SEQ 7
+	double freq;
+
+	int len;
+
+	if (!obs->acq.acq_max)
+		return 0;
+
 
 	timer = g_timer_new();
-	g_timer_start(timer);
 
-
-	/* bins to discard on either side */
-	discard = (uint32_t) ((double) SDR14_DISCARD_HZ / (SDR14_RT_BW / blsiz));
-
-	bw_eff = (double) SDR14_RT_BW - (double) discard * 2.0 * SDR14_RT_BW / blsiz;
 
 	/* prepare and send: allocate full length */
-	s = g_malloc0(sizeof(struct spec_data) + (blsiz - 2 * discard) * SEQ * sizeof(uint32_t));
+	len = ((obs->blsize - 2 * obs->disc_raw) * obs->n_seq - obs->disc_fin);
+	printf("len %d %d %d %d %d\n", len, obs->blsize, obs->disc_raw, obs->n_seq, obs->disc_fin);
+	s = g_malloc0(sizeof(struct spec_data) + len * sizeof(uint32_t));
 
-//s->n = blsiz - 31 -31;
-	s->n = (blsiz - 2 * discard) * SEQ;
+	fft_init(obs->blsize, &p0, &reamin0, &reamout0);
 
+	/* update number of SDR14_NSAM sequences to record in the one shot command */
+	oneshot_cmd[7] = obs->acq.n_stack;
 
-	fft_init(blsiz, &p0, &reamin0, &reamout0);
+	freq = obs->f0 - RECV_LO_FREQ;
+	for (l = 0; l < obs->n_seq; l++) {
 
-	/* XXX fixme, these are just random values */
-	s->freq_min_hz = (typeof(s->freq_min_hz)) 5500000 - (uint32_t) (bw_eff / 2) * SEQ/2;
-	s->freq_max_hz = (typeof(s->freq_max_hz)) 5500000 + (uint32_t) (bw_eff / 2) * SEQ/2;
-	s->freq_inc_hz = (typeof(s->freq_inc_hz)) (uint32_t) (bw_eff * SEQ / (s->n) );
+		g_timer_start(timer);
+		sdr14_serial_flush(sdr14_fd);
+		sdr14_set_freq(freq);
 
-	uint8_t oneshot_cmd[8] = {0x08, 0x00, 0x18, 0x00, 0x81, 0x02, 0x02, AVG};
-	uint8_t stp_cmd[8] = {0x08, 0x00, 0x18, 0x00, 0x81, 0x01, 0x00, 0x01};
-	uint8_t ack[8];
+		freq = freq + obs->bw_eff;
 
-	uint8_t hbeat[3] = {0x03,0x60,0x00};
+		if (!g_mutex_trylock(&acq_abort)) {
+			g_message(MSG "acquisition loop abort indicated");
+			goto cleanup;
+		}
 
+		g_mutex_unlock(&acq_abort);
 
-	uint32_t f0 = 5500000 - bw_eff*3;
-
-
-	float rre, aam, aam2, rre2;
-
-	for (l = 0; l < SEQ; l++) {
-
-	sdr14_serial_flush(sdr14_fd);
-		sdr14_set_freq(f0);
-
-		f0 = f0 + bw_eff;
 		write(sdr14_fd, oneshot_cmd, sizeof(oneshot_cmd));
 		read(sdr14_fd, ack, sizeof(ack));
 
-		for (i = 0; i < blsiz; i++)
+
+		for (i = 0; i < obs->blsize; i++)
 			spec[i] = 0;
 
-		for (k = 0; k < AVG; k++) {
+		for (k = 0; k < obs->acq.n_stack; k++) {
 
 			int z;
+
 			sdr14_read(&pkt);
 
-			for (z = 0; z < SDR14_NSAM / blsiz; z++) {
+			for (z = 0; z < SDR14_NSAM / obs->blsize; z++) {
 
-				for (j = 0; j < 2* blsiz; j++) {
-					reamin0[j] = (double) (pkt.data[j + z * blsiz*2 ]);
-					//printf("%d ", pkt.data[j]); 
-				}
-
-				//		printf("\n");
+				for (j = 0; j < 2* obs->blsize; j++)
+					reamin0[j] = (double) (pkt.data[j + z * obs->blsize * 2 ]);
 
 				cfft(&p0);
 
+				for (i = 0; i < obs->blsize; i++) {
 
-				for (i = 0; i < blsiz; i++) {
-
-					if (i < blsiz / 2)
-						j = i + blsiz / 2;
+					if (i < obs->blsize / 2)
+						j = i + obs->blsize / 2;
 					else
-						j = i - blsiz / 2;
+						j = i - obs->blsize / 2;
 
-					spec[i] +=   1.0/((float) AVG) * sqrt((reamout0[2 * j] * reamout0[2 * j] + reamout0[2 * j + 1] * reamout0[2 * j + 1]) );
+					spec[i] +=  1.0 / ((float) obs->acq.n_stack) * \
+						    sqrt((reamout0[2 * j] * reamout0[2 * j]
+						    + reamout0[2 * j + 1] * reamout0[2 * j + 1]) ) ;
 				}
 			}
-
-		}
-#if 0
-		write(sdr14_fd, stp_cmd, sizeof(stp_cmd));
-		read(sdr14_fd, ack, sizeof(ack));
-
-		write(sdr14_fd, hbeat, sizeof(hbeat));
-#endif
-
-
-		for (i = 0; i < blsiz - 2 * discard ; i++) {
-			s->spec[i + l * (blsiz - 2*discard)] = (uint32_t) (spec[i + discard]);
 		}
 
+		for (i = 0; i < obs->blsize - 2 * obs->disc_raw ; i++) {
+			s->spec[s->n] = (uint32_t) (spec[i + obs->disc_raw]);
+			if (s->n == (len - 1))	/* will skip final discarded bins */
+				goto done;
+			s->n++;
+		}
+		
+		g_timer_stop(timer);
 
-
-
+		g_message(MSG "ACQ: %f sec for %d", g_timer_elapsed(timer, NULL), obs->acq.n_stack);
 	}
 
 
+done:
+	s->freq_min_hz = (typeof(s->freq_min_hz)) obs->acq.freq_start_hz;
+	s->freq_max_hz = (typeof(s->freq_max_hz)) obs->acq.freq_stop_hz;
+	s->freq_inc_hz = (typeof(s->freq_inc_hz)) ((s->freq_max_hz - s->freq_min_hz) / s->n);
 
+	printf("%d %d %d %d\n", s->freq_min_hz, s->freq_max_hz, s->freq_inc_hz,  s->n );
 
-	g_timer_stop(timer);
-
+	sdr14_apply_temp_calibration(s);
 
 	/* handover for transmission */
 	ack_spec_data(PKT_TRANS_ID_UNDEF, s);
 
+	g_timer_stop(timer);
+	//g_message(MSG "ACQ: %f sec", g_timer_elapsed(timer, NULL));
 
-	g_message(MSG "ACQ: %f sec", g_timer_elapsed(timer, NULL));
-
+cleanup:
 	g_timer_destroy(timer);
 
-
 	g_free(s);
-#if 1
-	/* to move to cleanup() or module unload if any... */
+
 	fft_free(&p0, &reamin0, &reamout0);
-#endif
 
+	obs->acq.acq_max--;
 
-	return 1;
+	return obs->acq.acq_max;
 }
 
+
+/**
+ * @brief check acquisiton paramters for validity
+ */
+
+static int sdr14_spec_check_param(struct spec_acq_cfg *acq)
+{
+	if (acq->freq_start_hz < sdr14.freq_min_hz) {
+		g_warning(MSG "start frequency %d too low, min %d",
+			  acq->freq_start_hz, sdr14.freq_min_hz);
+		return -1;
+	}
+
+	if (acq->freq_stop_hz > sdr14.freq_max_hz) {
+		g_warning(MSG "stop frequency %d too low, max %d",
+			  acq->freq_stop_hz, sdr14.freq_max_hz);
+		return -1;
+	}
+
+	if (acq->bin_div > sdr14.freq_bin_div_max) {
+		g_warning(MSG "bandwidth divider exponent %d too high, max %d",
+			  acq->bin_div, sdr14.freq_bin_div_max);
+		return -1;
+	}
+
+	if (!acq->acq_max) {
+		/* we could add a meaximum limit in a configuration file entry,
+		 * for now, we'll set this to the full numeric range of the data
+		 * type
+		 */
+	        acq->acq_max = ~0;
+		g_message(MSG "number of acquisitions specified as 0, assuming "
+			      "perpetuous acquisition is requested, setting to "
+			      "%u", acq->acq_max);
+	}
+
+
+	return 0;
+}
 
 
 /**
@@ -599,7 +682,7 @@ static gpointer sdr14_spec_thread(gpointer data)
 			g_mutex_unlock(&acq_pause);
 
 			g_rw_lock_reader_lock(&obs_rwlock);
-			run = sdr14_spec_acquire();
+			run = sdr14_spec_acquire(&g_obs);
 			g_rw_lock_reader_unlock(&obs_rwlock);
 		} while (run);
 
@@ -609,6 +692,125 @@ static gpointer sdr14_spec_thread(gpointer data)
 }
 
 
+
+/**
+ * @brief thread function to update the acquisition information
+ */
+
+static gpointer sdr14_acquisition_update(gpointer data)
+{
+	struct observation *obs;
+
+
+	obs = (struct observation *) data;
+
+
+	/* wait for mutex lock to indicate abort to a single acquisition cycle
+	 * this is needed if a very wide frequency span had been selected
+	 */
+	g_mutex_lock(&acq_abort);
+
+	g_rw_lock_writer_lock(&obs_rwlock);
+
+	memcpy(&g_obs, obs, sizeof(struct observation));
+
+	g_rw_lock_writer_unlock(&obs_rwlock);
+
+	g_mutex_unlock(&acq_abort);
+
+	/* signal the acquisition thread outer loop */
+	if (g_mutex_trylock(&acq_lock)) {
+		g_cond_signal(&acq_cond);
+		g_mutex_unlock(&acq_lock);
+	}
+
+	/* push current configuration to clients */
+	ack_spec_acq_cfg(PKT_TRANS_ID_UNDEF, &g_obs.acq);
+
+	g_free(data);
+}
+
+
+
+
+
+/**
+ * @brief configure radio acquisition
+ *
+ * @returns -1 on error, 0 otherwise
+ */
+
+static int sdr14_spec_acquisition_configure(struct spec_acq_cfg *acq)
+{
+	struct observation *obs;
+
+
+	if (sdr14_spec_check_param(acq))
+		return -1;
+
+	g_message(MSG "configuring spectrum acquisition to "
+		      "FREQ range: %g - %g MHz, BW div: %u, BIN div %u,"
+		      "STACK: %u, ACQ %u",
+		      acq->freq_start_hz / 1e6,
+		      acq->freq_stop_hz / 1e6,
+		      acq->bw_div,
+		      acq->bin_div,
+		      acq->n_stack,
+		      acq->acq_max);
+
+
+	obs = g_malloc(sizeof(struct observation));
+	if (!obs) {
+		g_error(MSG "memory allocation failed: %s: %d",
+			__func__, __LINE__);
+		return -1;
+	}
+
+
+	memcpy(&obs->acq, acq, sizeof(struct spec_acq_cfg));
+
+	sdr14_comp_obs_strategy(obs);
+
+	/* create new thread to update acquisition thread, so we don't
+	 * lock down the main loop
+	 */
+	g_thread_new(NULL, sdr14_acquisition_update, (gpointer) obs);
+
+
+
+	return 0;
+}
+
+/**
+ * @brief set a default configuration
+ */
+
+static void sdr14_spec_cfg_defaults(void)
+{
+	struct observation *obs;
+
+	obs = g_malloc(sizeof(struct observation));
+	if (!obs) {
+		g_error(MSG "memory allocation failed: %s: %d",
+				__func__, __LINE__);
+		return;
+	}
+
+	obs->acq.freq_start_hz = SDR14_INIT_FREQ_START_HZ;
+	obs->acq.freq_stop_hz  = SDR14_INIT_FREQ_STOP_HZ;
+	obs->acq.bw_div        = 0;
+	obs->acq.bin_div       = SDR14_INIT_BIN_DIV;
+	obs->acq.n_stack       = SDR14_INIT_NSTACK;
+	obs->acq.acq_max       = ~0;
+
+	sdr14_comp_obs_strategy(obs);
+
+	g_thread_new(NULL, sdr14_acquisition_update, (gpointer) obs);
+}
+
+
+
+
 /**
  * @brief spectrum acquisition configuration
  */
@@ -616,10 +818,9 @@ static gpointer sdr14_spec_thread(gpointer data)
 G_MODULE_EXPORT
 int be_spec_acq_cfg(struct spec_acq_cfg *acq)
 {
-#if 0
-	if (srt_spec_acquisition_configure(acq))
+	if (sdr14_spec_acquisition_configure(acq))
 		return -1;
-#endif
+
 	return 0;
 }
 
@@ -633,9 +834,9 @@ int be_spec_acq_cfg_get(struct spec_acq_cfg *acq)
 {
 	if (!acq)
 		return -1;
-#if 0
+
 	memcpy(acq, &g_obs.acq, sizeof(struct spec_acq_cfg));
-#endif
+
 	return 0;
 }
 
@@ -647,7 +848,6 @@ int be_spec_acq_cfg_get(struct spec_acq_cfg *acq)
 G_MODULE_EXPORT
 int be_spec_acq_enable(gboolean mode)
 {
-	once = 0;
 	sdr14_spec_acq_enable(mode);
 
 	return 0;
@@ -661,19 +861,46 @@ int be_spec_acq_enable(gboolean mode)
 G_MODULE_EXPORT
 int be_get_capabilities_spec(struct capabilities *c)
 {
-	c->freq_min_hz		= 1400000000;
-	c->freq_max_hz		= 1430000000;
-	c->freq_inc_hz		= 100;
-	c->bw_max_hz		= 100;
+	c->freq_min_hz		= (uint64_t) sdr14.freq_min_hz;
+	c->freq_max_hz		= (uint64_t) sdr14.freq_max_hz;
+	c->freq_inc_hz		= (uint64_t) sdr14.freq_inc_hz;
+	c->bw_max_hz		= (uint32_t) sdr14.freq_if_bw;
 	c->bw_max_div_lin	= 0;
-	c->bw_max_div_rad2	= 1;
-	c->bw_max_bins		= 2048;
+	c->bw_max_div_rad2	= 0;
+	c->bw_max_bins		= (uint32_t) sdr14.bins;
 	c->bw_max_bin_div_lin	= 0;
-	c->bw_max_bin_div_rad2	= 0;
-	c->n_stack_max		= 0; /* stacking not implemented */
+	c->bw_max_bin_div_rad2	= (uint32_t) sdr14.freq_bin_div_max;
+	c->n_stack_max		= SDR14_SPEC_STACK_MAX;
 
 	return 0;
 }
+
+
+/**
+ * @brief get telescope spectrometer capabilities_load
+ * @note this is identical to be_get_capabilities_load, as
+ *	 the hot load is part of the SRT's drive controller
+ */
+
+G_MODULE_EXPORT
+int be_get_capabilities_load_spec(struct capabilities_load *c)
+{
+	c->freq_min_hz		= (uint64_t) sdr14.freq_min_hz;
+	c->freq_max_hz		= (uint64_t) sdr14.freq_max_hz;
+	c->freq_inc_hz		= (uint64_t) sdr14.freq_inc_hz;
+	c->bw_max_hz		= (uint32_t) sdr14.freq_if_bw;
+	c->bw_max_div_lin	= 0;
+	c->bw_max_div_rad2	= 0;
+	c->bw_max_bins		= (uint32_t) sdr14.bins;
+	c->bw_max_bin_div_lin	= 0;
+	c->bw_max_bin_div_rad2	= (uint32_t) sdr14.freq_bin_div_max;
+	c->n_stack_max		= SDR14_SPEC_STACK_MAX;
+
+
+	return 0;
+}
+
+
 
 
 /**
@@ -704,7 +931,9 @@ void module_extra_init(void)
 
 
 	sdr14_serial_flush(sdr14_fd);
-	//sdr14_get_mode();
+#if 0
+	sdr14_get_mode();
+#endif
 	sdr14_setup_ad6620();
 
 	g_message(MSG "starting spectrum acquisition thread");
@@ -714,9 +943,7 @@ void module_extra_init(void)
 	/* always start paused */
 	sdr14_spec_acq_enable(FALSE);
 
-#if 0
-	srt_spec_cfg_defaults();
-#endif
+	sdr14_spec_cfg_defaults();
 }
 
 
