@@ -131,7 +131,8 @@ static void radio_handle_pr_spec_acq_cfg(gpointer instance,
 					 const struct spec_acq_cfg *acq,
 					 gpointer data)
 {
-	int div;
+	int bw_div;
+	int bin_div;
 
 	gdouble f0, f1;
 
@@ -145,14 +146,19 @@ static void radio_handle_pr_spec_acq_cfg(gpointer instance,
 	f1 = (gdouble) acq->freq_stop_hz  * 1e-6;
 
 	if (p->cfg->c.bw_max_div_lin)
-		div = p->cfg->c.bw_max_div_lin - acq->bw_div;
+		bw_div = p->cfg->c.bw_max_div_lin - acq->bw_div;
 	else
-		div = p->cfg->c.bw_max_div_rad2 - acq->bw_div;
+		bw_div = p->cfg->c.bw_max_div_rad2 - acq->bw_div;
+
+	if (p->cfg->c.bw_max_bin_div_lin)
+		bin_div = p->cfg->c.bw_max_bin_div_lin - acq->bin_div;
+	else
+		bin_div = p->cfg->c.bw_max_bin_div_rad2 - acq->bin_div;
 
 	gtk_spin_button_set_value(p->cfg->sb_frq_lo,  f0);
 	gtk_spin_button_set_value(p->cfg->sb_frq_hi,  f1);
-	gtk_spin_button_set_value(p->cfg->sb_bw_div,  div);
-	gtk_spin_button_set_value(p->cfg->sb_bin_div, acq->bin_div);
+	gtk_spin_button_set_value(p->cfg->sb_bw_div,  bw_div);
+	gtk_spin_button_set_value(p->cfg->sb_bin_div, bin_div);
 	gtk_spin_button_set_value(p->cfg->sb_avg,     acq->n_stack);
 
 	radio_update_avg_lbl(p);

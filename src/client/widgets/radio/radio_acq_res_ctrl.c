@@ -72,7 +72,7 @@ static gint radio_sb_bin_div_input_cb(GtkSpinButton *sb, gdouble *new_val,
 	if (p->cfg->c.bw_max_bin_div_lin)
 		(*new_val) = p->cfg->c.bw_max_bin_div_lin - p->cfg->bin_div;
 	else
-		(*new_val) = p->cfg->c.bw_max_div_rad2 - p->cfg->bin_div;
+		(*new_val) = p->cfg->c.bw_max_bin_div_rad2 - p->cfg->bin_div;
 
 
 	return TRUE;
@@ -267,7 +267,7 @@ GtkWidget *radio_acq_res_ctrl_new(Radio *p)
 				       "bins per bandwidth");
 	gtk_spin_button_set_increments(GTK_SPIN_BUTTON(w), 1, 1);
 	gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(w), FALSE);
-	gtk_entry_set_width_chars(GTK_ENTRY(w), 3);
+	gtk_entry_set_width_chars(GTK_ENTRY(w), 6);
 
 	gtk_grid_attach(grid, w, 2, 2, 1, 1);
 	g_signal_connect(G_OBJECT(w), "input",
