@@ -443,7 +443,8 @@ static void sdr14_apply_temp_calibration(struct spec_data *s)
  * @returns 0 on completion, 1 if more acquisitions are pending
  *
  */
-
+#define AVG_LEN 5.
+#define MIN_MS_ACQ_STATUS 500
 static uint32_t sdr14_spec_acquire(struct observation *obs)
 {
 	int i, j, k, l;
@@ -453,11 +454,14 @@ static uint32_t sdr14_spec_acquire(struct observation *obs)
 #if 0
 	uint8_t hbeat[3] = {0x03,0x60,0x00};
 #endif
+	static double acq_time[SDR14_BIN_DIV_MAX + 1] = {[0 ... SDR14_BIN_DIV_MAX] = 0.001};	/* bin_div starts at 1 */
 
 	GTimer *timer;
 
 	double spec[SDR14_NSAM] = {0};
 
+	struct status s_acq;
+	struct status s_rec;
 
 	struct spec_data *s = NULL;
 	struct sdr14_data_pkt pkt;
@@ -475,7 +479,7 @@ static uint32_t sdr14_spec_acquire(struct observation *obs)
 
 	/* prepare and send: allocate full length */
 	len = ((obs->blsize - 2 * obs->disc_raw) * obs->n_seq - obs->disc_fin);
-	printf("len %d %d %d %d %d\n", len, obs->blsize, obs->disc_raw, obs->n_seq, obs->disc_fin);
+	//printf("len %d %d %d %d %d\n", len, obs->blsize, obs->disc_raw, obs->n_seq, obs->disc_fin);
 	s = g_malloc0(sizeof(struct spec_data) + len * sizeof(uint32_t));
 
 	fft_init(obs->blsize, &p0, &reamin0, &reamout0);
@@ -483,10 +487,15 @@ static uint32_t sdr14_spec_acquire(struct observation *obs)
 	/* update number of SDR14_NSAM sequences to record in the one shot command */
 	oneshot_cmd[7] = obs->acq.n_stack;
 
+	s_rec.busy = 1;
+	s_rec.eta_msec = (typeof(s_acq.eta_msec))(acq_time[obs->acq.bin_div] *  1000. * (double) obs->n_seq * obs->acq.n_stack * SDR14_NSAM / obs->blsize);
+	ack_status_rec(PKT_TRANS_ID_UNDEF, &s_rec);
+
+
 	freq = obs->f0 - RECV_LO_FREQ;
 	for (l = 0; l < obs->n_seq; l++) {
+	
 
-		g_timer_start(timer);
 		sdr14_serial_flush(sdr14_fd);
 		sdr14_set_freq(freq);
 
@@ -506,12 +515,19 @@ static uint32_t sdr14_spec_acquire(struct observation *obs)
 		for (i = 0; i < obs->blsize; i++)
 			spec[i] = 0;
 
+		s_acq.eta_msec = (typeof(s_acq.eta_msec))(acq_time[obs->acq.bin_div] * 1000. * (double) obs->acq.n_stack * SDR14_NSAM / obs->blsize);
+		if (s_acq.eta_msec > MIN_MS_ACQ_STATUS) {
+			s_acq.busy = 1;
+			ack_status_acq(PKT_TRANS_ID_UNDEF, &s_acq);
+		}
+
 		for (k = 0; k < obs->acq.n_stack; k++) {
 
 			int z;
 
 			sdr14_read(&pkt);
 
+			g_timer_start(timer);
 			for (z = 0; z < SDR14_NSAM / obs->blsize; z++) {
 
 				for (j = 0; j < 2* obs->blsize; j++)
@@ -530,7 +546,19 @@ static uint32_t sdr14_spec_acquire(struct observation *obs)
 						    + reamout0[2 * j + 1] * reamout0[2 * j + 1]) );
 				}
 			}
+			g_timer_stop(timer);
+			acq_time[obs->acq.bin_div] =(acq_time[obs->acq.bin_div] * (AVG_LEN - 1.0) +  g_timer_elapsed(timer, NULL)) / AVG_LEN;
 		}
+
+
+		if (s_acq.eta_msec > MIN_MS_ACQ_STATUS) {
+			s_acq.busy = 0;
+			s_acq.eta_msec = 0;
+			ack_status_acq(PKT_TRANS_ID_UNDEF, &s_acq);
+		}
+
+		
+
 
 		for (i = 0; i < obs->blsize - 2 * obs->disc_raw ; i++) {
 			s->spec[s->n] = (uint32_t)( (1000. * spec[i + obs->disc_raw]) /
@@ -540,9 +568,6 @@ static uint32_t sdr14_spec_acquire(struct observation *obs)
 			s->n++;
 		}
 		
-		g_timer_stop(timer);
-
-		g_message(MSG "ACQ: %f sec for %d", g_timer_elapsed(timer, NULL), obs->acq.n_stack);
 	}
 
 
@@ -558,8 +583,11 @@ done:
 	/* handover for transmission */
 	ack_spec_data(PKT_TRANS_ID_UNDEF, s);
 
-	g_timer_stop(timer);
-	//g_message(MSG "ACQ: %f sec", g_timer_elapsed(timer, NULL));
+
+
+	s_rec.busy = 0;
+	s_rec.eta_msec = 0;
+	ack_status_rec(PKT_TRANS_ID_UNDEF, &s_rec);
 
 cleanup:
 	g_timer_destroy(timer);
