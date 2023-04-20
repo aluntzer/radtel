@@ -63,6 +63,9 @@ static void radio_update_freq_vel_sp(Radio *p, GtkSpinButton *b,
 
 	val = gtk_spin_button_get_value(b);
 
+	/* set minimum inc to 10 kHz */
+	if (inc < 0.01)
+		inc = 0.01;
 
 	if (is_vel) {
 		min = doppler_vel(min, p->cfg->freq_ref_mhz);

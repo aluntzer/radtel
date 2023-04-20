@@ -25,6 +25,7 @@
 
 #include <coordinates.h>
 
+#define SB_CLIMB_RATE 0.1
 
 static gint radio_freq_value_changed(GtkSpinButton *sb, Radio *p);
 static gint radio_center_freq_value_changed(GtkSpinButton *sb, Radio *p);
@@ -451,7 +452,7 @@ GtkWidget *radio_acq_freq_range_ctrl_new(Radio *p)
 	p->cfg->sb_frq_lo_center_lbl = GTK_LABEL(w);
 
 	/* low freq spin button */
-	w = gtk_spin_button_new(NULL, 1.2, 4);
+	w = gtk_spin_button_new(NULL, SB_CLIMB_RATE, 4);
 	gtk_widget_set_tooltip_text(w, "Set the lower\n"
 				       "frequency limit");
 	gtk_spin_button_set_range(GTK_SPIN_BUTTON(w), G_MINDOUBLE, G_MAXDOUBLE);
@@ -467,7 +468,7 @@ GtkWidget *radio_acq_freq_range_ctrl_new(Radio *p)
 
 
 	/* center freq spin button */
-	w = gtk_spin_button_new(NULL, 1.2, 4);
+	w = gtk_spin_button_new(NULL, SB_CLIMB_RATE, 4);
 	gtk_widget_set_tooltip_text(w, "Set the center\n"
 				       "frequency");
 	gtk_spin_button_set_range(GTK_SPIN_BUTTON(w), G_MINDOUBLE, G_MAXDOUBLE);
@@ -484,7 +485,7 @@ GtkWidget *radio_acq_freq_range_ctrl_new(Radio *p)
 
 
 	/* low vel spin button */
-	w = gtk_spin_button_new(NULL, 1.2, 4);
+	w = gtk_spin_button_new(NULL, SB_CLIMB_RATE, 4);
 	gtk_widget_set_tooltip_text(w, "Set the lower\n"
 				       "frequency limit");
 	gtk_spin_button_set_range(GTK_SPIN_BUTTON(w), G_MINDOUBLE, G_MAXDOUBLE);
@@ -501,7 +502,7 @@ GtkWidget *radio_acq_freq_range_ctrl_new(Radio *p)
 
 
 	/* center vel spin button */
-	w = gtk_spin_button_new(NULL, 1.2, 4);
+	w = gtk_spin_button_new(NULL, SB_CLIMB_RATE, 4);
 	gtk_widget_set_tooltip_text(w, "Set the center\n"
 				       "velocity");
 	gtk_spin_button_set_range(GTK_SPIN_BUTTON(w), G_MINDOUBLE, G_MAXDOUBLE);
@@ -523,7 +524,7 @@ GtkWidget *radio_acq_freq_range_ctrl_new(Radio *p)
 	p->cfg->sb_frq_hi_bw_lbl = GTK_LABEL(w);
 
 	/* high freq spin button */
-	w = gtk_spin_button_new(NULL, 1.2, 4);
+	w = gtk_spin_button_new(NULL, SB_CLIMB_RATE, 4);
 	gtk_widget_set_tooltip_text(w, "Set the upper\n"
 				       "frequency limit");
 	gtk_spin_button_set_range(GTK_SPIN_BUTTON(w), G_MINDOUBLE, G_MAXDOUBLE);
@@ -539,7 +540,7 @@ GtkWidget *radio_acq_freq_range_ctrl_new(Radio *p)
 
 
 	/* span freq spin button */
-	w = gtk_spin_button_new(NULL, 1.2, 4);
+	w = gtk_spin_button_new(NULL, SB_CLIMB_RATE, 4);
 	gtk_widget_set_tooltip_text(w, "Set the frequency\n"
 				       "span");
 	gtk_spin_button_set_range(GTK_SPIN_BUTTON(w), G_MINDOUBLE, G_MAXDOUBLE);
@@ -558,7 +559,7 @@ GtkWidget *radio_acq_freq_range_ctrl_new(Radio *p)
 
 	/* high vel spin button */
 
-	w = gtk_spin_button_new(NULL, 1.2, 4);
+	w = gtk_spin_button_new(NULL, SB_CLIMB_RATE, 4);
 	gtk_widget_set_tooltip_text(w, "Set the upper\n"
 				       "velocity limit");
 	gtk_spin_button_set_range(GTK_SPIN_BUTTON(w), G_MINDOUBLE, G_MAXDOUBLE);
@@ -575,7 +576,7 @@ GtkWidget *radio_acq_freq_range_ctrl_new(Radio *p)
 
 
 	/* span freq spin button */
-	w = gtk_spin_button_new(NULL, 1.2, 4);
+	w = gtk_spin_button_new(NULL, SB_CLIMB_RATE, 4);
 	gtk_widget_set_tooltip_text(w, "Set the velocity\n"
 				       "span");
 	gtk_spin_button_set_range(GTK_SPIN_BUTTON(w), G_MINDOUBLE, G_MAXDOUBLE);
