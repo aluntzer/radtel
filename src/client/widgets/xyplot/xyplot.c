@@ -5095,6 +5095,11 @@ void xyplot_set_range_x(GtkWidget *widget, gdouble min, gdouble max)
 	p->xmin = min;
 	p->xmax = max;
 	p->xlen = max - min;
+	if (!p->xlen) {
+		p->xmin -= 1.0;
+		p->xmax += 1.0;
+		p->xlen = 2.0;
+	}
 
 	xyplot_auto_range(p);
 	xyplot_auto_axes(p);
@@ -5114,6 +5119,12 @@ void xyplot_set_range_y(GtkWidget *widget, gdouble min, gdouble max)
 	p->ymin = min;
 	p->ymax = max;
 	p->ylen = max - min;
+
+	if (!p->ylen) {
+		p->ymin -= 1.0;
+		p->ymax += 1.0;
+		p->ylen = 2.0;
+	}
 
 	xyplot_auto_range(p);
 	xyplot_auto_axes(p);

@@ -387,6 +387,7 @@ static void cross_draw_graph_el(ObsAssist *p)
  * @param el the actual target Elevation
  *
  * @returns TRUE if in position
+ * @note we use 1.5x the axis resolution for tolerance to avoid sampling issues
  */
 
 static gboolean cross_in_position(ObsAssist *p, gdouble az, gdouble el)
@@ -394,8 +395,8 @@ static gboolean cross_in_position(ObsAssist *p, gdouble az, gdouble el)
 	gdouble d_az;
 	gdouble d_el;
 
-	const gdouble az_tol = 1.0 * p->cfg->az_res;
-	const gdouble el_tol = 1.0 * p->cfg->el_res;
+	const gdouble az_tol = 1.5 * p->cfg->az_res;
+	const gdouble el_tol = 1.5 * p->cfg->el_res;
 
 
 	d_az = fabs(az - p->cfg->az);
