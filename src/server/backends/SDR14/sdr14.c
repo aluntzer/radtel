@@ -92,7 +92,7 @@ struct sdr14_data_pkt {
 #define SDR14_DIGITAL_BINS	SDR14_NSAM
 #define SDR14_SPEC_STACK_MAX	128		/* internal fifo queue limit for contiguous sampling */
 #define SDR14_TUNING_STEP_HZ	1
-#define SDR14_BIN_DIV_MAX	7		/* allow resolutions down to
+#define SDR14_BIN_DIV_MAX	6		/* allow resolutions down to
 						 * SDR14_RT_BW / SDR14_NSAM / SDR14_BW_DIV_MAX HZ
 						 */
 
@@ -138,7 +138,7 @@ static struct {
 	 .freq_if_bw       = SDR14_IF_BW_HZ,
 	 .freq_bin_div_max = SDR14_BIN_DIV_MAX,
 	 .bins	           = SDR14_DIGITAL_BINS,
-	 .temp_cal_factor   = 2.0,
+	 .temp_cal_factor   = 0.8,
 	};
 
 
@@ -420,6 +420,7 @@ static void sdr14_comp_obs_strategy(struct observation *obs)
 /**
  * @brief apply temperature calibration
  *
+ * @note milliK is already done in spec_acquire!
  * @note converts data to integer milliKelvins (see payload/pr_spec_data.h)
  *
  * @todo polynomial preamp/inputfilter curve calibration
@@ -430,7 +431,7 @@ static void sdr14_apply_temp_calibration(struct spec_data *s)
 	gsize i;
 
 	for (i = 0; i < s->n; i++)
-		s->spec[i] = (uint32_t) ((double) s->spec[i] * 1000.0) * sdr14.temp_cal_factor;
+		s->spec[i] = (uint32_t) ((double) s->spec[i]) * sdr14.temp_cal_factor;
 }
 
 
@@ -524,15 +525,15 @@ static uint32_t sdr14_spec_acquire(struct observation *obs)
 					else
 						j = i - obs->blsize / 2;
 
-					spec[i] +=  1.0 / ((float) obs->acq.n_stack) * \
-						    sqrt((reamout0[2 * j] * reamout0[2 * j]
-						    + reamout0[2 * j + 1] * reamout0[2 * j + 1]) ) ;
+					spec[i] +=  sqrt((reamout0[2 * j] * reamout0[2 * j]
+						    + reamout0[2 * j + 1] * reamout0[2 * j + 1]) );
 				}
 			}
 		}
 
 		for (i = 0; i < obs->blsize - 2 * obs->disc_raw ; i++) {
-			s->spec[s->n] = (uint32_t) (spec[i + obs->disc_raw]);
+			s->spec[s->n] = (uint32_t)( (1000. * spec[i + obs->disc_raw]) /
+			 ((float) ((float) obs->acq.n_stack * (float) SDR14_NSAM / obs->blsize)) / sqrt((float) (obs->blsize)));
 			if (s->n == (len - 1))	/* will skip final discarded bins */
 				goto done;
 			s->n++;
