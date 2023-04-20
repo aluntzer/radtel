@@ -180,7 +180,7 @@ void radio_update_bin_divider(Radio *p)
 	}
 
 	gtk_spin_button_set_range(b, (gdouble) p->cfg->bin_div, dmax);
-	gtk_spin_button_set_value(b, dmax);
+	gtk_spin_button_set_value(b, p->cfg->bin_div);
 }
 
 
@@ -191,7 +191,7 @@ void radio_update_bin_divider(Radio *p)
 void radio_update_avg_range(Radio *p)
 {
 	gtk_spin_button_set_range(p->cfg->sb_avg, 0, p->cfg->c.n_stack_max);
-	gtk_spin_button_set_value(p->cfg->sb_avg, 0);
+	gtk_spin_button_set_value(p->cfg->sb_avg, p->cfg->c.n_stack_max);
 }
 
 

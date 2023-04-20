@@ -556,7 +556,7 @@ static gboolean spectrum_plt_clicked_coord(GtkWidget *w, gdouble x,
 
 	cmd_spec_acq_cfg(PKT_TRANS_ID_UNDEF,
 			 acq.freq_start_hz, acq.freq_stop_hz, acq.bw_div,
-			 acq.bin_div, 0, 0);
+			 acq.bin_div, acq.n_stack, 0);
 
 	msg = g_strdup_printf("Acquisition frequency range update: "
 			      "%6.2f - %6.2f MHz",
