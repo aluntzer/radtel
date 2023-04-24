@@ -837,8 +837,13 @@ static void spectrum_append_data(Spectrum *p, struct spectrum *sp)
 	xyplot_set_graph_style(p->cfg->plot, ref, p->cfg->s_per);
 	xyplot_set_graph_rgba(p->cfg->plot, ref, p->cfg->c_per);
 
+	/* don't try to refresh here, we rather do it explicitly in
+	 * the caller so we can keep indiviual data and the
+	 * average in sync on display
+	 */
+#if 0
 	spectrum_plot_try_refresh(p->cfg->plot, p);
-
+#endif
 	p->cfg->per = g_list_append(p->cfg->per, ref);
 }
 
@@ -945,7 +950,12 @@ static void spectrum_append_avg(Spectrum *p, struct spectrum *sp)
 	xyplot_set_graph_style(p->cfg->plot, p->cfg->r_avg, p->cfg->s_avg);
 	xyplot_set_graph_rgba(p->cfg->plot, p->cfg->r_avg, p->cfg->c_avg);
 
+	/* do not try to redraw here, but rather explicitly in the
+	 * caller so indiviual data and averages remain in sync when drawn
+	 */
+#if 0
 	spectrum_plot_try_refresh(p->cfg->plot, p);
+#endif
 }
 
 
@@ -1012,6 +1022,7 @@ static void spectrum_handle_pr_spec_data(gpointer instance,
 
 	/* this one does */
 	spectrum_append_avg(p, sp);
+	spectrum_plot_try_refresh(p->cfg->plot, p);
 }
 
 
