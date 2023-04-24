@@ -31,6 +31,7 @@
 
 G_DEFINE_TYPE_WITH_PRIVATE(SysStatus, sys_status, GTK_TYPE_BOX)
 
+#define SPIN_LABEL_CHAR_WIDTH	7
 
 /**
  * @brief fetch needed configuration data
@@ -420,6 +421,7 @@ static void gui_create_sys_status_controls(SysStatus *p)
 		w = sys_status_create_align_lbl(NULL, 0.0);
 		gtk_grid_attach(GTK_GRID(grid2), w, 2, 0, 1, 1);
 		p->cfg->lbl_eta_acq = GTK_LABEL(w);
+		gtk_label_set_width_chars(GTK_LABEL(w), SPIN_LABEL_CHAR_WIDTH);
 
 		w = sys_status_create_align_lbl("<span alpha='50%'>Recording</span>", 1.0);
 		gtk_grid_attach(GTK_GRID(grid2), w, 0, 1, 1, 1);
@@ -429,6 +431,7 @@ static void gui_create_sys_status_controls(SysStatus *p)
 		w = sys_status_create_align_lbl(NULL, 0.0);
 		gtk_grid_attach(GTK_GRID(grid2), w, 2, 1, 1, 1);
 		p->cfg->lbl_eta_rec = GTK_LABEL(w);
+		gtk_label_set_width_chars(GTK_LABEL(w), SPIN_LABEL_CHAR_WIDTH);
 
 		w = sys_status_create_align_lbl("<span alpha='50%'>Slewing</span>", 1.0);
 		gtk_grid_attach(GTK_GRID(grid2), w, 0, 2, 1, 1);
@@ -438,6 +441,7 @@ static void gui_create_sys_status_controls(SysStatus *p)
 		w = sys_status_create_align_lbl(NULL, 0.0);
 		gtk_grid_attach(GTK_GRID(grid2), w, 2, 2, 1, 1);
 		p->cfg->lbl_eta_slew = GTK_LABEL(w);
+		gtk_label_set_width_chars(GTK_LABEL(w), SPIN_LABEL_CHAR_WIDTH);
 
 		w = sys_status_create_align_lbl("<span alpha='50%'>Moving</span>", 1.0);
 		gtk_grid_attach(GTK_GRID(grid2), w, 0, 3, 1, 1);
@@ -447,6 +451,7 @@ static void gui_create_sys_status_controls(SysStatus *p)
 		w = sys_status_create_align_lbl(NULL, 0.0);
 		gtk_grid_attach(GTK_GRID(grid2), w, 2, 3, 1, 1);
 		p->cfg->lbl_eta_move = GTK_LABEL(w);
+		gtk_label_set_width_chars(GTK_LABEL(w), SPIN_LABEL_CHAR_WIDTH);
 
 		gtk_grid_attach(GTK_GRID(grid), grid2, 4, 0, 1, 1);
 	}
