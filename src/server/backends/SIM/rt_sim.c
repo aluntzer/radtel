@@ -3037,13 +3037,13 @@ static gpointer sim_acquisition_update(gpointer data)
 	g_obs.n_acs = obs->n_acs;
 
 	g_rw_lock_writer_unlock(&obs_rwlock);
-
+#if 0
 	/* signal the acquisition thread outer loop */
 	if (g_mutex_trylock(&acq_lock)) {
 		g_cond_signal(&acq_cond);
 		g_mutex_unlock(&acq_lock);
 	}
-
+#endif
 	/* push current configuration to clients */
 	ack_spec_acq_cfg(PKT_TRANS_ID_UNDEF, &g_obs.acq);
 
