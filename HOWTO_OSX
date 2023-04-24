@@ -26,8 +26,9 @@ cd Downloads
 
 the sources may have been unpacked automatically, otherwise:
 
-unzip radtel-src-v0.0.28.zip
+unzip radtel-src-v0.0.30.zip
 
+(note: the version number of the latest source package may differ)
 then:
 cd radtel
 
