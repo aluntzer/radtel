@@ -399,8 +399,8 @@ static gboolean cross_in_position(ObsAssist *p, gdouble az, gdouble el)
 	const gdouble el_tol = 1.5 * p->cfg->el_res;
 
 
-	d_az = fabs(az - p->cfg->az);
-	d_el = fabs(el - p->cfg->el);
+	d_az = fmod(fabs(az - p->cfg->az), 360.0);
+	d_el = fmod(fabs(el - p->cfg->el), 90.0);
 
 	if ((d_az > az_tol) || (d_el > el_tol)) {
 
