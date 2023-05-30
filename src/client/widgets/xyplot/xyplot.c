@@ -410,8 +410,9 @@ static void xyplot_import_graph_xy_asc(const gchar *fname, XYPlot *p)
 			xyplot_set_graph_style(GTK_WIDGET(p), grph, SQUARES);
 
 
-
+#if 0
 			xyplot_redraw(GTK_WIDGET(p));
+#endif
 
 			g_array_free(gx, FALSE);
 			g_array_free(gy, FALSE);
@@ -473,6 +474,8 @@ static void xyplot_import_graph_xy_asc(const gchar *fname, XYPlot *p)
 			       (gdouble *) gc->data,
 			       n, g_strdup_printf("%s-%d", fname, cnt++));
 
+	if (!grph)
+		goto cleanup;
 
 	grph->colour.red   = GRAPH_IMP_R;
 	grph->colour.green = GRAPH_IMP_G;
@@ -483,6 +486,7 @@ static void xyplot_import_graph_xy_asc(const gchar *fname, XYPlot *p)
 
 	xyplot_redraw(GTK_WIDGET(p));
 
+cleanup:
 	g_array_free(gx, FALSE);
 	g_array_free(gy, FALSE);
 	g_array_free(gc, FALSE);
@@ -504,8 +508,9 @@ static gboolean xyplot_export_graph_xy_asc(const gchar *fname, struct graph *g,
 
 	setlocale(LC_ALL, "C");
 
-	/* append mode: add empty newline to indicate new dataset */
-	if (mode[0] == 'a')
+	/* append mode: add empty newline to indicate new dataset
+	 * for xy plots, continue on xyc plots to create a single set map */
+	if (mode[0] == 'a' && !g->data_c)
 		fprintf(f, "\n");
 
 	if (!g->data_c) {
@@ -514,11 +519,11 @@ static gboolean xyplot_export_graph_xy_asc(const gchar *fname, struct graph *g,
 		for (i = 0; i < g->data_len; i++)
 			fprintf(f, "\t%f\t%f\n", g->data_x[i], g->data_y[i]);
 	} else {
-
+#if 0
 		fprintf(f, "#\t%s\t%s\tz-axis\n",
 			g->parent->xlabel,
 			g->parent->ylabel);
-
+#endif
 		for (i = 0; i < g->data_len; i++) {
 			fprintf(f, "\t%f\t%f\t%f\n",
 				g->data_x[i],
@@ -1267,7 +1272,7 @@ static GtkWidget *xyplot_create_graph_menu(struct graph *g)
 	return sub;
 }
 
-
+#define MAX_GRAPHS_LISTED	18
 static void xyplot_popup_menu_add_graphs(XYPlot *p)
 {
 	GtkWidget *w;
@@ -1276,6 +1281,8 @@ static void xyplot_popup_menu_add_graphs(XYPlot *p)
 	GList *l;
 
 	struct graph *g;
+
+	int cnt = 0;
 
 
 	w = gtk_menu_item_new_with_label("Graphs");
@@ -1298,6 +1305,15 @@ static void xyplot_popup_menu_add_graphs(XYPlot *p)
 
 		gtk_menu_item_set_submenu(GTK_MENU_ITEM(w),
 					  xyplot_create_graph_menu(g));
+
+		if (cnt++ > MAX_GRAPHS_LISTED) {
+
+			w = gtk_menu_item_new_with_label("(list display limit reached)");
+			gtk_menu_shell_append(GTK_MENU_SHELL(sub), w);
+			gtk_widget_show(w);
+
+			break;
+		}
 	}
 }
 
