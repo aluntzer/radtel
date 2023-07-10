@@ -466,10 +466,13 @@ static gboolean cross_measure(ObsAssist *p, gboolean az)
 		g_array_append_val(p->cfg->cross.el.amp, avg);
 	}
 
-	if (sample < p->cfg->cross.samples) {
-		sample++;
+	obs_assist_clear_spec(p);
+
+	sample++;
+
+	if (sample < p->cfg->cross.samples)
 		return FALSE;
-	}
+
 
 	sample = 0;
 
@@ -518,8 +521,6 @@ static gboolean cross_obs_az(ObsAssist *p)
 
 	if (!cross_measure(p, TRUE))
 		return TRUE;
-
-	obs_assist_clear_spec(p);
 
 	cross_draw_graph_az(p);
 

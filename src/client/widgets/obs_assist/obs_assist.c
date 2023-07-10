@@ -71,6 +71,9 @@ static void obs_assist_handle_pr_spec_data(gpointer instance,
 
 	obs_assist_clear_spec(p);
 
+	if (!p->cfg->acq_enabled)
+		return;
+
 	frq = g_malloc(s->n * sizeof(gdouble));
 	amp = g_malloc(s->n * sizeof(gdouble));
 
