@@ -149,6 +149,7 @@ fftw_plan p0;
 
 static char *sdr14_tty = "/dev/ttyUSB1";
 static int sdr14_fd;
+static gboolean last_acq_mode = TRUE;
 
 /* I'm beginning to suspect that we use too many locks :D */
 static GThread *thread;
@@ -581,7 +582,8 @@ done:
 	sdr14_apply_temp_calibration(s);
 
 	/* handover for transmission */
-	ack_spec_data(PKT_TRANS_ID_UNDEF, s);
+	if (last_acq_mode)
+		ack_spec_data(PKT_TRANS_ID_UNDEF, s);
 
 
 
@@ -649,11 +651,8 @@ static int sdr14_spec_check_param(struct spec_acq_cfg *acq)
 
 static void sdr14_spec_acq_enable(gboolean mode)
 {
-	static gboolean last = TRUE;
-
-
 	/* see if we currently hold the lock */
-	if (mode == last) {
+	if (mode == last_acq_mode) {
 
 		if (mode)
 			ack_spec_acq_enable(PKT_TRANS_ID_UNDEF);
@@ -663,7 +662,7 @@ static void sdr14_spec_acq_enable(gboolean mode)
 		return;
 	}
 
-	last = mode;
+	last_acq_mode = mode;
 
 
 	if (!mode) {
