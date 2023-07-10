@@ -2424,7 +2424,7 @@ static GtkWidget *sim_rt_par_gui(void)
 	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
 	gtk_grid_attach(GTK_GRID(grid), w, 0, 1, 1, 1);
 
-	w = gtk_spin_button_new_with_range(0., 1000., 1.);
+	w = gtk_spin_button_new_with_range(1.0., 1000., 1.);
 	gtk_entry_set_alignment(GTK_ENTRY(w), 1.0);
 	gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(w), TRUE);
 	gtk_spin_button_set_digits(GTK_SPIN_BUTTON(w), 0);
