@@ -7,7 +7,7 @@ _installer_root="${_thisdir}"/installer
 _arch=$(uname -m)
 _date=$(date +'%Y%m%d')
 _dateqif=$(date +'%Y-%m-%d')
-_version=0.0.28
+_version=0.0.34
 _filename=radtel-${_arch}-${_version}.msi
 _log=/tmp/installer.log
 if [ "${_arch}" = "x86_64" ]; then
@@ -224,7 +224,7 @@ create_chroot_system() {
 }
 
 install_radtel_packages() {
-  pacman -S mingw-w64-${_arch}-gtk3 mingw-w64-${_arch}-adwaita-icon-theme  mingw-w64-${_arch}-gstreamer mingw-w64-${_arch}-gst-plugins-base   mingw-w64-${_arch}-gst-plugins-good --noconfirm --root "${_newradtel}"
+  pacman -S mingw-w64-${_arch}-gtk3 mingw-w64-${_arch}-adwaita-icon-theme  mingw-w64-${_arch}-gstreamer mingw-w64-${_arch}-gst-plugins-base   mingw-w64-${_arch}-gst-plugins-good mingw-w64-${_arch}-gst-plugin-gtk --noconfirm --root "${_newradtel}"
   _result=$?
   if [ "$_result" -ne "0" ]; then
     exit_cleanly "1" "failed to create ${_newradtel} via command 'pacman -S radtel --noconfirm --root ${_newradtel}'"

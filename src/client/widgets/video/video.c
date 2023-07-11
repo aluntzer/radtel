@@ -334,6 +334,11 @@ static void video_init(Video *p)
 
 	videosink = gst_element_factory_make ("gtksink", "gtksink");
 
+	if (!videosink) {
+		g_object_unref(p->cfg->playbin);
+		return;
+	}
+
 	g_object_set(p->cfg->playbin, "video-sink", videosink, NULL);
 
 	/* set force-aspect-ratio to false to shut up
