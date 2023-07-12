@@ -654,10 +654,14 @@ static void sdr14_spec_acq_enable(gboolean mode)
 	/* see if we currently hold the lock */
 	if (mode == last_acq_mode) {
 
-		if (mode)
-			ack_spec_acq_enable(PKT_TRANS_ID_UNDEF);
-		else
-			ack_spec_acq_disable(PKT_TRANS_ID_UNDEF);
+		if (g_mutex_trylock(&acq_lock)) {
+			g_mutex_unlock(&acq_lock);
+			if (!mode)
+				ack_spec_acq_disable(PKT_TRANS_ID_UNDEF);
+		 } else {
+			if (mode)
+				ack_spec_acq_enable(PKT_TRANS_ID_UNDEF);
+		}
 
 		return;
 	}
