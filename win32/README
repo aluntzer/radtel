@@ -1,6 +1,34 @@
 To create the installer you need the following prerequisites
+ - install WiX Toolset v3:
+	https://github.com/wixtoolset/wix3/releases/tag/wix3112rtm
+	-> wix311.exe and install to default location
+
  - install the latest version of msys2: follow instructions on website
- - install mingw-w64-x86_64-toolchain, mingw-w64-x86_64-gtk3 
- - build software in this repository
- - edit make-installer and update the version number
- - ./make-installer.bat
+ - install mingw-w64-x86_64-toolchain
+ - also install:
+	mingw-w64-x86_64-gtk3
+	mingw-w64-x86_64-adwaita-icon-theme
+	mingw-w64-x86_64-gstreamer
+	mingw-w64-x86_64-gst-plugins-base
+	mingw-w64-x86_64-gst-plugins-good
+	mingw-w64-x86_64-gst-plugin-gtk
+
+ - build software
+	(in top level source directory):
+	./autogen.sh
+	./configure
+	make
+
+ - if the software build was successful
+	(in this directory):
+	(optional) edit make-installer and update the version number
+	run: ./make-installer.bat
+
+	in case the this fails, first verify that WiX is indeed
+	installed in C:\Program Files (x86)\WiX Toolset v3.11,
+	otherwise edit "make installer" and set the correct path
+	(near top of file)
+
+	if the installer was created successfully, you should find the
+	.msi file in the msys /tmp directory, typically located in
+	C:\msys64\tmp
