@@ -266,6 +266,43 @@ static void sim_load_keys(GKeyFile *kf)
 	sim.el.res = g_key_file_get_double(kf, "DRIVE", "el_res", &error);
 	if (error)
 		g_error(error->message);
+
+
+	/* we use the radius internally */
+	sim.r_beam = 0.5 * g_key_file_get_double(kf, "ANTENNA", "hpbw", &error);
+	if (error)
+		g_error(error->message);
+
+	sim.tsys = g_key_file_get_double(kf, "ANTENNA", "tsys", &error);
+	if (error)
+		g_error(error->message);
+
+	sim.eff = g_key_file_get_double(kf, "ANTENNA", "efficiency", &error);
+	if (error)
+		g_error(error->message);
+
+	sim.sig_n = g_key_file_get_double(kf, "ANTENNA", "sigma", &error);
+	if (error)
+		g_error(error->message);
+
+	sim.readout_hz = g_key_file_get_double(kf, "ANTENNA", "spec_rate", &error);
+	if (error)
+		g_error(error->message);
+
+	sim.hot_load_temp = g_key_file_get_double(kf, "ANTENNA", "hot_load", &error);
+	if (error)
+		g_error(error->message);
+
+	sim.noise_fig = g_key_file_get_double(kf, "ANTENNA", "noise_fig", &error);
+	if (error)
+		g_error(error->message);
+
+
+
+	sim.sun_sfu = g_key_file_get_double(kf, "OTHER", "sun_sfu", &error);
+	if (error)
+		g_error(error->message);
+
 }
 
 /**
@@ -2287,7 +2324,8 @@ static void sim_redraw_cb(GtkWidget *w, gpointer dat)
 
 static gboolean sky_spb_value_changed_cb(GtkSpinButton *sb, gpointer data)
 {
-	sim.r_beam = gtk_spin_button_get_value(sim.gui.sb_beam);
+	/* we use the radius internally */
+	sim.r_beam = 0.5 * gtk_spin_button_get_value(sim.gui.sb_beam);
 	sim_gen_sky();
 }
 
@@ -2399,17 +2437,17 @@ static GtkWidget *sim_rt_par_gui(void)
 	gtk_container_add(GTK_CONTAINER(frame), GTK_WIDGET(grid));
 
 
-	w = gtk_label_new("Rbeam [deg]");
+	w = gtk_label_new("Beam [deg]");
 	gtk_widget_set_halign(w, GTK_ALIGN_START);
 	gtk_widget_set_halign(w, GTK_ALIGN_START);
 	gtk_label_set_xalign(GTK_LABEL(w), 0.0);
 	gtk_grid_attach(GTK_GRID(grid), w, 0, 0, 1, 1);
 
-	w = gtk_spin_button_new_with_range(0.25, 5.0, 0.05);
+	w = gtk_spin_button_new_with_range(0.5, 10.0, 0.1);
 	gtk_entry_set_alignment(GTK_ENTRY(w), 1.0);
 	gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(w), TRUE);
 	gtk_spin_button_set_digits(GTK_SPIN_BUTTON(w), 2);
-	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w), sim.r_beam);
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w), 2.0 * sim.r_beam);
 	gtk_widget_set_halign(w, GTK_ALIGN_FILL);
 	gtk_widget_set_hexpand(w, FALSE);
 	gtk_grid_attach(GTK_GRID(grid), w, 1, 0, 1, 1);
