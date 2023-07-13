@@ -46,7 +46,7 @@ The default configuration of the client software points to the server running
 a (modified) *Old SRT* at the Department of Astrophysics at the University of
 Vienna. If you want to run the simulator, you must download a HI data file
 (*sky_vel.dat.*, available as .gz or .zip) from
-[here](https://www.univie.ac.at/radio/files/), **unpack it** and place
+[here](https://radio.univie.ac.at/), **unpack it** and place
 it in the **directory** the server is executed from, which in typical UNIX
 systems is your home directory, if you launch the server via the desktop icon,
 or in the current directory, if you launch it via the console.
@@ -62,7 +62,7 @@ how to set up a build environment and install the software.
 
 ## Windows
 You can build this software on Windows via MingW, but you may also download
-a pre-built windows installer (.msi-file) [here](https://www.univie.ac.at/radio/files/)
+a pre-built windows installer (.msi-file) [here](https://radio.univie.ac.at/)
 
 **NOTE:** On Windows, the (extracted) simulator data must be placed in the base
 installation directory (usually C:\Program Files\radtel), NOT in the bin/
