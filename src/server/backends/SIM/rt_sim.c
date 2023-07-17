@@ -2466,7 +2466,7 @@ static GtkWidget *sim_rt_par_gui(void)
 	gtk_entry_set_alignment(GTK_ENTRY(w), 1.0);
 	gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(w), TRUE);
 	gtk_spin_button_set_digits(GTK_SPIN_BUTTON(w), 0);
-	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w), SIM_TSYS);
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w), sim.tsys);
 	gtk_widget_set_halign(w, GTK_ALIGN_FILL);
 	gtk_widget_set_hexpand(w, FALSE);
 	gtk_grid_attach(GTK_GRID(grid), w, 1, 1, 1, 1);
@@ -2484,7 +2484,7 @@ static GtkWidget *sim_rt_par_gui(void)
 	gtk_entry_set_alignment(GTK_ENTRY(w), 1.0);
 	gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(w), TRUE);
 	gtk_spin_button_set_digits(GTK_SPIN_BUTTON(w), 1);
-	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w), SIM_SIG_NOISE);
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w), sim.sig_n);
 	gtk_widget_set_halign(w, GTK_ALIGN_FILL);
 	gtk_widget_set_hexpand(w, FALSE);
 	gtk_grid_attach(GTK_GRID(grid), w, 1, 2, 1, 1);
@@ -2503,7 +2503,7 @@ static GtkWidget *sim_rt_par_gui(void)
 	gtk_entry_set_alignment(GTK_ENTRY(w), 1.0);
 	gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(w), TRUE);
 	gtk_spin_button_set_digits(GTK_SPIN_BUTTON(w), 1);
-	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w), SIM_EFF);
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w), sim.eff);
 	gtk_widget_set_halign(w, GTK_ALIGN_FILL);
 	gtk_widget_set_hexpand(w, FALSE);
 	gtk_grid_attach(GTK_GRID(grid), w, 1, 3, 1, 1);
@@ -2561,7 +2561,7 @@ static GtkWidget *sim_rt_par_gui(void)
 	gtk_entry_set_alignment(GTK_ENTRY(w), 1.0);
 	gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(w), TRUE);
 	gtk_spin_button_set_digits(GTK_SPIN_BUTTON(w), 1);
-	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w), SIM_READOUT_HZ);
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w), sim.readout_hz);
 	gtk_widget_set_halign(w, GTK_ALIGN_FILL);
 	gtk_widget_set_hexpand(w, FALSE);
 	gtk_grid_attach(GTK_GRID(grid), w, 1, 6, 1, 1);
@@ -2579,7 +2579,7 @@ static GtkWidget *sim_rt_par_gui(void)
 	gtk_entry_set_alignment(GTK_ENTRY(w), 1.0);
 	gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(w), TRUE);
 	gtk_spin_button_set_digits(GTK_SPIN_BUTTON(w), 1);
-	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w), SIM_SUN_SFU);
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w), sim.sun_sfu);
 	gtk_widget_set_halign(w, GTK_ALIGN_FILL);
 	gtk_widget_set_hexpand(w, FALSE);
 	gtk_grid_attach(GTK_GRID(grid), w, 1, 7, 1, 1);
@@ -2599,7 +2599,7 @@ static GtkWidget *sim_rt_par_gui(void)
 	gtk_entry_set_alignment(GTK_ENTRY(w), 1.0);
 	gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(w), TRUE);
 	gtk_spin_button_set_digits(GTK_SPIN_BUTTON(w), 1);
-	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w), SIM_HOT_LOAD_TEMP);
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w), sim.hot_load_temp);
 	gtk_widget_set_halign(w, GTK_ALIGN_FILL);
 	gtk_widget_set_hexpand(w, FALSE);
 	gtk_grid_attach(GTK_GRID(grid), w, 1, 8, 1, 1);
@@ -2618,7 +2618,7 @@ static GtkWidget *sim_rt_par_gui(void)
 	gtk_entry_set_alignment(GTK_ENTRY(w), 1.0);
 	gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(w), TRUE);
 	gtk_spin_button_set_digits(GTK_SPIN_BUTTON(w), 1);
-	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w), SIM_NOISE_FIG);
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(w), sim.noise_fig);
 	gtk_widget_set_halign(w, GTK_ALIGN_FILL);
 	gtk_widget_set_hexpand(w, FALSE);
 	gtk_grid_attach(GTK_GRID(grid), w, 1, 10, 1, 1);
