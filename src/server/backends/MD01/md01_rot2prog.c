@@ -534,17 +534,31 @@ static void md01_rot2prog_eval_response(const char *msg, gsize len)
 				+ msg[9] * md01.res.v
 				- 360.0;
 
+
 		md01.pos.az_cur = round(md01.pos.az_cur * (double) md01.res.hdiv) * md01.res.h;
 		md01.pos.el_cur = round(md01.pos.el_cur * (double) md01.res.vdiv) * md01.res.v;
 
-		/* fold into 0-360, 0-90 */
-		md01.pos.az_cur = fmod(md01.pos.az_cur, 360.0);
-		md01.pos.el_cur = fmod(md01.pos.el_cur, 90.0);
+
+		if (md01.pos.el_cur > 180.) {
+				md01.pos.el_cur -= 180.;
+				md01.pos.az_cur += 180.;
+		}
+
+		if (md01.pos.el_cur > 90.)  {
+			md01.pos.el_cur = 180. - md01.pos.el_cur;
+			md01.pos.az_cur += 180.;
+		}
+
 
 		if (md01.pos.az_cur < 0.)
 			md01.pos.az_cur += 360.0;
 		if (md01.pos.el_cur < 0.)
 			md01.pos.el_cur += 90.0;
+
+		/* fold into 0-360, 0-90 */
+		md01.pos.az_cur = fmod(md01.pos.az_cur, 360.0);
+		md01.pos.el_cur = fmod(md01.pos.el_cur, 90.0);
+
 
 	} else if (len == ROT2PROG_ACK_CONFIG) {
 		g_message(MSG "configuration data received:");
