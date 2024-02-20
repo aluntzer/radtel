@@ -683,22 +683,43 @@ static void sky_draw_pointing_limits(cairo_t *cr,
 
 	cairo_set_source_rgb(cr, 1.0, 0.0, 0.0);
 
-	cairo_arc_negative(cr, x, y,
-			   (90.0 - lim[0].el) * scale,
-			   RAD(270.0 - lim[0].az), RAD(270.0f - lim[1].az));
-	cairo_arc(cr, x, y,
-		   (90.0f - lim[1].el) * scale,
-		   RAD((270.0f - lim[1].az)), RAD(270.0f - lim[0].az));
+	if (lim[0].az != fmod(lim[1].az, 360.0)) {
+		cairo_arc_negative(cr, x, y,
+				   (90.0 - lim[0].el) * scale,
+				   RAD(270.0 - lim[0].az), RAD(270.0f - lim[1].az));
+		cairo_arc(cr, x, y,
+			  (90.0f - lim[1].el) * scale,
+			  RAD((270.0f - lim[1].az)), RAD(270.0f - lim[0].az));
 
 
-	cairo_close_path(cr);
-	cairo_stroke_preserve(cr);
+		cairo_close_path(cr);
+		cairo_stroke_preserve(cr);
 
-	/* shade inaccessible area */
-	cairo_arc(cr, x, y, r, 0.0, 2.0 * M_PI);
-	cairo_set_source_rgba(cr, 1.0, 0.0, 0.0, 0.1); /* shade color */
+		/* shade inaccessible area */
+		cairo_arc(cr, x, y, r, 0.0, 2.0 * M_PI);
+		cairo_set_source_rgba(cr, 1.0, 0.0, 0.0, 0.1); /* shade color */
 
-	cairo_fill(cr);
+		cairo_fill(cr);
+	} else {
+		if (lim[1].el < 90.0) {
+		cairo_arc(cr, x, y, (90.0 - lim[0].el) * scale, 0.0, 2.0 * M_PI);
+		cairo_stroke(cr);
+		cairo_arc(cr, x, y, (90.0 - lim[1].el) * scale, 0.0, 2.0 * M_PI);
+
+		cairo_stroke_preserve(cr);
+		cairo_set_source_rgba(cr, 1.0, 0.0, 0.0, 0.1); /* shade color */
+		cairo_fill(cr);
+		cairo_stroke(cr);
+		}
+
+		cairo_arc(cr, x, y, (90.0 - lim[0].el) * scale, 0.0, 2.0 * M_PI);
+		cairo_stroke_preserve(cr);
+		cairo_arc(cr, x, y, 90.0 * scale, 0.0, 2.0 * M_PI);
+
+		cairo_set_source_rgba(cr, 1.0, 0.0, 0.0, 0.1);
+		cairo_set_fill_rule(cr, CAIRO_FILL_RULE_EVEN_ODD);
+		cairo_fill(cr);
+	}
 
 	cairo_restore(cr);
 }
