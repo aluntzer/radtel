@@ -2085,15 +2085,20 @@ static gboolean sky_button_press_cb(GtkWidget *widget, GdkEventButton *event,
 
 			/* ignore click if outside of axis range, the external
 			 * tracker will take care of selected objects
+			 *
+			 * NOTE: identical AZ limits are treated as no-limit
 			 */
 
-			if (hor.az < p->cfg->lim[0].az)
-				return TRUE;
+			if (p->cfg->lim[0].az != p->cfg->lim[1].az) {
+
+				if (hor.az < p->cfg->lim[0].az)
+					return TRUE;
+
+				if (hor.az > p->cfg->lim[1].az)
+					return TRUE;
+			}
 
 			if (hor.el < p->cfg->lim[0].el)
-				return TRUE;
-
-			if (hor.az > p->cfg->lim[1].az)
 				return TRUE;
 
 			if (hor.el > p->cfg->lim[1].el)
