@@ -366,12 +366,17 @@ static gboolean telescope_track_timeout_cb(void *data)
 
 	hor = equatorial_to_horizontal(equ, p->cfg->lat, p->cfg->lon, 0.0);
 
-	/* stop tracking if out of bounds */
-	if (hor.az > p->cfg->az_max)
-		p->cfg->tracking = G_SOURCE_REMOVE;
+	/* stop tracking if out of bounds
+	 * NOTE: identical az limits are interpreted as no limit!
+	 */
 
-	if (hor.az < p->cfg->az_min)
-		p->cfg->tracking = G_SOURCE_REMOVE;
+	if (p->cfg->az_max != p->cfg->az_min) {
+		if (hor.az > p->cfg->az_max)
+			p->cfg->tracking = G_SOURCE_REMOVE;
+
+		if (hor.az < p->cfg->az_min)
+			p->cfg->tracking = G_SOURCE_REMOVE;
+	}
 
 	if (hor.el > p->cfg->el_max)
 		p->cfg->tracking = G_SOURCE_REMOVE;
