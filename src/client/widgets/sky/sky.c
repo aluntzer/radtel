@@ -683,7 +683,7 @@ static void sky_draw_pointing_limits(cairo_t *cr,
 
 	cairo_set_source_rgb(cr, 1.0, 0.0, 0.0);
 
-	if (lim[0].az != fmod(lim[1].az, 360.0)) {
+	if (lim[0].az != lim[1].az) {
 		cairo_arc_negative(cr, x, y,
 				   (90.0 - lim[0].el) * scale,
 				   RAD(270.0 - lim[0].az), RAD(270.0f - lim[1].az));
@@ -700,7 +700,7 @@ static void sky_draw_pointing_limits(cairo_t *cr,
 		cairo_set_source_rgba(cr, 1.0, 0.0, 0.0, 0.1); /* shade color */
 
 		cairo_fill(cr);
-	} else {
+	} else {	/* identical limits indicate no mechanical turnover limit */
 		if (lim[1].el < 90.0) {
 		cairo_arc(cr, x, y, (90.0 - lim[0].el) * scale, 0.0, 2.0 * M_PI);
 		cairo_stroke(cr);
