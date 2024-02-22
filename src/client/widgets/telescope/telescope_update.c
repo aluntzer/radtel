@@ -35,7 +35,11 @@ static void telescope_update_sb_az_ra_glon(Telescope *p)
 	p->cfg->az_max = (gdouble) p->cfg->c.az_max_arcsec / 3600.0;
 	p->cfg->az_res = (gdouble) p->cfg->c.az_res_arcsec / 3600.0;
 
-	gtk_spin_button_set_range(b, p->cfg->az_min, p->cfg->az_max);
+	if (p->cfg->az_min != p->cfg->az_max)
+		gtk_spin_button_set_range(b, p->cfg->az_min, p->cfg->az_max);
+	else
+		gtk_spin_button_set_range(b, 0.0, 360.0);	/* full range available */
+
 	gtk_spin_button_set_increments(b,
 				       p->cfg->az_res,
 				       p->cfg->az_res * 10.0);
