@@ -166,6 +166,9 @@ static gboolean gal_plane_in_position(ObsAssist *p, gdouble az, gdouble el)
 	const gdouble el_tol = 1.5 * p->cfg->el_res;
 
 
+	if (az < 0.0)
+		az = 360.0 + az;
+
 	d_az = fmod(fabs(az - p->cfg->az), 360.0);
 	d_el = fmod(fabs(el - p->cfg->el), 90.0);
 
