@@ -30,6 +30,34 @@
 #include <math.h>
 
 
+static int once;
+
+/* a mechanism to allow recording of at least one
+ * spectrum when a position has been reached;
+ * this prevents apparent stalls in the zenith region
+ * when tracking objects in coordinate systems other
+ * than horizon; note: this is due to the zenith being
+ * a pole where the changes in angular position between
+ * the coordinate systems may occur faster than
+ * the recording speed of a single spectrum
+ */
+
+static void gal_plane_set_once(int arg)
+{
+	if (arg)
+		once = 1;
+	else
+		arg = 0;
+}
+
+static int gal_plane_get_once(void)
+{
+	return once;
+}
+
+
+
+
 
 /**
  * @brief enable/disable waiting for lower bound coordinate rise
@@ -224,6 +252,9 @@ static gboolean gal_plane_measure(ObsAssist *p)
 		sp->n = p->cfg->spec.n;
 	}
 
+	/* spec data has arrived, we may track again */
+	gal_plane_set_once(TRUE);
+
 	/* If length of spectral data or the first frequency bin has changed,
 	 * we can be pretty sure that the spectrometer configuration changed
 	 * while we were accumulating. This leaves some edge cases, but who
@@ -299,8 +330,13 @@ static gboolean gal_plane_obs_pos(ObsAssist *p)
 	gal.lon = p->cfg->gal_plane.glon_cur;
 	hor = galactic_to_horizontal(gal, p->cfg->lat, p->cfg->lon, 0.0);
 
-	if (!gal_plane_in_position(p, hor.az, hor.el))
+	if (!gal_plane_in_position(p, hor.az, hor.el) && !gal_plane_get_once())
 		return TRUE;
+
+	/* we reached the position, allow at least one spectrum;
+	 * this will be cleared in gal_plane_measure()
+	 */
+	gal_plane_set_once(TRUE);
 
 	if (!gal_plane_measure(p))
 		return TRUE;
