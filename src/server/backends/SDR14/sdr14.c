@@ -489,6 +489,11 @@ static uint32_t sdr14_spec_acquire(struct observation *obs)
 
 	/* prepare and send: allocate full length */
 	len = ((obs->blsize - 2 * obs->disc_raw) * obs->n_seq - obs->disc_fin);
+	if (len <= 0 ) {
+		g_usleep(10000);
+		goto noobs;
+	}
+
 	//printf("len %d %d %d %d %d\n", len, obs->blsize, obs->disc_raw, obs->n_seq, obs->disc_fin);
 	s = g_malloc0(sizeof(struct spec_data) + len * sizeof(uint32_t));
 
@@ -608,6 +613,7 @@ cleanup:
 
 	fft_free(&p0, &reamin0, &reamout0);
 
+noobs:
 	obs->acq.acq_max--;
 
 	return obs->acq.acq_max;
