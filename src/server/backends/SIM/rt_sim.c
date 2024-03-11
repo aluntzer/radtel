@@ -3046,6 +3046,7 @@ static gpointer sim_spec_thread(gpointer data)
 			g_rw_lock_reader_lock(&obs_rwlock);
 			run = sim_spec_acquire(&g_obs);
 			g_rw_lock_reader_unlock(&obs_rwlock);
+			g_usleep(1000);
 		} while (run);
 
 
