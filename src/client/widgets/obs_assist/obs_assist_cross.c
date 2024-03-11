@@ -825,18 +825,21 @@ static void obs_assist_on_prepare_cross(GtkWidget *as, GtkWidget *pg,
 		gtk_box_pack_start(GTK_BOX(box), w, FALSE, FALSE, 0);
 	}
 
-	if (az_max > p->cfg->az_max) {
-		page_complete = FALSE;
-		w = obs_assist_limits_exceeded_warning("right", "azimuth",
-							  p->cfg->az_max);
-		gtk_box_pack_start(GTK_BOX(box), w, FALSE, FALSE, 0);
-	}
+	if (p->cfg->az_min != p->cfg->az_max) {
 
-	if (az_min < p->cfg->az_min) {
-		page_complete = FALSE;
-		w = obs_assist_limits_exceeded_warning("left", "azimuth",
-							  p->cfg->az_min);
-		gtk_box_pack_start(GTK_BOX(box), w, FALSE, FALSE, 0);
+		if (az_max > p->cfg->az_max) {
+			page_complete = FALSE;
+			w = obs_assist_limits_exceeded_warning("right", "azimuth",
+							       p->cfg->az_max);
+			gtk_box_pack_start(GTK_BOX(box), w, FALSE, FALSE, 0);
+		}
+
+		if (az_min < p->cfg->az_min) {
+			page_complete = FALSE;
+			w = obs_assist_limits_exceeded_warning("left", "azimuth",
+							       p->cfg->az_min);
+			gtk_box_pack_start(GTK_BOX(box), w, FALSE, FALSE, 0);
+		}
 	}
 
 	if (!page_complete) {

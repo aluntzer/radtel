@@ -30,6 +30,31 @@
 #include <math.h>
 
 
+static int once;
+
+/* a mechanism to allow recording of at least one
+ * spectrum when a position has been reached;
+ * this prevents apparent stalls in the zenith region
+ * when tracking objects in coordinate systems other
+ * than horizon; note: this is due to the zenith being
+ * a pole where the changes in angular position between
+ * the coordinate systems may occur faster than
+ * the recording speed of a single spectrum
+ */
+
+static void npoint_set_once(int arg)
+{
+	if (arg)
+		once = 1;
+	else
+		arg = 0;
+}
+
+static int npoint_get_once(void)
+{
+	return once;
+}
+
 
 /**
  * @brief update the az progress bar
@@ -155,6 +180,9 @@ static gboolean npoint_in_position(ObsAssist *p, gdouble az, gdouble el)
 	const gdouble el_tol = 1.5 * p->cfg->el_res;
 
 
+	if (az < 0.0)
+		az = 360.0 + az;
+
 	d_az = fmod(fabs(az - p->cfg->az), 360.0);
 	d_el = fmod(fabs(el - p->cfg->el), 90.0);
 
@@ -210,6 +238,9 @@ static gboolean npoint_measure(ObsAssist *p)
 	/* has new spectral data arrived? */
 	if (!p->cfg->spec.n)
 		return FALSE;
+
+	/* spec data has arrived, we may track again */
+	npoint_set_once(TRUE);
 
 	/* compute continuum flux */
 	for (i = 0; i < p->cfg->spec.n; i++)
@@ -300,8 +331,13 @@ static gboolean npoint_obs_pos(ObsAssist *p)
 
 
 	/* actual pointing is done in horizon system */
-	if (!npoint_in_position(p, hor.az, hor.el))
+	if (!npoint_in_position(p, hor.az, hor.el) && !npoint_get_once())
 		return TRUE;
+
+	/* we reached the position, allow at least one spectrum;
+	 * this will be cleared in gal_plane_measure()
+	 */
+	npoint_set_once(TRUE);
 
 	if (!npoint_measure(p))
 		return TRUE;
