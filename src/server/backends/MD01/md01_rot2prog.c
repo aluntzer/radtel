@@ -603,6 +603,7 @@ static int md01_rot2prog_moveto(double az, double el)
 	char cmdstr[ROT2PROG_CMD_BYTES];
 	int u_az, u_el;
 
+	struct status s;
 
 	u_az = (int) (md01.res.hdiv * (360 + az));
 	u_el = (int) (md01.res.vdiv * (360 + el));
@@ -669,6 +670,12 @@ static int md01_rot2prog_moveto(double az, double el)
 
 	az = md01.pos.az_cur;
 	el = md01.pos.el_cur;
+
+	s.busy = 1;
+	s.eta_msec = 0;
+	ack_status_move(PKT_TRANS_ID_UNDEF, &s);
+	ack_status_slew(PKT_TRANS_ID_UNDEF, &s);
+
 
 
 #endif
@@ -739,6 +746,7 @@ static void md01_rot2prog_notify_pos_update(void)
 	double az_arcsec;
 	double el_arcsec;
 
+	struct status s;
 	struct getpos pos;
 
 
@@ -753,6 +761,16 @@ static void md01_rot2prog_notify_pos_update(void)
 	pos.az_arcsec = (typeof(pos.az_arcsec)) az_arcsec;
 	pos.el_arcsec = (typeof(pos.el_arcsec)) el_arcsec;
 	ack_getpos_azel(PKT_TRANS_ID_UNDEF, &pos);
+
+	if (fabs(md01.pos.az_cur - md01.pos.az_tgt) <= md01.res.h) {
+		if (fabs(md01.pos.el_cur - md01.pos.el_tgt) <= md01.res.v)  {
+			s.busy = 0;
+			s.eta_msec = 0;
+			ack_status_move(PKT_TRANS_ID_UNDEF, &s);
+			ack_status_slew(PKT_TRANS_ID_UNDEF, &s);
+		}
+	}
+
 }
 
 

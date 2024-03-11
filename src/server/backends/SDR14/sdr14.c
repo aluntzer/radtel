@@ -77,11 +77,16 @@ struct sdr14_data_pkt {
 #define SDR14_RT_BW		(SDR14_ADC_FREQ / SDR14_DECIMATION / 2)
 #define SDR14_SIDE_DISCARD_HZ	6300
 
+//#define IS_OH_MASER
 
 /* XXX need to implement the receiver as separate plugin
  * since the values are fixed for now, I define it here
  */
+#ifndef IS_OH_MASER
 #define RECV_LO_FREQ		  1414000000
+#else
+#define RECV_LO_FREQ		  1606000000
+#endif /* IS_OH_MASER */
 #define RECV_IF_HZ		     6500000
 #define RECV_IF_BW		    10700000	/* nominal output low pass */
 
@@ -96,10 +101,14 @@ struct sdr14_data_pkt {
 #define SDR14_BIN_DIV_MAX	6		/* allow resolutions down to
 						 * SDR14_RT_BW / SDR14_NSAM / SDR14_BW_DIV_MAX HZ
 						 */
-
+#ifndef IS_OH_MASER
 /* initial receiver configuration */
 #define SDR14_INIT_FREQ_START_HZ	1420042187
 #define SDR14_INIT_FREQ_STOP_HZ		1420970312
+#else
+#define SDR14_INIT_FREQ_START_HZ	1611800000
+#define SDR14_INIT_FREQ_STOP_HZ		1612200000
+#endif /* IS_OH_MASER */
 #define SDR14_INIT_BIN_DIV		         6
 #define SDR14_INIT_NSTACK		        64
 
@@ -536,12 +545,13 @@ static uint32_t sdr14_spec_acquire(struct observation *obs)
 
 				cfft(&p0);
 
-				for (i = 0; i < obs->blsize; i++) {
+				for (i = 0; i < obs->blsize -1; i++) {
 
 					if (i < obs->blsize / 2)
 						j = i + obs->blsize / 2;
 					else
-						j = i - obs->blsize / 2;
+						j = i - obs->blsize / 2 + 1; /* skip one for DC?? TOOD: VERIFY with sig gen */
+
 
 					spec[i] +=  sqrt((reamout0[2 * j] * reamout0[2 * j]
 						    + reamout0[2 * j + 1] * reamout0[2 * j + 1]) );
