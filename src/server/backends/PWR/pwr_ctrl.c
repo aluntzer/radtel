@@ -44,17 +44,6 @@ static int drive_to_cur;
 
 
 /**
- * @brief load configuration keys in the message of the day group
- */
-
-static void server_cfg_load_motd(GKeyFile *kf, struct server_settings *s)
-{
-	drive_pwr_cmd = g_key_file_get_string(kf, "DRIVE", "pwr_cmd", NULL);
-	drive_off_cmd = g_key_file_get_string(kf, "DRIVE", "off_cmd", NULL);
-}
-
-
-/**
  * @brief load configuration keys
  */
 

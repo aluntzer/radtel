@@ -70,3 +70,5 @@ AC_CONFIG_FILES([src/server/backends/SIM/Makefile])
 AC_OUTPUT
 AC_CONFIG_FILES([src/server/backends/SDR14/Makefile])
 AC_OUTPUT
+AC_CONFIG_FILES([src/server/backends/PWR/Makefile])
+AC_OUTPUT

@@ -23,7 +23,7 @@ AM_LDFLAGS += -module
 AM_LDFLAGS += -shared
 AM_LDFLAGS += -export-dynamic
 
-pwr_ctrl_la_la_LIBADD := -L$(top_builddir)/src/net/ -lproto -lutil
+pwr_ctrl_la_LIBADD := -L$(top_builddir)/src/net/ -lproto -lutil
 
 plugin_LTLIBRARIES = pwr_ctrl.la
 
