@@ -12,7 +12,7 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * @brief plugin for control of networked power switches via exec() system calls
+ * @brief plugin for commandline controlled (networked) power switches
  *
  */
 
@@ -184,7 +184,7 @@ static gboolean drive_pwr_cycle_cb(gpointer data)
 	g_message(MSG "cycle drive on!");
 
 	if (drive_pwr_cmd)
-		execle(drive_pwr_cmd, NULL);
+		g_spawn_command_line_sync(drive_pwr_cmd, NULL, NULL, NULL, NULL);
 
 	return G_SOURCE_REMOVE;
 }
@@ -199,14 +199,15 @@ static gboolean drive_pwr_ctrl_cb(gpointer data)
 		return G_SOURCE_CONTINUE;
 
 	drive_to_cur--;
-	if (!drive_to_cur)
-		if (drive_off_cmd)
-			execle(drive_off_cmd, NULL);
+	if (!drive_to_cur) {
+		if (drive_off_cmd) {
+			g_spawn_command_line_sync(drive_off_cmd, NULL, NULL, NULL, NULL);
+		}
+	}	
 
 
         return G_SOURCE_CONTINUE;
 }
-
 
 
 /**
@@ -224,7 +225,7 @@ int be_drive_pwr_ctrl(gboolean mode)
 
 		drive_has_usr = 1;
 		if (drive_pwr_cmd)
-			execle(drive_pwr_cmd, NULL);
+			g_spawn_command_line_sync(drive_pwr_cmd, NULL, NULL, NULL, NULL);
 
 
 	} else {
@@ -249,7 +250,7 @@ void be_drive_pwr_cycle(void)
 {
 	g_message(MSG "cycle drive off!");
 	if (drive_off_cmd)
-		execle(drive_off_cmd, NULL);
+		g_spawn_command_line_sync(drive_off_cmd, NULL, NULL, NULL, NULL);
 
 	/* return power after 5 seconds */
 	g_timeout_add_seconds(5, drive_pwr_cycle_cb, NULL);
