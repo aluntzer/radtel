@@ -250,6 +250,7 @@ static gboolean npoint_measure(ObsAssist *p)
 
 	avg += tmp;
 
+	obs_assist_clear_spec(p);
 
 	if (sample < p->cfg->npoint.n_avg) {
 		sample++;
