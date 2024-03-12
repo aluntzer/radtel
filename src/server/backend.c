@@ -50,6 +50,7 @@ static void backend_try_load_symbols(GModule *mod)
 	be_hot_load_enable_load(mod);
 	be_radiometer_pwr_ctrl_load(mod);
 	be_drive_pwr_ctrl_load(mod);
+	be_drive_pwr_cycle_load(mod);
 }
 
 
