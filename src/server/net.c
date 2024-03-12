@@ -26,6 +26,7 @@
 #include <cmd.h>
 #include <ack.h>
 #include <pkt_proc.h>
+#include <backend.h>
 
 #include <gio/gio.h>
 #include <glib.h>
@@ -434,6 +435,12 @@ static void drop_con_finalize(struct con_data *c)
 unlock:
 
 	g_mutex_unlock(&finalize);
+
+	/* indicate power disable on last disconnect */
+	if(!g_list_length(con_list)) {
+		be_radiometer_pwr_ctrl(0);
+		be_drive_pwr_ctrl(0);
+	}
 }
 
 
@@ -835,6 +842,10 @@ static gboolean net_incoming(GSocketService    *service,
 		g_object_unref(connection);
 		return FALSE;
 	}
+
+
+	be_drive_pwr_ctrl(1);
+	be_radiometer_pwr_ctrl(1);
 
 	c = g_malloc0(sizeof(struct con_data));
 

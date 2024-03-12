@@ -48,6 +48,8 @@ static void backend_try_load_symbols(GModule *mod)
 	be_get_capabilities_load_drive_load(mod);
 	be_get_capabilities_load_spec_load(mod);
 	be_hot_load_enable_load(mod);
+	be_radiometer_pwr_ctrl_load(mod);
+	be_drive_pwr_ctrl_load(mod);
 }
 
 
