@@ -1,0 +1,267 @@
+/**
+ * @file    server/backends/PWR/pwr_ctrl.c
+ * @author  Armin Luntzer (armin.luntzer@univie.ac.at)
+ *
+ * @copyright GPLv2
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * @brief plugin for control of networked power switches via exec() system calls
+ *
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <termios.h>
+
+#include <glib.h>
+#include <gmodule.h>
+#include <string.h>
+
+#include <math.h>
+#include <backend.h>
+#include <ack.h>
+
+#include <net.h>
+
+
+#define MSG "PWR CTRL: "
+
+
+static gchar *drive_pwr_cmd;
+static gchar *drive_off_cmd;
+static int drive_to_delay;
+static int drive_to_max;
+static int drive_to_cur;
+
+
+/**
+ * @brief load configuration keys in the message of the day group
+ */
+
+static void server_cfg_load_motd(GKeyFile *kf, struct server_settings *s)
+{
+	drive_pwr_cmd = g_key_file_get_string(kf, "DRIVE", "pwr_cmd", NULL);
+	drive_off_cmd = g_key_file_get_string(kf, "DRIVE", "off_cmd", NULL);
+}
+
+
+/**
+ * @brief load configuration keys
+ */
+
+static void pwr_ctrl_load_keys(GKeyFile *kf)
+{
+	GError *error = NULL;
+
+	if (g_key_file_has_key(kf, "DRIVE", "pwr_cmd", &error)) {
+
+		drive_pwr_cmd = g_key_file_get_string(kf, "DRIVE", "pwr_cmd", &error);
+		if (error)
+			goto error;
+
+	}
+	if (error)
+		goto error;
+
+	if (g_key_file_has_key(kf, "DRIVE", "off_cmd", &error)) {
+
+		drive_off_cmd = g_key_file_get_string(kf, "DRIVE", "off_cmd", &error);
+		if (error)
+			goto error;
+	}
+	if (error)
+		goto error;
+
+	if (g_key_file_has_key(kf, "DRIVE", "to_delay", &error)) {
+
+		drive_to_delay = g_key_file_get_integer(kf, "DRIVE", "to_delay", &error);
+		if (error)
+			goto error;
+	}
+	if (error)
+		goto error;
+
+	if (g_key_file_has_key(kf, "DRIVE", "to_max", &error)) {
+
+		drive_to_max = g_key_file_get_integer(kf, "DRIVE", "to_max", &error);
+		if (error)
+			goto error;
+	}
+	if (error)
+		goto error;
+
+
+
+	return;
+
+error:
+	if (error) {
+		g_error(error->message);
+		g_clear_error(&error);
+	}
+}
+
+
+/**
+ * @brief load the pwr_ctrl configuration file from a given prefix
+ *
+ * @returns 0 on success, otherwise error
+ */
+
+static int pwr_ctrl_load_config_from_prefix(const gchar *prefix, GError **err)
+{
+	gboolean ret;
+
+	GKeyFile *kf;
+	GKeyFileFlags flags;
+
+
+	gchar *cfg;
+
+
+	kf = g_key_file_new();
+	flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
+
+	cfg = g_strconcat(prefix, "backends/pwr_ctrl.cfg", NULL);
+	ret = g_key_file_load_from_file(kf, cfg, flags, err);
+
+
+	if (!ret) {
+		g_key_file_free(kf);
+		g_free(cfg);
+		return -1;
+	}
+
+	g_message(MSG "Configuration file loaded from %s", cfg);
+
+	pwr_ctrl_load_keys(kf);
+
+	g_key_file_free(kf);
+	g_free(cfg);
+
+	return 0;
+}
+
+
+/**
+ * @brief try to load a pwr_ctrl configuration file from various paths
+ */
+
+int pwr_ctrl_load_config(void)
+{
+	int ret;
+
+	gchar *prefix;
+
+	GError *error = NULL;
+
+
+
+	/* search relative path first */
+	ret = pwr_ctrl_load_config_from_prefix("/", &error);
+	if (ret) {
+		g_clear_error(&error);
+		/* try again in sysconfdir */
+		prefix = g_strconcat(SYSCONFDIR, "/", CONFDIR, "/", NULL);
+		ret = pwr_ctrl_load_config_from_prefix(prefix, &error);
+		g_free(prefix);
+	}
+
+	if (ret) {
+		g_warning(MSG "Could not find backends/pwr_ctrl.cfg: %s. "
+			  "Looked in ./, %s and %s/%s",
+			  error->message, CONFDIR, SYSCONFDIR, CONFDIR);
+		g_clear_error(&error);
+
+		return -1;
+	}
+
+	return 0;
+}
+
+
+static gboolean drive_pwr_ctrl_cb(gpointer data)
+{
+	if (!drive_to_cur)
+		return G_SOURCE_CONTINUE;
+
+	drive_to_cur--;
+	if (!drive_to_cur)
+		if (drive_off_cmd)
+			execle(drive_off_cmd, NULL);
+
+
+        return G_SOURCE_CONTINUE;
+}
+
+
+
+/**
+ * @brief hot load enable/disable
+ */
+
+G_MODULE_EXPORT
+int be_drive_pwr_ctrl(gboolean mode)
+{
+	if (mode) {
+
+		g_message(MSG "POWER ON!");
+
+		/* disable countdown to poweroff */
+		drive_to_cur  = 0;
+		if (drive_pwr_cmd)
+			execle(drive_pwr_cmd, NULL);
+
+
+	} else {
+		g_message(MSG "POWER OFF!");
+
+		drive_to_cur += drive_to_delay;
+		if (drive_to_cur > drive_to_max)
+			drive_to_cur = drive_to_max;
+	}
+
+	return 0;
+}
+
+
+/**
+ * @brief extra initialisation function
+ */
+
+G_MODULE_EXPORT
+void module_extra_init(void)
+{
+	g_message(MSG "configuring power controls");
+
+	/* ceck timeouts once a second */
+	g_timeout_add(1, drive_pwr_ctrl_cb, NULL);
+}
+
+
+/**
+ * @brief the module initialisation function
+ * @note this is called automatically on g_module_open
+ */
+
+G_MODULE_EXPORT
+const gchar *g_module_check_init(void)
+{
+
+        g_message(MSG "initialising module");
+
+	if (pwr_ctrl_load_config())
+		g_warning(MSG "Error loading module configuration, this plugin may not function properly.");
+
+
+	return NULL;
+}
