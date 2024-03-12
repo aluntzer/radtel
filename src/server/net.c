@@ -1104,15 +1104,23 @@ int net_server_parse_msg(const gchar *msg, gpointer ref)
 	if (strlen(msg) < 5)
 	       return -1;
 
-	if (strncmp(msg, "!motd", 5))
-		return -1;
+	if (!strncmp(msg, "!motd", 5)) {
 
-	/* stupidly set the motd */
-	server_cfg_set_motd(&msg[5]);
+		/* stupidly set the motd */
+		server_cfg_set_motd(&msg[5]);
 
-	net_push_motd_update();
+		net_push_motd_update();
+		return 0;
+	}
 
-	return 0;
+	if (!strncmp(msg, "!drive_cycle", 12)) {
+		be_drive_pwr_cycle();
+		return 0;
+
+	}
+
+
+	return -1;
 }
 
 

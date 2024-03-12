@@ -23,4 +23,5 @@ libbackend_a_SOURCES = be_moveto_azel.c \
 		       be_hot_load_enable.c \
 		       be_cold_load_enable.c \
 		       be_radiometer_pwr_ctrl.c \
-		       be_drive_pwr_ctrl.c
+		       be_drive_pwr_ctrl.c \
+		       be_drive_pwr_cycle.c

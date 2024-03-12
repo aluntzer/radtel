@@ -39,6 +39,7 @@ int be_get_capabilities_load_spec(struct capabilities_load *c);
 int be_hot_load_enable(gboolean mode);
 int be_radiometer_pwr_ctrl(gboolean mode);
 int be_drive_pwr_ctrl(gboolean mode);
+void be_drive_pwr_cycle(void);
 
 /* backend call loaders */
 int be_moveto_azel_load(GModule *mod);
@@ -59,6 +60,7 @@ int be_get_capabilities_load_spec_load(GModule *mod);
 int be_hot_load_enable_load(GModule *mde);
 int be_radiometer_pwr_ctrl_load(GModule *mde);
 int be_drive_pwr_ctrl_load(GModule *mde);
+int be_drive_pwr_cycle_load(GModule *mde);
 
 
 int backend_load_plugins(void);

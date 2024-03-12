@@ -179,6 +179,17 @@ int pwr_ctrl_load_config(void)
 }
 
 
+static gboolean drive_pwr_cycle_cb(gpointer data)
+{
+	g_message(MSG "cycle drive on!");
+
+	if (drive_pwr_cmd)
+		execle(drive_pwr_cmd, NULL);
+
+	return G_SOURCE_REMOVE;
+}
+
+
 static gboolean drive_pwr_ctrl_cb(gpointer data)
 {
 	if (!drive_to_cur)
@@ -199,7 +210,7 @@ static gboolean drive_pwr_ctrl_cb(gpointer data)
 
 
 /**
- * @brief hot load enable/disable
+ * @brief drive power enable/disable
  */
 
 G_MODULE_EXPORT
@@ -229,6 +240,21 @@ int be_drive_pwr_ctrl(gboolean mode)
 	return 0;
 }
 
+/**
+ * @brief drive power cycle
+ */
+
+G_MODULE_EXPORT
+void be_drive_pwr_cycle(void)
+{
+	g_message(MSG "cycle drive off!");
+	if (drive_off_cmd)
+		execle(drive_off_cmd, NULL);
+
+	/* return power after 5 seconds */
+	g_timeout_add_seconds(5, drive_pwr_cycle_cb, NULL);
+}
+
 
 /**
  * @brief extra initialisation function
@@ -240,7 +266,7 @@ void module_extra_init(void)
 	g_message(MSG "configuring power controls");
 
 	/* ceck timeouts once a second */
-	g_timeout_add(1, drive_pwr_ctrl_cb, NULL);
+	g_timeout_add_seconds(1, drive_pwr_ctrl_cb, NULL);
 }
 
 
