@@ -41,6 +41,7 @@ static gchar *drive_off_cmd;
 static int drive_to_delay;
 static int drive_to_max;
 static int drive_to_cur;
+static int drive_has_usr;
 
 
 /**
@@ -183,6 +184,9 @@ static gboolean drive_pwr_ctrl_cb(gpointer data)
 	if (!drive_to_cur)
 		return G_SOURCE_CONTINUE;
 
+	if (drive_has_usr)
+		return G_SOURCE_CONTINUE;
+
 	drive_to_cur--;
 	if (!drive_to_cur)
 		if (drive_off_cmd)
@@ -206,13 +210,16 @@ int be_drive_pwr_ctrl(gboolean mode)
 		g_message(MSG "POWER ON!");
 
 		/* disable countdown to poweroff */
-		drive_to_cur  = 0;
+
+		drive_has_usr = 1;
 		if (drive_pwr_cmd)
 			execle(drive_pwr_cmd, NULL);
 
 
 	} else {
 		g_message(MSG "POWER OFF!");
+
+		drive_has_usr = 0;
 
 		drive_to_cur += drive_to_delay;
 		if (drive_to_cur > drive_to_max)
