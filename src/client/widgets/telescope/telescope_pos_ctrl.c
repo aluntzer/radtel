@@ -355,7 +355,7 @@ static gboolean telescope_track_timeout_cb(void *data)
 	 * if the current move different from our target location
 	 */
 	if (p->cfg->moving) {
-		if (!once)
+		if (once)
 			return p->cfg->tracking;
 		once++;
 	}
