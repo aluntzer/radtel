@@ -47,7 +47,7 @@ static void gal_plane_set_once(int arg)
 	if (arg)
 		once = 1;
 	else
-		arg = 0;
+		once = 0;
 }
 
 static int gal_plane_get_once(void)
@@ -253,7 +253,7 @@ static gboolean gal_plane_measure(ObsAssist *p)
 	}
 
 	/* spec data has arrived, we may track again */
-	gal_plane_set_once(TRUE);
+	gal_plane_set_once(FALSE);
 
 	/* If length of spectral data or the first frequency bin has changed,
 	 * we can be pretty sure that the spectrometer configuration changed
@@ -330,7 +330,8 @@ static gboolean gal_plane_obs_pos(ObsAssist *p)
 	gal.lon = p->cfg->gal_plane.glon_cur;
 	hor = galactic_to_horizontal(gal, p->cfg->lat, p->cfg->lon, 0.0);
 
-	if (!gal_plane_in_position(p, hor.az, hor.el) && !gal_plane_get_once())
+	if (!gal_plane_get_once())
+		if (!gal_plane_in_position(p, hor.az, hor.el))
 		return TRUE;
 
 	/* we reached the position, allow at least one spectrum;

@@ -47,7 +47,7 @@ static void npoint_set_once(int arg)
 	if (arg)
 		once = 1;
 	else
-		arg = 0;
+		once = 0;
 }
 
 static int npoint_get_once(void)
@@ -201,7 +201,6 @@ static gboolean npoint_in_position(ObsAssist *p, gdouble az, gdouble el)
 		return FALSE;
 	}
 
-
 	return TRUE;
 }
 
@@ -240,7 +239,7 @@ static gboolean npoint_measure(ObsAssist *p)
 		return FALSE;
 
 	/* spec data has arrived, we may track again */
-	npoint_set_once(TRUE);
+	npoint_set_once(FALSE);
 
 	/* compute continuum flux */
 	for (i = 0; i < p->cfg->spec.n; i++)
@@ -332,8 +331,9 @@ static gboolean npoint_obs_pos(ObsAssist *p)
 
 
 	/* actual pointing is done in horizon system */
-	if (!npoint_in_position(p, hor.az, hor.el) && !npoint_get_once())
-		return TRUE;
+	if (!npoint_get_once())
+		if (!npoint_in_position(p, hor.az, hor.el))
+			return TRUE;
 
 	/* we reached the position, allow at least one spectrum;
 	 * this will be cleared in gal_plane_measure()
@@ -342,8 +342,6 @@ static gboolean npoint_obs_pos(ObsAssist *p)
 
 	if (!npoint_measure(p))
 		return TRUE;
-
-	obs_assist_clear_spec(p);
 
 	npoint_draw_graph(p);
 
