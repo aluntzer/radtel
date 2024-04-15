@@ -72,15 +72,16 @@ void telescope_update_azel_internal(Telescope *p)
 	};
 
 
-	/* is negative ? try to wrap */
-	if (hor.az > p->cfg->az_max)
-		hor.az = hor.az - 360.0;
+	hor.az = fmod(hor.az, 360.0);
 
-	if (hor.az < p->cfg->az_min || hor.az > p->cfg->az_max)
-		return;
+	if (p->cfg->az_min != p->cfg->az_max) {
+		if (hor.az < p->cfg->az_min || hor.az > p->cfg->az_max)
+			return;
+	}
 
 	if (hor.el < p->cfg->el_min || hor.el > p->cfg->el_max)
 		return;
+
 
 	/* we're good, update azel spin buttons and hide warning */
 	gtk_widget_hide(GTK_WIDGET(p->cfg->not_vis_lbl));
