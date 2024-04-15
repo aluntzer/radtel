@@ -145,6 +145,20 @@ static gchar *net_server_msg_nick(const gchar *msg, struct con_data *c)
 	return buf;
 }
 
+static gboolean net_power_on(gpointer data)
+{
+	struct con_data *c = data;
+
+	/* see if it still in the list of connections */
+	if (g_list_index(con_list, c) > 0) {
+		be_drive_pwr_ctrl(1);
+		be_radiometer_pwr_ctrl(1);
+	}
+
+	return G_SOURCE_REMOVE;
+}
+
+
 static gboolean net_push_station_single(gpointer data)
 {
 	gchar *buf;
@@ -851,9 +865,6 @@ static gboolean net_incoming(GSocketService    *service,
 	}
 
 
-	be_drive_pwr_ctrl(1);
-	be_radiometer_pwr_ctrl(1);
-
 	c = g_malloc0(sizeof(struct con_data));
 
 	/* reference, so it is not dropped by glib */
@@ -876,6 +887,11 @@ static gboolean net_incoming(GSocketService    *service,
 	g_timeout_add_seconds(1, net_push_station_single, c);
 	g_timeout_add_seconds(1, net_push_motd_single, c);
 	g_timeout_add_seconds(1, net_push_userlist_cb, NULL);
+
+	/* do not power on for one second in case this is one of those
+	 * idiotic bots trying to "hack"
+	 */
+	g_timeout_add_seconds(1, net_power_on, c);
 
 	str = net_get_host_string(c->con);
 	g_message("Received connection from %s", str);
