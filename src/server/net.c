@@ -150,7 +150,7 @@ static gboolean net_power_on(gpointer data)
 	struct con_data *c = data;
 
 	/* see if it still in the list of connections */
-	if (g_list_index(con_list, c) > 0) {
+	if (g_list_index(con_list, c) >= 0) {
 		be_drive_pwr_ctrl(1);
 		be_radiometer_pwr_ctrl(1);
 	}
