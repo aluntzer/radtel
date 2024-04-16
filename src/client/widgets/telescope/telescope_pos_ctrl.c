@@ -248,6 +248,8 @@ static void telescope_park_cb(GtkWidget *w, Telescope *p)
 {
 	cmd_park_telescope(PKT_TRANS_ID_UNDEF);
 
+	sig_tracking(FALSE, 0.0, 0.0);
+
 	sig_status_push("Moving telescope to park position. "
 			"This may take a while.");
 }
