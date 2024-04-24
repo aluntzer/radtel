@@ -592,7 +592,7 @@ done:
 	s->freq_max_hz = (typeof(s->freq_max_hz)) obs->acq.freq_stop_hz;
 	s->freq_inc_hz = (typeof(s->freq_inc_hz)) ((s->freq_max_hz - s->freq_min_hz) / s->n);
 
-	printf("%d %d %d %d\n", s->freq_min_hz, s->freq_max_hz, s->freq_inc_hz,  s->n );
+	//printf("%d %d %d %d\n", s->freq_min_hz, s->freq_max_hz, s->freq_inc_hz,  s->n );
 
 	sdr14_apply_temp_calibration(s);
 

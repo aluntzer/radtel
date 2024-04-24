@@ -646,19 +646,20 @@ static int md01_rot2prog_moveto(double az, double el)
 	n = md01_rot2prog_serial_read(fd, buf, ROT2PROG_ACK_BYTES);
 
 	if (n != ROT2PROG_ACK_BYTES) {
-		g_warning(MSG "moveto mismatch in message length. expected %d, got %d",
-			  ROT2PROG_ACK_BYTES, n);
 
-
-	{
 		int i;
-		for (i = 0; i < n; i++) {
+
+		for (i = 0; i < n; i++)
 			g_print("%x ", buf[i]);
-		}
+
 		g_print("\n");
 
 		md01_rot2prog_serial_flush(fd);
-	}
+
+#if 0
+		g_warning(MSG "moveto mismatch in message length. expected %d, got %d",
+				ROT2PROG_ACK_BYTES, n);
+#endif
 
 
 
@@ -666,7 +667,7 @@ static int md01_rot2prog_moveto(double az, double el)
 		return -1;
 	} else
 
-	md01_rot2prog_eval_response(buf, n);
+		md01_rot2prog_eval_response(buf, n);
 
 	az = md01.pos.az_cur;
 	el = md01.pos.el_cur;
@@ -707,8 +708,10 @@ static void md01_rot2prog_get_position(double *az, double *el)
 	n = md01_rot2prog_serial_read(fd, buf, ROT2PROG_ACK_BYTES);
 
 	if (n != ROT2PROG_ACK_BYTES) {
+#if 0
 		g_warning(MSG "mismatch in message length. expected %d, got %d",
 			       ROT2PROG_ACK_BYTES, n);
+#endif
 		return;
 	}
 

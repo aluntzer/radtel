@@ -329,8 +329,16 @@ static void try_disconnect_socket(struct con_data *c)
 	if (!G_IS_SOCKET_CONNECTION(c->con))
 		return;
 
-	if (!g_socket_connection_is_connected(c->con))
+	if (!g_socket_connection_is_connected(c->con)) {
+
+		/* indicate power disable on last disconnect */
+		if(!g_list_length(con_list)) {
+			be_radiometer_pwr_ctrl(0);
+			be_drive_pwr_ctrl(0);
+		}
+
 		return;
+	}
 
 	s = g_socket_connection_get_socket(c->con);
 
