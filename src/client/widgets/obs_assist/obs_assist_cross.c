@@ -32,6 +32,33 @@
 #include <math.h>
 
 
+static int once;
+
+/* a mechanism to allow recording of at least one
+ * spectrum when a position has been reached;
+ * this prevents apparent stalls in the zenith region
+ * when tracking objects in coordinate systems other
+ * than horizon; note: this is due to the zenith being
+ * a pole where the changes in angular position between
+ * the coordinate systems may occur faster than
+ * the recording speed of a single spectrum
+ */
+
+static void cross_set_once(int arg)
+{
+	if (arg)
+		once = 1;
+	else
+		once = 0;
+}
+
+static int cross_get_once(void)
+{
+	return once;
+}
+
+
+
 /**
  * @brief plot a gaussian
  */
@@ -452,6 +479,9 @@ static gboolean cross_measure(ObsAssist *p, gboolean az)
 	if (!p->cfg->spec.n)
 		return FALSE;
 
+	/* spec data has arrived, we may track again */
+	cross_set_once(FALSE);
+
 	/* compute continuum flux */
 	for (i = 0; i < p->cfg->spec.n; i++)
 		avg += p->cfg->spec.y[i];
@@ -518,8 +548,14 @@ static gboolean cross_obs_az(ObsAssist *p)
 	az = obs_assistant_get_corr_az(p);
 	el = p->cfg->cross.el_cent;
 
-	if (!cross_in_position(p, az, el))
-		return TRUE;
+	if (!cross_get_once())
+		if (!cross_in_position(p, az, el))
+			return TRUE;
+
+	/* we reached the position, allow at least one spectrum;
+	 * this will be cleared in measure()
+	 */
+	cross_set_once(TRUE);
 
 	if (!cross_measure(p, TRUE))
 		return TRUE;
@@ -561,8 +597,14 @@ static gboolean cross_obs_el(ObsAssist *p)
 	az = p->cfg->cross.az_cent;
 	el = p->cfg->cross.el_cur;
 
-	if (!cross_in_position(p, az, el))
-		return TRUE;
+	if (!cross_get_once())
+		if (!cross_in_position(p, az, el))
+			return TRUE;
+
+	/* we reached the position, allow at least one spectrum;
+	 * this will be cleared in measure()
+	 */
+	cross_set_once(TRUE);
 
 	if (!cross_measure(p, FALSE))
 		return TRUE;
