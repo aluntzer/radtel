@@ -83,7 +83,7 @@ struct sdr14_data_pkt {
  * since the values are fixed for now, I define it here
  */
 #ifndef IS_OH_MASER
-#define RECV_LO_FREQ		  1414000000
+#define RECV_LO_FREQ		  1413000000
 #else
 #define RECV_LO_FREQ		  1606000000
 #endif /* IS_OH_MASER */
@@ -148,7 +148,7 @@ static struct {
 	 .freq_if_bw       = SDR14_IF_BW_HZ,
 	 .freq_bin_div_max = SDR14_BIN_DIV_MAX,
 	 .bins	           = SDR14_DIGITAL_BINS,
-	 .temp_cal_factor   = 0.8,
+	 .temp_cal_factor   = 0.8234,
 	};
 
 
@@ -338,7 +338,7 @@ static void sdr14_set_freq(uint32_t hz)
 
 	uint8_t cmd[10] = {0x0a, 0x00, 0x20, 0x00, 0x00, 0xc0, 0x65, 0x52, 0x00, 0x01};
 	uint8_t cmd2[6] = {0x06, 0x00, 0x40, 0x00, 0x00, 0x18};
-	uint8_t cmd3[6] = {0x06, 0x00, 0x38, 0x00, 0x00, 0x0};
+	uint8_t cmd3[6] = {0x06, 0x00, 0x38, 0x00, 0x00, 0x00};
 	uint8_t ack[10] = {0};
 
 
@@ -477,6 +477,7 @@ static uint32_t sdr14_spec_acquire(struct observation *obs)
 	struct sdr14_data_pkt pkt;
 
 	double freq;
+	double scale;
 
 	int len;
 
@@ -557,15 +558,14 @@ static uint32_t sdr14_spec_acquire(struct observation *obs)
 					else
 						j = i - obs->blsize / 2 + 1; /* skip one for DC?? TOOD: VERIFY with sig gen */
 
-
 					spec[i] +=  sqrt((reamout0[2 * j] * reamout0[2 * j]
 						    + reamout0[2 * j + 1] * reamout0[2 * j + 1]) );
 				}
 			}
+
 			g_timer_stop(timer);
 			acq_time[obs->acq.bin_div] =(acq_time[obs->acq.bin_div] * (AVG_LEN - 1.0) +  g_timer_elapsed(timer, NULL)) / AVG_LEN;
 		}
-
 
 		if (s_acq.eta_msec > MIN_MS_ACQ_STATUS) {
 			s_acq.busy = 0;
@@ -573,12 +573,18 @@ static uint32_t sdr14_spec_acquire(struct observation *obs)
 			ack_status_acq(PKT_TRANS_ID_UNDEF, &s_acq);
 		}
 
-		
-
+		scale = (double)obs->acq.n_stack * (double)SDR14_NSAM / (double)obs->blsize;
+		scale *= sqrt((double)obs->blsize);
+		scale = 1.0 / scale;
 
 		for (i = 0; i < obs->blsize - 2 * obs->disc_raw ; i++) {
-			s->spec[s->n] = (uint32_t)( (1000. * spec[i + obs->disc_raw]) /
-			 ((float) ((float) obs->acq.n_stack * (float) SDR14_NSAM / obs->blsize)) / sqrt((float) (obs->blsize)));
+
+			double tmp;
+
+			tmp = (double)spec[i + obs->disc_raw] * scale;
+			tmp *= tmp;	/* ADC samples voltage, we want power-equivalent -> P ~ V^2 */
+			s->spec[s->n] = (uint32_t) tmp;
+
 			if (s->n == (len - 1))	/* will skip final discarded bins */
 				goto done;
 			s->n++;
