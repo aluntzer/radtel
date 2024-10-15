@@ -151,8 +151,10 @@ static gboolean net_power_on(gpointer data)
 
 	/* see if it still in the list of connections */
 	if (g_list_index(con_list, c) >= 0) {
-		be_drive_pwr_ctrl(1);
-		be_radiometer_pwr_ctrl(1);
+		if (c->priv != PRIV_DEFAULT) {
+			be_drive_pwr_ctrl(1);
+			be_radiometer_pwr_ctrl(1);
+		}
 	}
 
 	return G_SOURCE_REMOVE;
@@ -1034,6 +1036,16 @@ static void net_server_reassign_control_internal(gpointer ref, gint lvl)
 				      "(connected from %s)",
 				      c->nick, str);
 	} else if (p == c) {
+
+		if (c->priv != PRIV_DEFAULT && lvl != c->priv) {
+			/* controlling client dropped privilege, request power off */
+			be_radiometer_pwr_ctrl(0);
+			be_drive_pwr_ctrl(0);
+		}
+
+		/* do not change state: off was either already requested or its already on */
+		pwr = FALSE;
+
 		c->priv = lvl;
 		msg = g_strdup_printf("%s (connected from %s) changed their "
 				      "own privilege level",
@@ -1085,7 +1097,7 @@ void net_server_reassign_control(gpointer ref)
 }
 
 /**
- * @brief drop to lowest priviledge on connection
+ * @brief drop to lowest privilege on connection
  */
 
 void net_server_drop_priv(gpointer ref)
@@ -1143,7 +1155,7 @@ int net_server_parse_msg(const gchar *msg, gpointer ref)
 
 	c = (struct con_data *) ref;
 
-	/* ignore if not fully priviledged */
+	/* ignore if not fully privileged */
 	if (c->priv < PRIV_FULL)
 		return -1;
 
