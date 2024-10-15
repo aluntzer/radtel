@@ -320,6 +320,7 @@ static gboolean net_push_userlist_cb(gpointer data)
 
 static void try_disconnect_socket(struct con_data *c)
 {
+	gboolean pwr = TRUE;
 	gboolean ret = TRUE;
 
 	GSocket *s;
@@ -329,15 +330,17 @@ static void try_disconnect_socket(struct con_data *c)
 	if (!G_IS_SOCKET_CONNECTION(c->con))
 		return;
 
+
+	/* disable power on last disconnect */
 	if (!g_socket_connection_is_connected(c->con)) {
+		pwr = FALSE;
+		goto exit;
+	}
 
-		/* indicate power disable on last disconnect */
-		if(!g_list_length(con_list)) {
-			be_radiometer_pwr_ctrl(0);
-			be_drive_pwr_ctrl(0);
-		}
-
-		return;
+	/* indicate power disable on controlling client disconnect */
+	if (c->priv != PRIV_DEFAULT) {
+		g_message("controlling client disconnecting, incicating power off");
+		pwr = FALSE;
 	}
 
 	s = g_socket_connection_get_socket(c->con);
@@ -356,6 +359,13 @@ static void try_disconnect_socket(struct con_data *c)
 	/* drop initial reference */
 	g_clear_object(&c->con);
 #endif
+
+exit:
+	if (!pwr) {
+		be_radiometer_pwr_ctrl(0);
+		be_drive_pwr_ctrl(0);
+	}
+
 }
 
 
@@ -990,6 +1000,8 @@ static void net_server_reassign_control_internal(gpointer ref, gint lvl)
 {
 	GList *elem;
 
+	gboolean pwr = TRUE;
+
 	struct con_data *c;
 	struct con_data *item;
 
@@ -1029,6 +1041,7 @@ static void net_server_reassign_control_internal(gpointer ref, gint lvl)
 	} else {
 		gchar *h;
 
+		pwr = FALSE;
 		h = net_get_host_string(c->con);
 
 		msg = g_strdup_printf("Failed to reassign control to %s "
@@ -1042,6 +1055,9 @@ static void net_server_reassign_control_internal(gpointer ref, gint lvl)
 
 	net_server_broadcast_message(msg, NULL);
 	net_push_userlist_cb(NULL);
+
+	if (pwr)
+		net_power_on(c);
 
 	g_free(msg);
 	g_free(str);
