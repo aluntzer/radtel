@@ -44,6 +44,11 @@
 #define PRIV_CONTROL	1
 #define PRIV_FULL	2
 
+/* number of seconds of inactivity after which the controlling client
+ * is demoted to PRIV_DEFAULT
+ * set 0 to disable
+ */
+#define LAZYBEARD_TIMEOUT (20 * 60) /* 20 minutes */
 
 
 /* client connection data */
@@ -55,8 +60,10 @@ struct con_data {
 	gchar *nick;
 	gboolean new;
 	gboolean kick;
+	gboolean lazybeard;
 	GMutex lock;
 	GCancellable *ca;
+	gint64 last_req;
 
 	GThreadPool *pool;
 };
@@ -158,6 +165,48 @@ static gboolean net_power_on(gpointer data)
 	}
 
 	return G_SOURCE_REMOVE;
+}
+
+
+static gboolean demote_inactive_users(gpointer data)
+{
+	GList *elem;
+
+	struct con_data *item = NULL;
+	gchar *str;
+
+
+	if(!g_list_length(con_list))
+		goto exit;
+
+	g_mutex_lock(&listlock);
+
+	for (elem = con_list; elem; elem = elem->next) {
+
+		item = (struct con_data *) elem->data;
+
+		if (item->priv == PRIV_DEFAULT)
+			continue;
+
+		/* demote after N usec of inactivity */
+		if ((g_get_monotonic_time() - item->last_req) > (LAZYBEARD_TIMEOUT * 1000000)) {
+			item->lazybeard = TRUE;
+			str = net_get_host_string(item->con);
+			g_message("user %s connected from %s was demoted for being a lazybeard\n", item->nick, str);
+
+			g_free(str);
+		}
+		break;
+	}
+
+	g_mutex_unlock(&listlock);
+
+	if (item)
+		if (item->lazybeard)
+			net_server_drop_priv(item);
+	
+exit:
+	return G_SOURCE_CONTINUE;
 }
 
 
@@ -705,6 +754,12 @@ pending:
 		if (process_pkt(pkt, (gboolean) c->priv, c))
 			goto drop_pkt;
 
+		/* record last command packet time for controlling connection
+		 * we use this to demote inactive users
+		 */
+		c->last_req = g_get_monotonic_time();
+	
+
 		/* valid packets were free'd */
 		pkt = NULL;
 
@@ -890,6 +945,9 @@ static gboolean net_incoming(GSocketService    *service,
 	/* reference, so it is not dropped by glib */
 	c->con = g_object_ref(connection);
 
+	/* prime for completeness */
+	c->last_req = g_get_monotonic_time();
+
 	setup_connection(c);
 	assign_default_priv(c);
 	begin_reception(c);
@@ -1047,9 +1105,18 @@ static void net_server_reassign_control_internal(gpointer ref, gint lvl)
 		pwr = FALSE;
 
 		c->priv = lvl;
+		if (c->lazybeard) {	/* make a snarky comment */
+			msg = g_strdup_printf("%s (connected from %s) was demoted "
+					"to the rank of Powder Monkey for being a Lazybeard.",
+					c->nick, str);
+
+			c->lazybeard = FALSE;
+
+		} else {
 		msg = g_strdup_printf("%s (connected from %s) changed their "
 				      "own privilege level",
 				      c->nick, str);
+		}
 	} else {
 		gchar *h;
 
@@ -1272,6 +1339,9 @@ int net_server(void)
 	loop = g_main_loop_new(NULL, FALSE);
 
 	g_message("Server started on port %d", port);
+
+	if (LAZYBEARD_TIMEOUT)
+		g_timeout_add_seconds(1, demote_inactive_users, NULL);;
 
 	g_main_loop_run(loop);
 
