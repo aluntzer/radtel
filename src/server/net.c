@@ -850,6 +850,11 @@ static void assign_default_priv(struct con_data *c)
 	struct con_data *item;
 
 
+	if (!server_cfg_get_auto_ctrl_enable()) {
+		c->priv = PRIV_DEFAULT;
+		return;
+	}
+
 	g_mutex_lock(&listlock);
 
 	for (elem = con_list; elem; elem = elem->next) {

@@ -40,6 +40,7 @@ int be_hot_load_enable(gboolean mode);
 int be_radiometer_pwr_ctrl(gboolean mode);
 int be_drive_pwr_ctrl(gboolean mode);
 void be_drive_pwr_cycle(void);
+gboolean be_drive_pwr_status(void);
 
 /* backend call loaders */
 int be_moveto_azel_load(GModule *mod);
@@ -61,6 +62,7 @@ int be_hot_load_enable_load(GModule *mde);
 int be_radiometer_pwr_ctrl_load(GModule *mde);
 int be_drive_pwr_ctrl_load(GModule *mde);
 int be_drive_pwr_cycle_load(GModule *mde);
+int be_drive_pwr_status_load(GModule *mde);
 
 
 int backend_load_plugins(void);

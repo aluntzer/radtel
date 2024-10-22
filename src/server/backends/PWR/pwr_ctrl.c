@@ -258,6 +258,20 @@ void be_drive_pwr_cycle(void)
 
 
 /**
+ * @brief drive power status
+ */
+
+G_MODULE_EXPORT
+gboolean be_drive_pwr_status(void)
+{
+	if (drive_to_cur || drive_has_usr)
+		return TRUE;
+
+	return FALSE;
+}
+
+
+/**
  * @brief extra initialisation function
  */
 

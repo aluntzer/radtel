@@ -106,6 +106,29 @@ static void server_cfg_load_video_uri(GKeyFile *kf, struct server_settings *s)
 	s->video_uri = g_key_file_get_string(kf, grp, "uri", NULL);
 }
 
+	
+/**
+ * @brief load configuration keys in the OTHER group
+ */
+
+static void server_cfg_load_ctrl_enable(GKeyFile *kf, struct server_settings *s)
+{
+	const char *grp = "OTHER";
+	GError *error = NULL;
+
+
+        if (g_key_file_has_key(kf, "OTHER", "auto_ctrl", &error)) {
+		s->ctrl_enable = g_key_file_get_boolean(kf, grp, "auto_ctrl", &error);
+	} else {
+		g_warning("Key auto_ctrl in group OTHER not found, assuming default == TRUE");
+		s->ctrl_enable = TRUE;
+	}
+
+        if (error) {
+                g_error(error->message);
+                g_clear_error(&error);
+        }
+}
 
 /**
  * @brief get the configured server port
@@ -235,6 +258,15 @@ gchar *server_cfg_get_video_uri(void)
 	return g_strdup(server_cfg->video_uri);
 }
 
+/**
+ * @brief get automatic control assignment setting
+ * @returns true if automatic assignment is enabled
+ */
+gboolean server_cfg_get_auto_ctrl_enable(void)
+{
+	return server_cfg->ctrl_enable;
+}
+
 
 /**
  * @brief update the message of the day at run time
@@ -308,6 +340,7 @@ static int server_load_config_from_prefix(const gchar *prefix, GError **err)
 	server_cfg_load_location(kf, server_cfg);
 	server_cfg_load_motd(kf, server_cfg);
 	server_cfg_load_video_uri(kf, server_cfg);
+	server_cfg_load_ctrl_enable(kf, server_cfg);
 
 	g_key_file_free(kf);
 	g_free(cfg);

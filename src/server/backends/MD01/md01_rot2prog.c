@@ -703,6 +703,13 @@ static void md01_rot2prog_get_position(double *az, double *el)
 	char poll[ROT2PROG_CMD_BYTES] = "\x57\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x3F\x20";
 
 
+	/* report last known position if power is off */
+	if (!be_drive_pwr_status()) {
+		(*az) = md01.pos.az_cur;
+		(*el) = md01.pos.el_cur;
+		return;
+	}
+
 	md01_rot2prog_serial_write(fd, get, ROT2PROG_CMD_BYTES, 0);
 
 	n = md01_rot2prog_serial_read(fd, buf, ROT2PROG_ACK_BYTES);

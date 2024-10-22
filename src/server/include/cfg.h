@@ -31,6 +31,7 @@ struct server_settings {
 	gchar    *motd;		/* a message of the day */
 	gchar    *masterkey;	/* guess */
 	gchar    *video_uri;	/* webcam URI */
+	gboolean ctrl_enable;	/* enable automatic assignment of control privileges */
 };
 
 
@@ -53,6 +54,8 @@ void server_cfg_set_motd(const gchar *motd);
 void server_cfg_set_video_uri(const gchar *video_uri);
 
 const gchar *server_cfg_get_masterkey(void);
+
+gboolean server_cfg_get_auto_ctrl_enable(void);
 
 
 
