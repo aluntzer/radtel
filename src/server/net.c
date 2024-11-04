@@ -188,6 +188,9 @@ static gboolean demote_inactive_users(gpointer data)
 		if (item->priv == PRIV_DEFAULT)
 			continue;
 
+		if (item->priv == PRIV_FULL)
+			continue;
+
 		/* demote after N usec of inactivity */
 		if ((g_get_monotonic_time() - item->last_req) > (LAZYBEARD_TIMEOUT * 1000000)) {
 			item->lazybeard = TRUE;
@@ -464,6 +467,7 @@ static void drop_con_begin(struct con_data *c)
 static void drop_con_finalize(struct con_data *c)
 {
 	gchar *buf;
+	gboolean pwr = FALSE;
 
 
 	g_mutex_lock(&finalize);
@@ -498,6 +502,9 @@ static void drop_con_finalize(struct con_data *c)
 		g_print("%s disconnected\n", c->nick);
 	}
 
+	if (c->priv != PRIV_DEFAULT)
+		pwr = TRUE;
+
 	net_server_broadcast_message(buf, NULL);
 	net_push_userlist_cb(NULL);
 
@@ -520,7 +527,7 @@ unlock:
 	g_mutex_unlock(&finalize);
 
 	/* indicate power disable on last disconnect */
-	if(!g_list_length(con_list)) {
+	if(!g_list_length(con_list) && pwr) {
 		be_radiometer_pwr_ctrl(0);
 		be_drive_pwr_ctrl(0);
 	}
@@ -673,6 +680,8 @@ static void net_buffer_ready(GObject *source_object, GAsyncResult *res,
 
 	GError *error = NULL;
 
+	gboolean pwr = FALSE;
+
 
 	c = (struct con_data *) user_data;
 
@@ -695,6 +704,10 @@ pending:
 	}
 
 	c->nbytes = nbytes;
+
+	/* power off in case of disconnect of controlling client */
+	if (!c->priv != PRIV_DEFAULT)
+		pwr = TRUE;
 
 
 	/* enough bytes to hold a packet? */
@@ -826,7 +839,7 @@ error:
 		drop_con_finalize(c);
 
 	/* indicate power disable on last disconnect */
-	if(!g_list_length(con_list)) {
+	if(!g_list_length(con_list) && pwr) {
 		be_radiometer_pwr_ctrl(0);
 		be_drive_pwr_ctrl(0);
 	}
