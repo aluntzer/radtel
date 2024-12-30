@@ -266,6 +266,25 @@ static void net_push_motd_update(void)
 	g_free(motd);
 }
 
+static void net_push_demote_to_update(void)
+{
+	gchar *buf;
+
+
+
+	if (!server_cfg_get_demote_timeout())
+		buf = g_strdup_printf("The demote timeout was disabled.\n");
+	else
+		buf = g_strdup_printf("The demote timeout was changed to %d minutes\n",
+				       server_cfg_get_demote_timeout() / 60);
+
+	net_server_broadcast_message(buf, NULL);
+
+	g_free(buf);
+}
+
+
+
 
 static void net_push_video_uri_single(void)
 {
@@ -1241,7 +1260,7 @@ int net_server_parse_msg(const gchar *msg, gpointer ref)
 	if (c->priv < PRIV_FULL)
 		return -1;
 
-	/* shorter than our only supported command word */
+	/* shorter than our shortest supported command word */
 	if (strlen(msg) < 5)
 	       return -1;
 
@@ -1259,6 +1278,15 @@ int net_server_parse_msg(const gchar *msg, gpointer ref)
 		return 0;
 
 	}
+
+	if (!strncmp(msg, "!demote_timeout", 15)) {
+
+		server_cfg_set_demote_timeout(g_ascii_strtoll(&msg[15], NULL, 10));
+
+		net_push_demote_to_update();
+		return 0;
+	}
+
 
 
 	return -1;
@@ -1355,8 +1383,7 @@ int net_server(void)
 
 	g_message("Server started on port %d", port);
 
-	if (server_cfg_get_demote_timeout())
-		g_timeout_add_seconds(1, demote_inactive_users, NULL);;
+	g_timeout_add_seconds(1, demote_inactive_users, NULL);;
 
 	g_main_loop_run(loop);
 

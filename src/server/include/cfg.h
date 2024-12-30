@@ -53,6 +53,7 @@ int server_cfg_load(void);
 gchar *server_cfg_get_motd(void);
 void server_cfg_set_motd(const gchar *motd);
 void server_cfg_set_video_uri(const gchar *video_uri);
+void server_cfg_set_demote_timeout(gint32 to);
 
 const gchar *server_cfg_get_masterkey(void);
 

@@ -307,6 +307,12 @@ gint32 server_cfg_get_demote_timeout(void)
 	return server_cfg->demote_to;
 }
 
+void server_cfg_set_demote_timeout(gint32 to)
+{
+	server_cfg->demote_to = to * 60;	/* to is in minutes */
+}
+
+
 /**
  * @brief update the message of the day at run time
  *
