@@ -44,12 +44,6 @@
 #define PRIV_CONTROL	1
 #define PRIV_FULL	2
 
-/* number of seconds of inactivity after which the controlling client
- * is demoted to PRIV_DEFAULT
- * set 0 to disable
- */
-#define LAZYBEARD_TIMEOUT (20 * 60) /* 20 minutes */
-
 
 /* client connection data */
 struct con_data {
@@ -176,6 +170,9 @@ static gboolean demote_inactive_users(gpointer data)
 	gchar *str;
 
 
+	if (!server_cfg_get_demote_timeout())
+		goto exit;
+
 	if(!g_list_length(con_list))
 		goto exit;
 
@@ -192,7 +189,7 @@ static gboolean demote_inactive_users(gpointer data)
 			continue;
 
 		/* demote after N usec of inactivity */
-		if ((g_get_monotonic_time() - item->last_req) > (LAZYBEARD_TIMEOUT * 1000000)) {
+		if ((g_get_monotonic_time() - item->last_req) > (server_cfg_get_demote_timeout() * 1000000)) {
 			item->lazybeard = TRUE;
 			str = net_get_host_string(item->con);
 			g_message("user %s connected from %s was demoted for being a lazybeard\n", item->nick, str);
@@ -1358,7 +1355,7 @@ int net_server(void)
 
 	g_message("Server started on port %d", port);
 
-	if (LAZYBEARD_TIMEOUT)
+	if (server_cfg_get_demote_timeout())
 		g_timeout_add_seconds(1, demote_inactive_users, NULL);;
 
 	g_main_loop_run(loop);

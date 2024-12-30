@@ -130,6 +130,35 @@ static void server_cfg_load_ctrl_enable(GKeyFile *kf, struct server_settings *s)
         }
 }
 
+
+/**
+ * @brief load configuration keys in the OTHER group
+ */
+
+static void server_cfg_load_demote_timeout(GKeyFile *kf, struct server_settings *s)
+{
+	const char *grp = "OTHER";
+	GError *error = NULL;
+
+
+        if (g_key_file_has_key(kf, "OTHER", "demote_timeout", &error)) {
+		s->demote_to = g_key_file_get_integer(kf, grp, "demote_timeout", &error);
+	} else {
+		g_warning("Key demote_timeout in group OTHER not found, setting demote to disabled");
+		s->demote_to = 0;
+	}
+
+        if (error) {
+                g_error(error->message);
+                g_clear_error(&error);
+		s->demote_to = 0;
+        }
+
+
+	s->demote_to *= 60; /* value is in minutes */
+}
+
+
 /**
  * @brief get the configured server port
  */
@@ -269,6 +298,16 @@ gboolean server_cfg_get_auto_ctrl_enable(void)
 
 
 /**
+ * @brief get demote timeout
+ * @returns demote timeout in minutes
+ */
+
+gint32 server_cfg_get_demote_timeout(void)
+{
+	return server_cfg->demote_to;
+}
+
+/**
  * @brief update the message of the day at run time
  *
  * @note does not update the configuration file
@@ -341,6 +380,7 @@ static int server_load_config_from_prefix(const gchar *prefix, GError **err)
 	server_cfg_load_motd(kf, server_cfg);
 	server_cfg_load_video_uri(kf, server_cfg);
 	server_cfg_load_ctrl_enable(kf, server_cfg);
+	server_cfg_load_demote_timeout(kf, server_cfg);
 
 	g_key_file_free(kf);
 	g_free(cfg);

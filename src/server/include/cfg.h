@@ -32,6 +32,7 @@ struct server_settings {
 	gchar    *masterkey;	/* guess */
 	gchar    *video_uri;	/* webcam URI */
 	gboolean ctrl_enable;	/* enable automatic assignment of control privileges */
+	gint32   demote_to;	/* demote timeout */
 };
 
 
@@ -56,6 +57,7 @@ void server_cfg_set_video_uri(const gchar *video_uri);
 const gchar *server_cfg_get_masterkey(void);
 
 gboolean server_cfg_get_auto_ctrl_enable(void);
+gint32 server_cfg_get_demote_timeout(void);
 
 
 
