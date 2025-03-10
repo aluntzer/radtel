@@ -13,6 +13,9 @@ test "x$prefix" = xNONE && test "x$sysconfdir" = 'x${prefix}/etc' && sysconfdir=
 AC_CANONICAL_HOST
 # Detect the target system
 case "${host_os}" in
+    linux*)
+        IS_LINUX=true
+        ;;
     mingw*)
         IS_WINDOWS=true
         ;;
@@ -27,6 +30,7 @@ test x$IS_WINDOWS != xtrue && LT_INIT([dlopen])
 test x$IS_WINDOWS = xtrue && AC_PROG_RANLIB
 
 
+AM_CONDITIONAL([OS_LINUX], [test x$IS_LINUX = xtrue])
 AM_CONDITIONAL([OS_WINDOWS], [test x$IS_WINDOWS = xtrue])
 AM_CONDITIONAL([OS_DARWIN],  [test x$IS_DARWIN = xtrue])
 
