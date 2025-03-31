@@ -148,7 +148,7 @@ static struct {
 	 .freq_if_bw       = SDR14_IF_BW_HZ,
 	 .freq_bin_div_max = SDR14_BIN_DIV_MAX,
 	 .bins	           = SDR14_DIGITAL_BINS,
-	 .temp_cal_factor   = 0.8234,
+	 .temp_cal_factor   = 0.8234 * 4.8,
 	};
 
 
@@ -736,7 +736,16 @@ static gpointer sdr14_spec_thread(gpointer data)
 			g_mutex_unlock(&acq_pause);
 
 			g_rw_lock_reader_lock(&obs_rwlock);
+#if 1	/* set 0 to annoy squatters by constantly turning off everything */
 			run = sdr14_spec_acquire(&g_obs);
+#else
+			/* disable acquisition on drive power off */
+			if (be_drive_pwr_status())
+				run = sdr14_spec_acquire(&g_obs);
+			else
+				run = 0;
+#endif
+
 			g_rw_lock_reader_unlock(&obs_rwlock);
 		} while (run);
 
