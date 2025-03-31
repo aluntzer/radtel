@@ -402,10 +402,8 @@ static void try_disconnect_socket(struct con_data *c)
 
 
 	/* disable power on last disconnect */
-	if (!g_socket_connection_is_connected(c->con)) {
+	if (!g_socket_connection_is_connected(c->con))
 		pwr = FALSE;
-		goto exit;
-	}
 
 	/* indicate power disable on controlling client disconnect */
 	if (c->priv != PRIV_DEFAULT) {
@@ -425,12 +423,10 @@ static void try_disconnect_socket(struct con_data *c)
 			g_clear_error(&error);
 		}
 	}
-#if 0
+
 	/* drop initial reference */
 	g_clear_object(&c->con);
-#endif
 
-exit:
 	if (!pwr) {
 		be_radiometer_pwr_ctrl(0);
 		be_drive_pwr_ctrl(0);
@@ -1129,7 +1125,7 @@ static void net_server_reassign_control_internal(gpointer ref, gint lvl)
 				      c->nick, str);
 	} else if (p == c) {
 
-		if (c->priv != PRIV_DEFAULT && lvl != c->priv) {
+		if (lvl == PRIV_DEFAULT) {
 			/* controlling client dropped privilege, request power off */
 			be_radiometer_pwr_ctrl(0);
 			be_drive_pwr_ctrl(0);
