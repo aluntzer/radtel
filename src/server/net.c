@@ -402,8 +402,10 @@ static void try_disconnect_socket(struct con_data *c)
 
 
 	/* disable power on last disconnect */
-	if (!g_socket_connection_is_connected(c->con))
+	if (!g_socket_connection_is_connected(c->con)) {
 		pwr = FALSE;
+		goto exit;
+	}
 
 	/* indicate power disable on controlling client disconnect */
 	if (c->priv != PRIV_DEFAULT) {
@@ -423,10 +425,11 @@ static void try_disconnect_socket(struct con_data *c)
 			g_clear_error(&error);
 		}
 	}
-
+#if 0
 	/* drop initial reference */
 	g_clear_object(&c->con);
-
+#endif
+exit:
 	if (!pwr) {
 		be_radiometer_pwr_ctrl(0);
 		be_drive_pwr_ctrl(0);
@@ -467,6 +470,7 @@ static void drop_con_begin(struct con_data *c)
 	try_disconnect_socket(c);
 
 	g_mutex_unlock(&listlock);
+	g_timeout_add_seconds(1, net_push_userlist_cb, NULL);
 }
 
 
@@ -1077,6 +1081,9 @@ gint net_send(const char *pkt, gsize nbytes)
 		drop_con_begin(drop);
 
 	g_mutex_unlock(&netlock_big);
+
+	if (drop)
+		g_timeout_add_seconds(1, net_push_userlist_cb, NULL);
 
 	return ret;
 }
