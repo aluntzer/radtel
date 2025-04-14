@@ -46,7 +46,7 @@ struct packet *cmd_control_gen(uint16_t trans_id, const uint8_t *digest,
 	c = (struct control *) pkt->data;
 
 	c->len = len;
-	memcpy(c->digest, digest, data_size);
+	memcpy(c->digest, digest, len);
 
 	pkt_set_data_crc16(pkt);
 
