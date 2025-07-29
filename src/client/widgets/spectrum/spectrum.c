@@ -406,8 +406,8 @@ static void spectrum_record_start(Spectrum *p)
 
 		fprintf(p->cfg->rec,
 			"# Format: LAT LON YEAR MONTH DAY LST AZ EL RA DE "
-			"GLAT GLON FIRST_FREQ[MHz] LAST_FREQ[MHz] REF_FREQ[MHz]"
-			"VRAD0[km/s] VRAD1[km/s] BINS "
+			"GLAT GLON FIRST_FREQ[MHz] LAST_FREQ[MHz] "
+			"VRAD0[km/s] VRAD1[km/s] REF_FREQ[MHz] BINS "
 			"Amplitude[K](1...N)\n");
 
 
