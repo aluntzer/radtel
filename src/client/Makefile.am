@@ -166,7 +166,7 @@ radtel_SOURCES += widgets/obs_assist/obs_assist.c \
 		  widgets/obs_assist/obs_assist_npoint.c \
 		  widgets/obs_assist/obs_assist_bswitch.c \
 		  widgets/obs_assist/obs_assist_spectral_axis.c \
-		  widgets/obs_assist/obs_assist_gal_plane.c
+		  widgets/obs_assist/obs_assist_gal_latscan.c
 
 
 radtel_SOURCES += widgets/chatlog/chatlog.c

@@ -262,7 +262,7 @@ static gboolean spectral_axis_obs_pos(ObsAssist *p)
 
 
 /**
- * @brief scan along plane
+ * @brief scan along axis
  */
 
 static gboolean spectral_axis_obs(void *data)
@@ -343,7 +343,7 @@ static void on_assistant_apply(GtkWidget *as, ObsAssist *p)
 
 
 /**
- * @brief set up the galactic plane observation
+ * @brief set up the axis scan observation
  */
 
 static void obs_assist_on_prepare_spectral_axis(GtkWidget *as, GtkWidget *pg,

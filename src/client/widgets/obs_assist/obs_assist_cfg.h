@@ -130,6 +130,7 @@ struct _ObsAssistConfig {
 		gdouble glon_lo;
 		gdouble glon_hi;
 		gdouble glon_stp;
+		gdouble glat;
 
 		gdouble glon_cur;
 		gint rpt_cur;
@@ -137,20 +138,19 @@ struct _ObsAssistConfig {
 		gint n_avg;
 		gint n_rpt;
 
-		gboolean wait;
-
 		GtkSpinButton *sb_deg;
 		GtkSpinButton *sb_lo;
 		GtkSpinButton *sb_hi;
 		GtkSpinButton *sb_avg;
 		GtkSpinButton *sb_rpt;
+		GtkSpinButton *sb_glat;
 
 		GtkWidget *pbar_glon;
 		GtkWidget *pbar_rpt;
 
 		GtkWidget *plt;
 
-	} gal_plane;
+	} gal_latscan;
 
 
 	struct {
@@ -227,6 +227,7 @@ struct _ObsAssistConfig {
 
 		GtkSpinButton *sb_avg;
 		GtkSpinButton *sb_rpt;
+
 
 		gdouble ra_cent;
 		gdouble de_cent;

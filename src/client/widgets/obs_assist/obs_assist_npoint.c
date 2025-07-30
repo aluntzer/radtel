@@ -336,7 +336,7 @@ static gboolean npoint_obs_pos(ObsAssist *p)
 			return TRUE;
 
 	/* we reached the position, allow at least one spectrum;
-	 * this will be cleared in gal_plane_measure()
+	 * this will be cleared in npoint_measure()
 	 */
 	npoint_set_once(TRUE);
 
