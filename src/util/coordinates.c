@@ -278,9 +278,10 @@ struct coord_equatorial horizontal_to_equatorial(struct coord_horizontal hor,
 
 	eq.ra = local_sidereal_time(lon) - hour_angle + hour_angle_shift;
 
-	if(eq.ra < 0.0)
+	while(eq.ra < 0.0)
 		eq.ra += 24.0;
 
+	eq.ra = fmod(eq.ra, 24.0);
 
 	return eq;
 }
