@@ -53,7 +53,10 @@ double gaussian(double p[4], double x)
 
 double gaussian_fwhm(double p[4])
 {
-	return 2.0 * sqrt(2.0 * log(2.0)) * p[1];
+	/* note we use fabs() so people are not irritated when this
+	 * the fwhm is negative, which can be a natural consequence of the LM fit
+	 */
+	return fabs(2.0 * sqrt(2.0 * log(2.0)) * p[1]);
 }
 
 
