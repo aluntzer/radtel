@@ -84,8 +84,11 @@ struct sdr14_data_pkt {
  */
 #ifndef IS_OH_MASER
 #define RECV_LO_FREQ		  1413000000
+#define SDR14_1_4_CAL		(0.8234 * 4.8 / 2.656)
 #else
-#define RECV_LO_FREQ		  1606000000
+//#define RECV_LO_FREQ		  1606000000
+#define RECV_LO_FREQ		  1660000000
+#define SDR14_1_6_CAL		(0.8234 * 4.8 * 3.54)
 #endif /* IS_OH_MASER */
 #define RECV_IF_HZ		     6500000
 #define RECV_IF_BW		    10700000	/* nominal output low pass */
@@ -105,13 +108,14 @@ struct sdr14_data_pkt {
 /* initial receiver configuration */
 #define SDR14_INIT_FREQ_START_HZ	1420042187
 #define SDR14_INIT_FREQ_STOP_HZ		1420970312
+#define SDR14_CAL	SDR14_1_4_CAL
 #else
-#define SDR14_INIT_FREQ_START_HZ	1611800000
-#define SDR14_INIT_FREQ_STOP_HZ		1612200000
+#define SDR14_INIT_FREQ_START_HZ	1611800000 + 54000000
+#define SDR14_INIT_FREQ_STOP_HZ		1612200000 + 54000000
+#define SDR14_CAL	SDR14_1_6_CAL
 #endif /* IS_OH_MASER */
 #define SDR14_INIT_BIN_DIV		         6
 #define SDR14_INIT_NSTACK		        64
-
 
 
 /**
@@ -148,7 +152,7 @@ static struct {
 	 .freq_if_bw       = SDR14_IF_BW_HZ,
 	 .freq_bin_div_max = SDR14_BIN_DIV_MAX,
 	 .bins	           = SDR14_DIGITAL_BINS,
-	 .temp_cal_factor   = 0.8234 * 4.8,
+	 .temp_cal_factor   = SDR14_CAL,
 	};
 
 

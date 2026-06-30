@@ -1126,10 +1126,16 @@ static void net_server_reassign_control_internal(gpointer ref, gint lvl)
 	str = net_get_host_string(c->con);
 
 	if (!p) {
+		if (lvl > PRIV_DEFAULT) {
+			msg = g_strdup_printf("Reassigned control to %s "
+					"(connected from %s)",
+					c->nick, str);
+		} else if (lvl == c->priv) {
+			msg = g_strdup_printf("Rejected control for %s "
+					"(connected from %s)",
+					c->nick, str);
+		}
 		c->priv = lvl;
-		msg = g_strdup_printf("Reassigned control to %s "
-				      "(connected from %s)",
-				      c->nick, str);
 	} else if (p == c) {
 
 		if (lvl == PRIV_DEFAULT) {
@@ -1154,7 +1160,7 @@ static void net_server_reassign_control_internal(gpointer ref, gint lvl)
 				      "own privilege level",
 				      c->nick, str);
 		}
-	} else {
+	} else if (p->priv == PRIV_FULL && lvl == PRIV_CONTROL) {
 		gchar *h;
 
 		pwr = FALSE;
@@ -1166,7 +1172,12 @@ static void net_server_reassign_control_internal(gpointer ref, gint lvl)
 				      "level of privilege",
 				      c->nick, str, p->nick, h);
 		g_free(h);
+	} else {
+		msg = g_strdup_printf("Rejected control for %s "
+				"(connected from %s)",
+				c->nick, str);
 	}
+
 
 
 	net_server_broadcast_message(msg, NULL);
