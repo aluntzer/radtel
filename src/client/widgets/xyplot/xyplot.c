@@ -62,7 +62,6 @@ G_DEFINE_TYPE(XYPlot, xyplot, GTK_TYPE_DRAWING_AREA)
 #define GRAPH_IMP_B 0.066
 
 
-
 struct graph {
 	gdouble *data_x;	/* the data to plot */
 	gdouble *data_y;
@@ -1622,8 +1621,14 @@ static void xyplot_update_plot_size(XYPlot *p,
 	p->plot_w = w;
 	p->plot_h = h;
 
-	p->scale_x =  w / p->x_ax.len;
-	p->scale_y =  h / p->y_ax.len;
+	p->scale_x = 1.0;
+	p->scale_y = 1.0;
+
+	if (isfinite(p->x_ax.len) && (p->x_ax.len > 0.0))
+		p->scale_x = w / p->x_ax.len;
+
+	if (isfinite(p->y_ax.len) && (p->y_ax.len > 0.0))
+		p->scale_y = h / p->y_ax.len;
 }
 
 
@@ -3059,6 +3064,11 @@ static void xyplot_draw_nan_lines(XYPlot *p, cairo_t *cr, struct graph *g)
 			break;
 	}
 
+	if (i >= g->data_len) {
+		cairo_restore(cr);
+		return;
+	}
+
 
 	gboolean restart = FALSE;
 	cairo_move_to(cr, (x[i] - p->x_ax.min) * sx,
@@ -3554,6 +3564,12 @@ static void xyplot_auto_range(XYPlot *p)
 			p->xmin -= 0.5;
 			p->xlen  = 1.0;
 		}
+
+		if (!isfinite(p->xlen) || (p->xlen < 0.0)) {
+			p->xmin = -0.5;
+			p->xmax =  0.5;
+			p->xlen =  1.0;
+		}
 	}
 
 	if (p->autorange_y) {
@@ -3561,6 +3577,12 @@ static void xyplot_auto_range(XYPlot *p)
 			p->ymax += 0.5;
 			p->ymin -= 0.5;
 			p->ylen  = 1.0;
+		}
+
+		if (!isfinite(p->ylen) || (p->ylen < 0.0)) {
+			p->ymin = -0.5;
+			p->ymax =  0.5;
+			p->ylen =  1.0;
 		}
 	}
 
@@ -3964,8 +3986,14 @@ static gboolean xyplot_motion_notify_event_cb(GtkWidget *widget,
 	py = p->plot_y + p->plot_h - event->y;
 
 	/* get data range reference */
-	x = px / p->scale_x + p->x_ax.min;
-	y = py / p->scale_y + p->y_ax.min;
+	x = p->x_ax.min;
+	y = p->y_ax.min;
+
+	if (isfinite(p->scale_x) && (p->scale_x > 0.0))
+		x = px / p->scale_x + p->x_ax.min;
+
+	if (isfinite(p->scale_y) && (p->scale_y > 0.0))
+		y = py / p->scale_y + p->y_ax.min;
 
 
 	snprintf(buf, ARRAY_SIZE(buf),
@@ -4041,9 +4069,16 @@ static gboolean xyplot_motion_notify_event_cb(GtkWidget *widget,
 	if (event->state & GDK_BUTTON1_MASK) {
 
 		/* get plot pixel reference */
-		p->rub.px0 = (p->rub.x0 - p->plot_x) / p->scale_x + p->x_ax.min;
-		p->rub.py0 = (p->plot_y + p->plot_h - p->rub.y0) / p->scale_y
-			     + p->y_ax.min;
+		p->rub.px0 = p->x_ax.min;
+		p->rub.py0 = p->y_ax.min;
+
+		if (isfinite(p->scale_x) && (p->scale_x > 0.0))
+			p->rub.px0 = (p->rub.x0 - p->plot_x) / p->scale_x
+				   + p->x_ax.min;
+
+		if (isfinite(p->scale_y) && (p->scale_y > 0.0))
+			p->rub.py0 = (p->plot_y + p->plot_h - p->rub.y0)
+				   / p->scale_y + p->y_ax.min;
 
 		p->rub.px1 = x;
 		p->rub.py1 = y;
@@ -4120,6 +4155,12 @@ static gboolean xyplot_button_release_cb(GtkWidget *widget,
 
 
 	if (event->state & GDK_CONTROL_MASK) {
+
+		if (!isfinite(p->sel.xmin) || !isfinite(p->sel.xmax) ||
+		    !isfinite(p->sel.ymin) || !isfinite(p->sel.ymax) ||
+		    (p->sel.xmax <= p->sel.xmin) ||
+		    (p->sel.ymax <= p->sel.ymin))
+			return TRUE;
 
 		g_message("FIT ALL DATA X: %g to %g and Y: %g to %g",
 			  p->sel.xmin, p->sel.xmax, p->sel.ymin, p->sel.ymax);
@@ -4524,6 +4565,10 @@ static ssize_t xyplot_extract_data(XYPlot *p,
 
 		g  = (struct graph *) elem->data;
 
+		/* a fit must not be fed its own output */
+		if (g->label && !strcmp("FIT", g->label))
+			continue;
+
 		for (i = 0; i < g->data_len; i++) {
 
 			if (g->data_x[i] >= xmin) {
@@ -4625,7 +4670,7 @@ void xyplot_select_all_data(GtkWidget *widget)
 
 	p->sel.xmin = p->xmin;
 	p->sel.xmax = p->xmax;
-	p->sel.ymin = p->xmin;
+	p->sel.ymin = p->ymin;
 	p->sel.ymax = p->ymax;
 
 	p->sel.active = TRUE;
@@ -4837,6 +4882,10 @@ void xyplot_drop_graph(GtkWidget *widget, void *ref)
 	elem = g_list_find(plot->graphs, g);
 
 	if (!elem) {
+		/* note: the reference is dangling here, so it must not be
+		 * dereferenced; the plain pointer comparison in g_list_find()
+		 * is all that is safe on this path
+		 */
 		g_warning("%s: graph reference not found!", __func__);
 		return;
 	}
@@ -4891,6 +4940,38 @@ void xyplot_drop_graph(GtkWidget *widget, void *ref)
  * XXX: need mechanism to mark "fit" data other than the graph label!
  */
 
+
+/* the fit-selection request must not be delivered from inside
+ * xyplot_add_graph(): the re-entrant fit handler refreshes the plot, and
+ * at that point the graph just added still carries the xyplot_add_graph
+ * defaults, so it would be painted as a yellow histeps curve. since the
+ * caller can only apply the style and the colour after xyplot_add_graph()
+ * has returned, the request is deferred to an idle handler instead.
+ */
+
+static gboolean xyplot_emit_fit_selection_cb(gpointer data)
+{
+	GtkWidget *widget = data;
+
+	XYPlot *p;
+
+	p = XYPLOT(widget);
+
+	if (p && p->sel.active)
+		g_signal_emit_by_name(widget, "xyplot-fit-selection");
+
+	return G_SOURCE_REMOVE;
+}
+
+
+static void xyplot_emit_fit_selection(GtkWidget *widget)
+{
+	g_idle_add_full(G_PRIORITY_DEFAULT_IDLE,
+			xyplot_emit_fit_selection_cb,
+			g_object_ref(widget), g_object_unref);
+}
+
+
 void *xyplot_add_graph(GtkWidget *widget,
 		       gdouble *x, gdouble *y, gdouble *c,
 		       gsize size, gchar *label)
@@ -4935,9 +5016,11 @@ void *xyplot_add_graph(GtkWidget *widget,
 	xyplot_auto_range(p);
 	xyplot_auto_axes(p);
 
-	if (strcmp("FIT", label))
-		if (p->sel.active)
-			g_signal_emit_by_name(widget, "xyplot-fit-selection");
+	if (g->label && !strcmp("FIT", g->label))
+		return g;
+
+	if (p->sel.active)
+		xyplot_emit_fit_selection(widget);
 
 	return g;
 }

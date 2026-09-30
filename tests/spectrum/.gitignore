@@ -1,0 +1,11 @@
+build/
+fuzz_spectrum
+repro
+art/
+corpus/
+crash-*
+leak-*
+timeout-*
+oom-*
+*.log
+log-*

@@ -603,6 +603,8 @@ static gboolean spectrum_plt_fitbox_selected(GtkWidget *w, gpointer data)
 	if (!n) {
 		xyplot_drop_graph(w, fit->plt_ref_in);
 		xyplot_drop_graph(w, fit->plt_ref_out);
+		fit->plt_ref_in  = NULL;
+		fit->plt_ref_out = NULL;
 		return TRUE;
 	}
 
@@ -806,18 +808,18 @@ static void spectrum_append_data(Spectrum *p, struct spectrum *sp)
 		alpha_frac = p->cfg->c_per.alpha * 1.0 / ((gdouble) (p->cfg->n_per));
 
 
-		for (elem = p->cfg->per; elem; elem = elem->next) {
+		elem = p->cfg->per;
+
+		while (elem) {
 			ref = elem->data;
 
 			if (xyplot_get_graph_rgba(p->cfg->plot, ref, &c)) {
 				/* graph is no more, drop */
 				tmp = elem->next;
 				p->cfg->per = g_list_delete_link(p->cfg->per, elem);
+				elem = tmp;
 
-				if (tmp && tmp->prev) {
-					elem = tmp->prev; /* take one step back */
-					continue;
-				}
+				continue;
 			}
 
 			c.alpha -= alpha_frac;
@@ -829,6 +831,8 @@ static void spectrum_append_data(Spectrum *p, struct spectrum *sp)
 				c.alpha = alpha_frac;
 
 			xyplot_set_graph_rgba(p->cfg->plot, ref, c);
+
+			elem = elem->next;
 		}
 	}
 

@@ -15,6 +15,7 @@
  */
 
 #include <glib.h>
+#include <string.h>
 
 #include <cmd.h>
 
@@ -40,7 +41,7 @@ struct packet *cmd_spec_acq_cfg_gen(uint16_t trans_id,
 
 	struct packet *pkt;
 
-	struct spec_acq_cfg *acq;
+	struct spec_acq_cfg acq;
 
 
 	pkt_size = sizeof(struct packet) + sizeof(struct spec_acq_cfg);
@@ -53,15 +54,17 @@ struct packet *cmd_spec_acq_cfg_gen(uint16_t trans_id,
 	pkt->data_size = sizeof(struct spec_acq_cfg);
 
 
-	acq = (struct spec_acq_cfg *) pkt->data;
+	/* the payload starts at offset 10 of a packed packet, so fill an
+	 * aligned local and copy the bytes across
+	 */
+	acq.freq_start_hz = f0;
+	acq.freq_stop_hz  = f1;
+	acq.bw_div	  = bw_div;
+	acq.bin_div       = bin_div;
+	acq.n_stack       = n_stack;
+	acq.acq_max       = acq_max;
 
-
-	acq->freq_start_hz = f0;
-	acq->freq_stop_hz  = f1;
-	acq->bw_div	   = bw_div;
-	acq->bin_div       = bin_div;
-	acq->n_stack       = n_stack;
-	acq->acq_max       = acq_max;
+	memcpy(pkt->data, &acq, sizeof(acq));
 
 	pkt_set_data_crc16(pkt);
 
@@ -76,22 +79,23 @@ void cmd_spec_acq_cfg(uint16_t trans_id,
 		      uint32_t bin_div, uint32_t n_stack, uint32_t acq_max)
 {
 	struct packet *pkt;
-	struct spec_acq_cfg *acq;
+	struct spec_acq_cfg acq;
 
 	pkt = cmd_spec_acq_cfg_gen(trans_id, f0, f1, bw_div,
 				   bin_div, n_stack, acq_max);
 
-	acq = (struct spec_acq_cfg *) pkt->data;
+	/* pkt->data is unaligned, so read the fields through a local */
+	memcpy(&acq, pkt->data, sizeof(acq));
 
 	g_debug("Sending command acquire spectrum "
 		  "FREQ range: %g - %g MHz, BW div: %d, BIN div %d,"
 		  "STACK: %d, ACQ %d",
-		  acq->freq_start_hz / 1e6,
-		  acq->freq_stop_hz / 1e6,
-		  acq->bw_div,
-		  acq->bin_div,
-		  acq->n_stack,
-		  acq->acq_max);
+		  acq.freq_start_hz / 1e6,
+		  acq.freq_stop_hz / 1e6,
+		  acq.bw_div,
+		  acq.bin_div,
+		  acq.n_stack,
+		  acq.acq_max);
 
 
 	net_send((void *) pkt, pkt_size_get(pkt));

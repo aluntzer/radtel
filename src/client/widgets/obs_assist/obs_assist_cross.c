@@ -155,6 +155,8 @@ static gboolean cross_plt_fitbox_selected(GtkWidget *w, gpointer data)
 	if (!n) {
 		xyplot_drop_graph(w, ax->plt_ref_in);
 		xyplot_drop_graph(w, ax->plt_ref_out);
+		ax->plt_ref_in  = NULL;
+		ax->plt_ref_out = NULL;
 		return TRUE;
 	}
 

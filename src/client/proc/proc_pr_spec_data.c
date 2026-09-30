@@ -15,6 +15,8 @@
  */
 
 #include <glib.h>
+#include <inttypes.h>
+#include <stddef.h>
 #include <string.h>
 
 #include <protocol.h>
@@ -26,12 +28,42 @@ void proc_pr_spec_data(struct packet *pkt)
 {
 	struct spec_data *s;
 
+	gsize hdr, avail, n;
+
 
 	g_debug("Server sent spectral data");
 
-	s = g_malloc(pkt->data_size);
+	hdr   = offsetof(struct spec_data, spec);
+	avail = pkt->data_size;
 
-	memcpy(s, pkt->data, pkt->data_size);
+	/* the payload lives at offset 10 of a packed packet, so it is never
+	 * suitably aligned for struct spec_data; read it through a copy
+	 */
+	if (avail < hdr) {
+		g_warning("PR_SPEC_DATA: payload of %" G_GSIZE_FORMAT
+			  " bytes is shorter than the header", avail);
+		return;
+	}
+
+	s = g_malloc(avail);
+
+	memcpy(s, pkt->data, avail);
+
+	/* the sender sizes the payload as sizeof(struct spec_data) + 4 * n,
+	 * so the sample count must fit what actually arrived, otherwise the
+	 * consumer reads past the copy
+	 */
+	n = (avail - hdr) / sizeof(uint32_t);
+
+	if (s->n > n) {
+		g_warning("PR_SPEC_DATA: n is %" PRIu32 " but the payload "
+			  "carries at most %" G_GSIZE_FORMAT " samples, "
+			  "dropping", s->n, n);
+
+		g_free(s);
+
+		return;
+	}
 
 	sig_pr_spec_data(s);
 
