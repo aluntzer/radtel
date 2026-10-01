@@ -35,6 +35,7 @@
 #define OP_CLICK	0x12
 #define OP_RESET	0x13
 #define OP_PROBE_NAN	0x14
+#define OP_POPDOWN	0x15
 
 
 struct buf {
@@ -672,6 +673,83 @@ int main(int argc, char **argv)
 		put(&b, OP_SEL_ALL);
 		put(&b, OP_REDRAW);
 		rc |= run_no_stale(&b, "fit-ref-stale", 40);
+	}
+
+	if (!strcmp(name, "all") || !strcmp(name, "fit-drop-all-ref")) {
+		/* make a fit so both curve references are live, then drop every
+		 * graph the way the plot's "Clear Plot" item does: the plot
+		 * frees the fit curves without the fit having asked for it, so
+		 * the stored references must be cleared there or the next fit
+		 * drops freed memory
+		 */
+		memset(&b, 0, sizeof(b));
+
+		for (i = 0; i < 6; i++) {
+			at = b.n;
+			push_ncode(&b, 30);
+			set_pattern(&b, at, (unsigned) (i % 9));
+		}
+
+		/* a fit over the data, so both curve references are live */
+		put(&b, OP_SEL_ALL);
+		put(&b, OP_REDRAW);
+
+		put(&b, OP_DROP_ALL);
+
+		at = b.n;
+		push_ncode(&b, 30);
+		set_pattern(&b, at, 1);
+
+		/* re-arm the band: the next graph to arrive asks for a fit,
+		 * and that fit is the one that drops the stale references
+		 */
+		put(&b, OP_SEL_ALL);
+
+		at = b.n;
+		push_ncode(&b, 30);
+		set_pattern(&b, at, 2);
+
+		put(&b, OP_REDRAW);
+		put(&b, OP_REDRAW);
+
+		rc |= run_no_stale(&b, "fit-drop-all-ref", 40);
+	}
+
+	if (!strcmp(name, "all") || !strcmp(name, "fit-menu-drop-all")) {
+		/* the same, but with the graph context menu up: the drop must
+		 * be deferred rather than free the graphs the open menu still
+		 * points at, and the references must be cleared once the
+		 * deferred free runs
+		 */
+		memset(&b, 0, sizeof(b));
+
+		for (i = 0; i < 6; i++) {
+			at = b.n;
+			push_ncode(&b, 30);
+			set_pattern(&b, at, (unsigned) (i % 9));
+		}
+
+		put(&b, OP_SEL_ALL);
+		put(&b, OP_REDRAW);
+
+		put(&b, OP_POPUP);
+		put(&b, OP_DROP_ALL);
+		put(&b, OP_POPDOWN);
+
+		at = b.n;
+		push_ncode(&b, 30);
+		set_pattern(&b, at, 1);
+
+		put(&b, OP_SEL_ALL);
+
+		for (i = 0; i < 4; i++) {
+			at = b.n;
+			push_ncode(&b, 30);
+			set_pattern(&b, at, (unsigned) (i + 1));
+			put(&b, OP_REDRAW);
+		}
+
+		rc |= run_no_stale(&b, "fit-menu-drop-all", 40);
 	}
 
 	if (!strcmp(name, "all") || !strcmp(name, "fit-deferred")) {

@@ -40,6 +40,7 @@ enum harness_op {
 	HARNESS_OP_CLICK	= 0x12,	/* mod1+click: retune acq */
 	HARNESS_OP_RESET	= 0x13,	/* autorange (key "a") */
 	HARNESS_OP_PROBE_NAN	= 0x14,	/* all-NaN graph, NaN-line style */
+	HARNESS_OP_POPDOWN	= 0x15,	/* dismiss the graph context menu */
 	HARNESS_OP_MAX
 };
 

@@ -129,6 +129,35 @@ static void plot_gaussian(GtkWidget *w, gdouble par[4], size_t n,
 
 
 /**
+ * @brief forget a fit curve reference once the plot has dropped it
+ *
+ * A graph can leave the plot without the fit having asked for it, when the drop
+ * happened while the graph context menu was up and the free was deferred until
+ * the menu went away, or when all graphs were dropped. The stored references
+ * must be cleared here or the next fit drops references the plot has already
+ * disowned.
+ */
+
+static void cross_plt_graph_dropped(__attribute__((unused)) GtkWidget *w,
+				     gpointer ref, gpointer data)
+{
+	struct crossax *ax;
+
+
+	if (!data)
+		return;
+
+	ax = (struct crossax *) data;
+
+	if (ax->plt_ref_in == ref)
+		ax->plt_ref_in = NULL;
+
+	if (ax->plt_ref_out == ref)
+		ax->plt_ref_out = NULL;
+}
+
+
+/**
  * @brief fit selection box callback
  */
 
@@ -747,6 +776,14 @@ static void on_assistant_apply(GtkWidget *as, ObsAssist *p)
 
 	g_signal_connect(p->cfg->cross.plt_el,  "xyplot-fit-selection",
 			 G_CALLBACK(cross_plt_fitbox_selected),
+			 &p->cfg->cross.el);
+
+	g_signal_connect(p->cfg->cross.plt_az,  "xyplot-graph-dropped",
+			 G_CALLBACK(cross_plt_graph_dropped),
+			 &p->cfg->cross.az);
+
+	g_signal_connect(p->cfg->cross.plt_el,  "xyplot-graph-dropped",
+			 G_CALLBACK(cross_plt_graph_dropped),
 			 &p->cfg->cross.el);
 
 	gtk_box_pack_start(GTK_BOX(p), GTK_WIDGET(grid), TRUE, TRUE, 0);

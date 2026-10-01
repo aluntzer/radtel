@@ -572,6 +572,56 @@ static gboolean spectrum_plt_clicked_coord(GtkWidget *w, gdouble x,
 
 
 /**
+ * @brief forget a graph reference once the plot has dropped it
+ *
+ * A graph can leave the plot without this widget having asked for it, when the
+ * drop happened while the graph context menu was up and the free was deferred
+ * until the menu went away, or when all graphs were dropped. Every stored
+ * reference must be cleared here or the next drop walks a list of references
+ * the plot has already disowned.
+ */
+
+static void spectrum_plt_graph_dropped(__attribute__((unused)) GtkWidget *w,
+				       gpointer ref, gpointer data)
+{
+	GList *elem;
+
+	struct fitdata *fit;
+
+	Spectrum *p;
+
+
+	p = SPECTRUM(data);
+
+	if (!p)
+		return;
+
+	fit = &p->cfg->fit;
+
+	if (fit->plt_ref_in == ref)
+		fit->plt_ref_in = NULL;
+
+	if (fit->plt_ref_out == ref)
+		fit->plt_ref_out = NULL;
+
+	if (p->cfg->r_per == ref)
+		p->cfg->r_per = NULL;
+
+	if (p->cfg->r_avg == ref)
+		p->cfg->r_avg = NULL;
+
+	/* blank the data sets rather than unlink them: this runs from inside
+	 * the drop the caller is in the middle of, and the caller still holds
+	 * the list node it is about to unlink itself
+	 */
+	for (elem = p->cfg->per; elem; elem = elem->next) {
+		if (elem->data == ref)
+			elem->data = NULL;
+	}
+}
+
+
+/**
  * @brief fit selection box callback
  */
 
@@ -1514,6 +1564,10 @@ static void gui_create_spectrum_controls(Spectrum *p)
 
 	g_signal_connect(p->cfg->plot, "xyplot-clicked-xy-coord",
 			 G_CALLBACK(spectrum_plt_clicked_coord),
+			 p);
+
+	g_signal_connect(p->cfg->plot, "xyplot-graph-dropped",
+			 G_CALLBACK(spectrum_plt_graph_dropped),
 			 p);
 
 

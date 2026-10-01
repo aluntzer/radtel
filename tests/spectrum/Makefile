@@ -48,7 +48,8 @@ SCENARIOS := nan-graph nan-graph-head nan-graph-tail nan-graph-2 nan-graph-1 \
 	     flat-selection zero-band few-points select-all refit-loop \
 	     refit-once refit-on-packet stale-scale degenerate-fit \
 	     style-sweep menu-drop persistence-churn short-packet \
-	     fit-graph-leak fit-menu-refit fit-ref-stale fit-deferred
+	     fit-graph-leak fit-menu-refit fit-ref-stale \
+	     fit-drop-all-ref fit-menu-drop-all fit-deferred
 
 .PHONY: all clean fuzz repro check
 

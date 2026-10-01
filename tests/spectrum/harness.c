@@ -789,6 +789,20 @@ void harness_run(const guint8 *data, size_t size)
 		case HARNESS_OP_POPUP:
 			send_button(GDK_BUTTON_PRESS, 3, 0, 10.0, 10.0);
 			break;
+		case HARNESS_OP_POPDOWN: {
+			XYPlot *p = XYPLOT(plot);
+
+			/* dismiss the graph context menu so a graph that a drop
+			 * deferred while the menu was up can finally be freed
+			 */
+			if (GTK_IS_WIDGET(p->menu)) {
+				gtk_menu_popdown(GTK_MENU(p->menu));
+				gtk_widget_hide(p->menu);
+			}
+
+			settle();
+			break;
+		}
 		case HARNESS_OP_CLICK: {
 			gdouble x, y;
 

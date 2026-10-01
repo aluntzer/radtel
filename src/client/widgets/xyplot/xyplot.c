@@ -99,6 +99,8 @@ static void xyplot_plot_render(XYPlot *p, cairo_t *cr,
 static void xyplot_auto_range(XYPlot *p);
 static void xyplot_auto_axes(XYPlot *p);
 
+static void xyplot_drop_all_graphs_cleanup(GtkWidget *widget);
+
 
 
 // stolen from gnuplot
@@ -4416,6 +4418,11 @@ static void xyplot_class_init(XYPlotClass *klass)
 		     0, NULL, NULL, NULL,
 		     G_TYPE_NONE, 2, G_TYPE_DOUBLE, G_TYPE_DOUBLE);
 
+	g_signal_new("xyplot-graph-dropped",
+		     TYPE_XYPLOT, G_SIGNAL_RUN_FIRST,
+		     0, NULL, NULL, NULL,
+		     G_TYPE_NONE, 1, G_TYPE_POINTER);
+
 
 	/* override widget methods go here if needed */
 }
@@ -4531,6 +4538,28 @@ static void xyplot_free_graph(struct graph *g)
 	g_free(g->data_c);
 	g_free(g->label);
 	g_free(g);
+}
+
+
+/**
+ * @brief announce that the plot no longer holds a graph
+ *
+ * The reference returned by xyplot_add_graph() is only usable while the plot
+ * still lists the graph. A drop takes it out of the list right away, even when
+ * the free itself has to wait for the graph menu to go away, so whoever stored
+ * the reference has to be told here rather than at the free: by then it would
+ * be walking a list of references the plot has already disowned.
+ *
+ * @param p the XYPlot widget
+ * @param g the graph that was dropped
+ */
+
+static void xyplot_notify_graph_dropped(XYPlot *p, struct graph *g)
+{
+	if (!g)
+		return;
+
+	g_signal_emit_by_name(p, "xyplot-graph-dropped", g);
 }
 
 
@@ -4788,16 +4817,45 @@ void xyplot_drop_all_graphs(GtkWidget *widget)
 
 	GList *elem;
 
+	struct graph *g;
+
+
 	plot = XYPLOT(widget);
 
 	if (!plot)
 		return;
 
-	for (elem = plot->graphs; elem; elem = elem->next)
-		xyplot_free_graph((struct graph *) elem->data);
+	if (!GTK_IS_WIDGET(plot->menu) || !gtk_widget_get_visible(plot->menu)) {
 
-	g_list_free(plot->graphs);
-	plot->graphs = NULL;
+		for (elem = plot->graphs; elem; elem = elem->next) {
+			g = (struct graph *) elem->data;
+
+			xyplot_notify_graph_dropped(plot, g);
+			xyplot_free_graph(g);
+		}
+
+		g_list_free(plot->graphs);
+		plot->graphs = NULL;
+
+		xyplot_drop_all_graphs_cleanup(widget);
+
+	} else {
+		/* the open menu still points at these graphs, so defer
+		 * their free the way xyplot_drop_graph() does
+		 */
+
+		for (elem = plot->graphs; elem; elem = elem->next) {
+			g = (struct graph *) elem->data;
+
+			xyplot_notify_graph_dropped(plot, g);
+
+			g_ref_count_dec(&g->ref);
+			plot->graphs_cleanup = g_list_append(plot->graphs_cleanup, g);
+		}
+
+		g_list_free(plot->graphs);
+		plot->graphs = NULL;
+	}
 
 	plot->sel.active = FALSE;
 }
@@ -4891,6 +4949,11 @@ void xyplot_drop_graph(GtkWidget *widget, void *ref)
 	}
 
 	plot->graphs = g_list_remove_link(plot->graphs, elem);
+
+	/* the graph leaves the plot here, whether or not the free below can
+	 * happen right away
+	 */
+	xyplot_notify_graph_dropped(plot, g);
 
 	if (!GTK_IS_WIDGET(plot->menu) || !gtk_widget_get_visible(plot->menu)) {
 
