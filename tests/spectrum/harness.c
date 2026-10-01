@@ -6,6 +6,7 @@
 #include <gtk/gtk.h>
 #include <math.h>
 #include <stddef.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <spectrum.h>
@@ -88,6 +89,118 @@ guint harness_graph_pending(void)
 	XYPlot *p = XYPLOT(plot);
 
 	return g_list_length(p->graphs_cleanup);
+}
+
+
+/* the xyplot paints onto its own surface and only blits that surface to the
+ * window, so the contents of that surface say what the user gets to see: a drop
+ * that no render follows leaves the previous graphs on it
+ */
+guint harness_plot_ink(void)
+{
+	int w, h, x, y, stride;
+	int br, bg, bb;
+
+	guint n = 0;
+
+	cairo_surface_t *img;
+	cairo_t *cr;
+	unsigned char *px;
+
+
+	w = gtk_widget_get_allocated_width(plot);
+	h = gtk_widget_get_allocated_height(plot);
+
+	if (w <= 0 || h <= 0)
+		return 0;
+
+	if (!XYPLOT(plot)->render) {
+		g_printerr("harness: the plot has no render surface\n");
+
+		return 0;
+	}
+
+	img = cairo_image_surface_create(CAIRO_FORMAT_RGB24, w, h);
+	cr  = cairo_create(img);
+
+	cairo_set_source_surface(cr, XYPLOT(plot)->render, 0, 0);
+	cairo_paint(cr);
+	cairo_destroy(cr);
+
+	px     = cairo_image_surface_get_data(img);
+	stride = cairo_image_surface_get_stride(img);
+
+	br = (int) (0.200 * 255.0);
+	bg = (int) (0.224 * 255.0);
+	bb = (int) (0.231 * 255.0);
+
+	for (y = 0; y < h; y++) {
+
+		unsigned int *row = (unsigned int *) (px + (ptrdiff_t) y * stride);
+
+		for (x = 0; x < w; x++) {
+
+			int r = (row[x] >> 16) & 0xff;
+			int g = (row[x] >> 8) & 0xff;
+			int b = row[x] & 0xff;
+
+			if (abs(r - br) > 8 || abs(g - bg) > 8 ||
+			    abs(b - bb) > 8)
+				n++;
+		}
+	}
+
+	cairo_surface_destroy(img);
+
+	return n;
+}
+
+
+/* activate the plot's own "Clear Plot" item, the way a user does, rather
+ * than calling the drop API behind the widget's back; the item sits in the
+ * "Plot" submenu, so the whole menu tree has to be searched
+ */
+static gboolean clear_plot_item(GtkWidget *w)
+{
+	GList *l;
+
+	if (GTK_IS_MENU_ITEM(w)) {
+
+		const gchar *lbl;
+
+		lbl = gtk_menu_item_get_label(GTK_MENU_ITEM(w));
+
+		if (!g_strcmp0(lbl, "Clear Plot")) {
+			gtk_menu_item_activate(GTK_MENU_ITEM(w));
+
+			return TRUE;
+		}
+
+		w = gtk_menu_item_get_submenu(GTK_MENU_ITEM(w));
+
+		if (!w)
+			return FALSE;
+	}
+
+	if (!GTK_IS_CONTAINER(w))
+		return FALSE;
+
+	for (l = gtk_container_get_children(GTK_CONTAINER(w)); l; l = l->next) {
+
+		if (clear_plot_item(GTK_WIDGET(l->data)))
+			return TRUE;
+	}
+
+	return FALSE;
+}
+
+
+void harness_clear_plot(void)
+{
+	XYPlot *p = XYPLOT(plot);
+
+	if (!clear_plot_item(p->menu))
+		g_printerr("harness: the plot menu has no Clear Plot item\n");
 }
 
 
@@ -803,6 +916,10 @@ void harness_run(const guint8 *data, size_t size)
 			settle();
 			break;
 		}
+		case HARNESS_OP_CLEAR:
+			harness_clear_plot();
+			pts_live = 0;
+			break;
 		case HARNESS_OP_CLICK: {
 			gdouble x, y;
 

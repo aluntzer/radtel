@@ -754,6 +754,8 @@ static void xyplot_import_xy_graph_cb(GtkWidget *w, XYPlot *p)
 static void xyplot_drop_all_graphs_cb(GtkWidget *w, XYPlot *p)
 {
 	xyplot_drop_all_graphs(GTK_WIDGET(p));
+
+	xyplot_redraw(GTK_WIDGET(p));
 }
 
 
@@ -4882,26 +4884,20 @@ static void xyplot_drop_all_graphs_cleanup(GtkWidget *widget)
 	if (!plot)
 		return;
 
-	for (elem = plot->graphs_cleanup; elem; elem = elem->next) {
+	for (elem = plot->graphs_cleanup; elem; elem = tmp) {
+
+		tmp = elem->next;
 
 		g = (struct graph *) elem->data;
 
 		if (!g_ref_count_dec(&g->ref))
 			continue;
 
-		tmp = elem->next;
-
 		plot->graphs_cleanup = g_list_remove_link(plot->graphs_cleanup,
 							  elem);
+		g_list_free(elem);
+
 		xyplot_free_graph(g);
-
-		if (tmp && tmp->prev)
-			elem = tmp->prev;
-	}
-
-	if (!g_list_length(plot->graphs_cleanup)) {
-		g_list_free(plot->graphs_cleanup);
-		plot->graphs_cleanup = NULL;
 	}
 }
 

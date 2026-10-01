@@ -36,6 +36,7 @@
 #define OP_RESET	0x13
 #define OP_PROBE_NAN	0x14
 #define OP_POPDOWN	0x15
+#define OP_CLEAR	0x16
 
 
 struct buf {
@@ -210,6 +211,62 @@ static int run_finite(struct buf *b, const char *name)
 	}
 
 	printf("--- %s: plot geometry finite\n", name);
+	fflush(stdout);
+
+	return 0;
+}
+
+
+/* run a program and require every graph the plot deferred to have been
+ * released: the drain walks the list once and must not stop after its first
+ * element
+ */
+static int run_pending(struct buf *b, const char *name, guint want)
+{
+	guint pend;
+
+	run(b, name);
+
+	pend = harness_graph_pending();
+
+	if (pend != want) {
+		printf("--- %s: FAIL, %u graphs awaiting cleanup, "
+		       "expected %u\n", name, pend, want);
+		fflush(stdout);
+
+		return 1;
+	}
+
+	printf("--- %s: %u graphs awaiting cleanup, as expected\n",
+	       name, pend);
+	fflush(stdout);
+
+	return 0;
+}
+
+
+/* run a program and require the plot to carry no more ink than an empty plot
+ * does; the widget shows the surface its last render filled, so a drop that is
+ * not followed by a refresh leaves the previous graphs on it
+ */
+static int run_blank(struct buf *b, const char *name, guint want)
+{
+	guint ink;
+
+	run(b, name);
+
+	ink = harness_plot_ink();
+
+	if (ink != want) {
+		printf("--- %s: FAIL, %u pixels of ink on the plot, "
+		       "expected %u\n", name, ink, want);
+		fflush(stdout);
+
+		return 1;
+	}
+
+	printf("--- %s: %u pixels of ink on the plot, as expected\n",
+	       name, ink);
 	fflush(stdout);
 
 	return 0;
@@ -750,6 +807,119 @@ int main(int argc, char **argv)
 		}
 
 		rc |= run_no_stale(&b, "fit-menu-drop-all", 40);
+	}
+
+	if (!strcmp(name, "all") || !strcmp(name, "clear-plot-refresh")) {
+		/* the plot shows the surface its last render filled, so
+		 * "Clear Plot" must refresh it: the graphs come off the plot
+		 * list inside the item, but without a refresh the surface
+		 * keeps carrying the frame the previous render left behind
+		 */
+		guint empty, plotted;
+
+		memset(&b, 0, sizeof(b));
+
+		/* an empty plot paints the background and the frame only */
+		put(&b, OP_REDRAW);
+
+		harness_run(b.b, b.n);
+
+		empty = harness_plot_ink();
+
+		harness_reset();
+
+		memset(&b, 0, sizeof(b));
+
+		for (i = 0; i < 4; i++) {
+			at = b.n;
+			push_ncode(&b, 30);
+			set_pattern(&b, at, (unsigned) (i % 9));
+		}
+
+		put(&b, OP_REDRAW);
+
+		harness_run(b.b, b.n);
+
+		plotted = harness_plot_ink();
+
+		harness_reset();
+
+		if (plotted <= empty) {
+			printf("--- clear-plot-refresh: FAIL, a plot carrying "
+			       "%u graphs paints %u pixels, no more than the "
+			       "%u an empty one does, so the check cannot tell "
+			       "them apart\n", 4u, plotted, empty);
+			fflush(stdout);
+
+			return 1;
+		}
+
+		printf("--- clear-plot-refresh: a plot carrying %u graphs "
+		       "paints %u pixels, an empty one %u\n", 4u, plotted,
+		       empty);
+		fflush(stdout);
+
+		memset(&b, 0, sizeof(b));
+
+		for (i = 0; i < 4; i++) {
+			at = b.n;
+			push_ncode(&b, 30);
+			set_pattern(&b, at, (unsigned) (i % 9));
+		}
+
+		put(&b, OP_REDRAW);
+
+		/* the same program, ending in the popup's own Clear Plot */
+		put(&b, OP_POPUP);
+		put(&b, OP_CLEAR);
+		put(&b, OP_POPDOWN);
+
+		rc |= run_blank(&b, "clear-plot-refresh", empty);
+	}
+
+	if (!strcmp(name, "all") || !strcmp(name, "clear-plot-drain")) {
+		/* a drop taken while the graph context menu was up defers the
+		 * free of every graph it dropped, and the drain must release
+		 * all of them on the next drop: it walks the list once, so it
+		 * must not stop after its first element
+		 */
+		memset(&b, 0, sizeof(b));
+
+		for (i = 0; i < 4; i++) {
+			at = b.n;
+			push_ncode(&b, 30);
+			set_pattern(&b, at, (unsigned) (i % 9));
+		}
+
+		put(&b, OP_POPUP);
+		put(&b, OP_CLEAR);
+
+		harness_run(b.b, b.n);
+
+		/* the four data sets and their running average */
+		if (harness_graph_pending() != 5) {
+			printf("--- clear-plot-drain: FAIL, %u graphs awaiting "
+			       "cleanup, 5 expected\n",
+			       harness_graph_pending());
+			fflush(stdout);
+
+			return 1;
+		}
+
+		harness_reset();
+
+		put(&b, OP_POPDOWN);
+		put(&b, OP_PER);
+		put(&b, 4); put(&b, 0);
+		put(&b, 0); put(&b, 0);
+
+		for (i = 0; i < 2; i++) {
+			at = b.n;
+			push_ncode(&b, 30);
+			set_pattern(&b, at, (unsigned) (i + 1));
+		}
+
+		rc |= run_pending(&b, "clear-plot-drain", 0);
 	}
 
 	if (!strcmp(name, "all") || !strcmp(name, "fit-deferred")) {

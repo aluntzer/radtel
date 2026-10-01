@@ -41,6 +41,7 @@ enum harness_op {
 	HARNESS_OP_RESET	= 0x13,	/* autorange (key "a") */
 	HARNESS_OP_PROBE_NAN	= 0x14,	/* all-NaN graph, NaN-line style */
 	HARNESS_OP_POPDOWN	= 0x15,	/* dismiss the graph context menu */
+	HARNESS_OP_CLEAR	= 0x16,	/* activate the "Clear Plot" item */
 	HARNESS_OP_MAX
 };
 
@@ -61,6 +62,14 @@ gboolean harness_axes_finite(void);
  */
 guint harness_graph_count(void);
 guint harness_graph_pending(void);
+
+/* number of pixels in the plot's render surface that do not carry the plot
+ * background, i.e. the amount of ink the last render left on it
+ */
+guint harness_plot_ink(void);
+
+/* activate the plot's own "Clear Plot" popup item, the way a user does */
+void harness_clear_plot(void);
 
 /* push one spectrum packet and check the fit request it triggers arrives
  * only once the main context runs, never from inside xyplot_add_graph()
