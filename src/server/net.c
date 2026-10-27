@@ -400,12 +400,13 @@ static void try_disconnect_socket(struct con_data *c)
 	if (!G_IS_SOCKET_CONNECTION(c->con))
 		return;
 
-
+#if 0
 	/* disable power on last disconnect */
 	if (!g_socket_connection_is_connected(c->con)) {
 		pwr = FALSE;
 		goto exit;
 	}
+#endif
 
 	/* indicate power disable on controlling client disconnect */
 	if (c->priv != PRIV_DEFAULT) {
