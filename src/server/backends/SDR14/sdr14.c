@@ -646,6 +646,7 @@ static uint32_t sdr14_spec_acquire(struct observation *obs)
 	double scale;
 	double fft_count;
 	double sum_w;
+	double prev_last = 0.0;	/* previous sequence's last output value */
 
 	int len;
 
@@ -801,8 +802,33 @@ static uint32_t sdr14_spec_acquire(struct observation *obs)
 		scale = 1.0 / (fft_count * window_sum * window_sum);
 
 		for (i = 0; i < (int)(obs->blsize - 2 * obs->disc_raw); i++) {
+			gsize idx = (gsize)i + obs->disc_raw;
+			double v;
 
-			double v = spec[i + obs->disc_raw] * scale;
+			if (i == 0) {
+				/* The first retained bin sits in the filter
+				 * roll-off.  Interpolate it from the previous
+				 * sequence's last bin and this sequence's
+				 * second bin so the concatenation points do
+				 * not show an edge zero/dip.
+				 */
+				double right = spec[idx + 1] * scale;
+				double left = (s->n > 0) ? prev_last : right;
+
+				v = 0.5 * (left + right);
+			} else if (idx == obs->blsize / 2) {
+				/* The DC bin is suppressed by the mean
+				 * subtraction.  Replace it with the average
+				 * of its neighbours so the uniform grid does
+				 * not contain a zero hole.
+				 */
+				v = 0.5 * (spec[idx - 1] + spec[idx + 1]) *
+				    scale;
+			} else {
+				v = spec[idx] * scale;
+			}
+
+			prev_last = v;
 
 			if (!isfinite(v) || v >= (double)UINT32_MAX)
 				s->spec[s->n] = UINT32_MAX;
