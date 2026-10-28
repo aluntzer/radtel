@@ -106,15 +106,17 @@ struct sdr14_data_pkt {
  */
 #define SDR14_REMOVE_DC		1
 
-//#define IS_OH_MASER
+#define IS_OH_MASER
 
 /* XXX need to implement the receiver as separate plugin
  * since the values are fixed for now, I define it here
  */
 #ifndef IS_OH_MASER
 #define RECV_LO_FREQ		  1413000000
+#define SDR14_1_4_CAL		  ( 0.8234 * 4.8 / 2.656 * 0.654 * (M_PI / 4.0))
 #else
 #define RECV_LO_FREQ		  1606000000
+#define SDR14_1_4_CAL		  ( 0.8234 * 4.8 * (M_PI / 4.0))
 #endif /* IS_OH_MASER */
 #define RECV_IF_HZ		     6500000
 #define RECV_IF_BW		    10700000	/* nominal output low pass */
@@ -136,8 +138,16 @@ struct sdr14_data_pkt {
 #define SDR14_INIT_FREQ_START_HZ	1420042187
 #define SDR14_INIT_FREQ_STOP_HZ		1420970312
 #else
-#define SDR14_INIT_FREQ_START_HZ	1611800000
-#define SDR14_INIT_FREQ_STOP_HZ		1612200000
+
+#if 1
+       #define SDR14_INIT_FREQ_START_HZ        1611800000
+       #define SDR14_INIT_FREQ_STOP_HZ         1612200000
+#else
+       #define SDR14_INIT_FREQ_START_HZ        (1611800000 + 54000000)
+       #define SDR14_INIT_FREQ_STOP_HZ         (1612200000 + 54000000)
+#endif
+#define SDR14_CAL      SDR14_1_6_CAL
+
 #endif /* IS_OH_MASER */
 #define SDR14_INIT_BIN_DIV		         6
 #define SDR14_INIT_NSTACK		        64
@@ -180,17 +190,17 @@ static struct {
 	 .bins	           = SDR14_DIGITAL_BINS,
 
 	 /* note: the calibration was measured with the old magnitude-averaging
-	  * normalisation at the default bin_div (N = 32).  The new
-	  * power-per-bin normalisation returns mean(|X|^2) / N^2, i.e.
-	  * sigma^2 / N for noise and A^2 for a coherent tone.  The old
-	  * estimator returned (pi/4) * sigma^2 for noise and A^2 * N for a
-	  * tone, so multiply by N * pi/4 to preserve the old noise-floor
-	  * calibration and remove the pi/4 magnitude-averaging bias.
+	  * normalisation.  The new PSD normalisation returns
+	  * mean(|X|^2) / N, i.e. sigma^2 for noise (independent of the
+	  * FFT size) and A^2 * N for a coherent tone.  The old estimator
+	  * returned (pi/4) * sigma^2 for noise and A^2 * N for a tone, so
+	  * multiply by pi/4 to preserve the old continuum calibration and
+	  * remove the pi/4 magnitude-averaging bias.
 	  *
 	  * XXX delete this once the new normalisation is validated
 	  *
 	  */
-	 .temp_cal_factor   = 0.8234 * 4.8 * (M_PI / 4.0) * (double)(SDR14_NSAM >> SDR14_INIT_BIN_DIV),
+	 .temp_cal_factor   = SDR14_1_4_CAL,
 	};
 
 
@@ -791,15 +801,17 @@ static uint32_t sdr14_spec_acquire(struct observation *obs)
 			ack_status_acq(PKT_TRANS_ID_UNDEF, &s_acq);
 		}
 
-		/* FFTW's forward transform is unnormalised.  With the
-		 * window w[], a coherent tone of amplitude A produces
-		 * |X| = A * sum(w), so dividing the accumulated power by
-		 * M * sum(w)^2 gives A^2, i.e. power per bin, independent
-		 * of the FFT size.  (Without a window sum(w) = N and this
-		 * reduces to the usual 1/(M*N^2) factor.)
+		/* FFTW's forward transform is unnormalised.  Use a PSD
+		 * normalisation: multiply the accumulated power by
+		 * N / (M * sum(w)^2).  For noise this gives sigma^2,
+		 * independent of the FFT size, so the continuum level does
+		 * not change with the bin count.  For a coherent tone it
+		 * gives A^2 * N (the usual PSD peak scaling).  Without a
+		 * window sum(w) = N, so the factor reduces to 1/(M*N).
 		 */
 		fft_count = (double)obs->acq.n_stack * ((double)SDR14_NSAM / (double)obs->blsize);
-		scale = 1.0 / (fft_count * window_sum * window_sum);
+		scale = (double)obs->blsize /
+			(fft_count * window_sum * window_sum);
 
 		for (i = 0; i < (int)(obs->blsize - 2 * obs->disc_raw); i++) {
 			gsize idx = (gsize)i + obs->disc_raw;
