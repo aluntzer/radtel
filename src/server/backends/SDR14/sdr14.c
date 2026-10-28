@@ -61,21 +61,50 @@ struct sdr14_data_pkt {
 	int16_t data[SDR14_DATA0_LEN];
 };
 
+/* full ASCP data-item-0 message: 2 byte header + 4096 int16 samples */
+#define SDR14_FULL_DATA_LEN	(SDR14_HDR_LEN + SDR14_DATA0_LEN * (int)sizeof(int16_t))
+
+/* ASCP message header fields.  The reference USB parser uses the low
+ * 5 bits for the length and treats length 0 as a full 8194-byte data
+ * block; follow that here.
+ */
+#define SDR14_ASCP_LEN_MASK	0x1F
+#define SDR14_ASCP_TYPE_MASK	0xE0
+#define SDR14_ASCP_TYPE_DATA0	(4 << 5)
+
 
 #define SDR14_NSAM  2048	/* 2048 16 bit I/Q pairs (in AD66220 mode)  */
 
 
-/* when using the AD6620 modes, the total decimation is 170, see
- * M_CICx in the sdr14_ad6620_data setup block
- * this results in an effective real-time bandwidth of
- * 66666667 / 170 / 2 = 196078 Hz of which <= 6300 Hz are discarded on
- * either side of the spectrum to remove effect of the filter curve and
- * digital down conversion effects
+/* The AD6620 setup in ad6620.h uses CIC2 = 10, CIC5 = 17 and RCF = 2,
+ * i.e. a total decimation of 340 (not 170).  The complex output rate is
+ * therefore 66666667 / 340 = 196078 Hz, which is the full complex
+ * bandwidth of the DDC output.  <= SDR14_SIDE_DISCARD_HZ are discarded
+ * on either side to remove the filter roll-off and DDC effects.
  */
-#define SDR14_DECIMATION	(10 * 17)
+#define SDR14_DECIMATION	(10 * 17 * 2)
 #define SDR14_ADC_FREQ		66666667
-#define SDR14_RT_BW		(SDR14_ADC_FREQ / SDR14_DECIMATION / 2)
+#define SDR14_RT_BW		((double)SDR14_ADC_FREQ / (double)SDR14_DECIMATION)
 #define SDR14_SIDE_DISCARD_HZ	6300
+
+/* XXX the reference SDK from ~2004 swaps I and Q for the raw complex AD6620 stream.
+ * possible verifcation with a signal generator: inject a tone
+ * slightly above the tuned centre; if it appears below, delete this option
+ * entire entirelyy
+ */
+#define SDR14_SWAP_IQ		1
+
+/* the reference SDK applies a Hann window. Enabling this improves the
+ * sidelobe rejection but changes the spectral resolution and the noise
+ * bandwidth, so re-measure temp_cal_factor after changing it.
+ */
+#define SDR14_USE_WINDOW	0
+
+/* remove the per-block I/Q mean before the FFT.  This suppresses the
+ * DC/NCO feedthrough without dropping the DC bin from the frequency
+ * grid (which would break the uniform bin spacing)
+ */
+#define SDR14_REMOVE_DC		1
 
 //#define IS_OH_MASER
 
@@ -84,11 +113,8 @@ struct sdr14_data_pkt {
  */
 #ifndef IS_OH_MASER
 #define RECV_LO_FREQ		  1413000000
-#define SDR14_1_4_CAL		(0.8234 * 4.8 / 2.656)
 #else
-//#define RECV_LO_FREQ		  1606000000
-#define RECV_LO_FREQ		  1660000000
-#define SDR14_1_6_CAL		(0.8234 * 4.8 * 3.54)
+#define RECV_LO_FREQ		  1606000000
 #endif /* IS_OH_MASER */
 #define RECV_IF_HZ		     6500000
 #define RECV_IF_BW		    10700000	/* nominal output low pass */
@@ -102,20 +128,20 @@ struct sdr14_data_pkt {
 #define SDR14_SPEC_STACK_MAX	128		/* internal fifo queue limit for contiguous sampling */
 #define SDR14_TUNING_STEP_HZ	1
 #define SDR14_BIN_DIV_MAX	6		/* allow resolutions down to
-						 * SDR14_RT_BW / SDR14_NSAM / SDR14_BW_DIV_MAX HZ
+						 * SDR14_RT_BW /
+						 * (SDR14_NSAM >> SDR14_BIN_DIV_MAX) HZ
 						 */
 #ifndef IS_OH_MASER
 /* initial receiver configuration */
 #define SDR14_INIT_FREQ_START_HZ	1420042187
 #define SDR14_INIT_FREQ_STOP_HZ		1420970312
-#define SDR14_CAL	SDR14_1_4_CAL
 #else
-#define SDR14_INIT_FREQ_START_HZ	1611800000 + 54000000
-#define SDR14_INIT_FREQ_STOP_HZ		1612200000 + 54000000
-#define SDR14_CAL	SDR14_1_6_CAL
+#define SDR14_INIT_FREQ_START_HZ	1611800000
+#define SDR14_INIT_FREQ_STOP_HZ		1612200000
 #endif /* IS_OH_MASER */
 #define SDR14_INIT_BIN_DIV		         6
 #define SDR14_INIT_NSTACK		        64
+
 
 
 /**
@@ -152,12 +178,27 @@ static struct {
 	 .freq_if_bw       = SDR14_IF_BW_HZ,
 	 .freq_bin_div_max = SDR14_BIN_DIV_MAX,
 	 .bins	           = SDR14_DIGITAL_BINS,
-	 .temp_cal_factor   = SDR14_CAL,
+
+	 /* note: the calibration was measured with the old magnitude-averaging
+	  * normalisation at the default bin_div (N = 32).  The new
+	  * power-per-bin normalisation returns mean(|X|^2) / N^2, i.e.
+	  * sigma^2 / N for noise and A^2 for a coherent tone.  The old
+	  * estimator returned (pi/4) * sigma^2 for noise and A^2 * N for a
+	  * tone, so multiply by N * pi/4 to preserve the old noise-floor
+	  * calibration and remove the pi/4 magnitude-averaging bias.
+	  *
+	  * XXX delete this once the new normalisation is validated
+	  *
+	  */
+	 .temp_cal_factor   = 0.8234 * 4.8 * (M_PI / 4.0) * (double)(SDR14_NSAM >> SDR14_INIT_BIN_DIV),
 	};
 
 
 double *reamin0, *reamout0;
 fftw_plan p0;
+
+static double window[SDR14_NSAM];
+static double window_sum = 1.0;
 
 
 static char *sdr14_tty = "/dev/ttyUSB1";
@@ -187,6 +228,8 @@ struct observation {
 	double f0;
 	double f1;
 	double bw_eff;
+	double bin_hz;		/* true FFT bin width */
+	double freq_first;	/* actual centre of the first retained bin */
 };
 
 static struct observation g_obs;
@@ -257,50 +300,74 @@ static int sdr14_serial_set_comm_param(int fd)
 
 
 
-static int read_bytes(size_t left, uint8_t *p)
+/**
+ * @brief read exactly \a left bytes
+ *
+ * @return the number of bytes actually read, or -1 on a read error
+ */
+
+static ssize_t read_bytes(size_t left, uint8_t *p)
 {
 	size_t n = 0;
-	while (left > 0)
-	{
+
+	while (left > 0) {
 		ssize_t nr = read(sdr14_fd, p, left);
-		if (nr <= 0) 	{
+
+		if (nr <= 0) {
 			if (nr < 0)
-				perror("read");  /* Error! */
+				perror("read");
 			break;
 		}
-		else {
-			n += nr;     /* We have read some more data */
-			left -= nr;     /* Less data left to read */
-			p += nr; /* So we don't read over already read data */
-		}
+
+		n    += (size_t)nr;
+		left -= (size_t)nr;
+		p    += nr;
 	}
 
+	return (ssize_t)n;
 }
 
 
-static int sdr14_read(struct sdr14_data_pkt *pkt)
+/**
+ * @brief read one complete ASCP message into \a pkt
+ *
+ * data item 0 blocks are 8194 bytes long and use a zero length field
+ * any other message is read into the same buffer and must be skipped by the caller
+ *
+ * @return the total message length, or -1 on error
+ */
+
+static ssize_t sdr14_read_msg(struct sdr14_data_pkt *pkt)
 {
-	uint8_t *p;
+	uint8_t hdr[SDR14_HDR_LEN];
+	size_t len;
+	ssize_t n;
 
-	size_t n = 0;
-	size_t left = sizeof(struct sdr14_data_pkt);  /* The total size of the buffer */
-	p = (uint8_t *) pkt;
-	while (left > 0)
-	{
-		ssize_t nr = read(sdr14_fd, p, left);
-		if (nr <= 0) 	{
-			if (nr < 0)
-				perror("read");  /* Error! */
-			break;
-		}
-		else {
-			n += nr;     /* We have read some more data */
-			left -= nr;     /* Less data left to read */
-			p += nr; /* So we don't read over already read data */
-		}
-	}
 
-	return 0;
+	n = read_bytes(sizeof(hdr), hdr);
+	if (n != (ssize_t)sizeof(hdr))
+		return -1;
+
+	len = hdr[0] & SDR14_ASCP_LEN_MASK;
+	if (len == 0)
+		len = SDR14_FULL_DATA_LEN;	/* special case: full data block */
+
+	if (len < sizeof(hdr) || len > sizeof(*pkt))
+		return -1;
+
+	memcpy(pkt->hdr, hdr, sizeof(hdr));
+
+	n = read_bytes(len - sizeof(hdr), (uint8_t *)pkt->data);
+	if (n != (ssize_t)(len - sizeof(hdr)))
+		return -1;
+
+	return (ssize_t)len;
+}
+
+
+static gboolean sdr14_is_data0(const struct sdr14_data_pkt *pkt, ssize_t len)
+{
+	return (pkt->hdr[1] & SDR14_ASCP_TYPE_MASK) == SDR14_ASCP_TYPE_DATA0 && len == (ssize_t)SDR14_FULL_DATA_LEN;
 }
 
 __attribute__((unused))
@@ -399,6 +466,61 @@ static void cfft(fftw_plan * p)
 
 
 /**
+ * @brief fill the FFTW input buffer from one I/Q block
+ *
+ * @param pkt		the received data packet
+ * @param offset	offset (in int16_t words) of the block in pkt->data
+ * @param blsize	number of complex samples in the block
+ * @param win		window coefficients (may all be 1.0)
+ * @param swap_iq	swap the I and Q words before the FFT
+ * @param remove_dc	subtract the per-block I/Q mean
+ */
+
+static void sdr14_fill_fft_input(const struct sdr14_data_pkt *pkt,
+				 gsize offset, gsize blsize,
+				 const double *win,
+				 gboolean swap_iq, gboolean remove_dc)
+{
+	gsize i;
+	double mean_i = 0.0;
+	double mean_q = 0.0;
+
+	if (remove_dc) {
+		for (i = 0; i < blsize; i++) {
+			double iv = (double)pkt->data[offset + 2 * i];
+			double qv = (double)pkt->data[offset + 2 * i + 1];
+
+			if (swap_iq) {
+				double t = iv;
+				iv = qv;
+				qv = t;
+			}
+
+			mean_i += iv;
+			mean_q += qv;
+		}
+
+		mean_i /= (double)blsize;
+		mean_q /= (double)blsize;
+	}
+
+	for (i = 0; i < blsize; i++) {
+		double iv = (double)pkt->data[offset + 2 * i];
+		double qv = (double)pkt->data[offset + 2 * i + 1];
+
+		if (swap_iq) {
+			double t = iv;
+			iv = qv;
+			qv = t;
+		}
+
+		reamin0[2 * i]     = (iv - mean_i) * win[i];
+		reamin0[2 * i + 1] = (qv - mean_q) * win[i];
+	}
+}
+
+
+/**
  * @brief computes the observing strategy
  *
  * @param acq the acquisition configuration
@@ -408,27 +530,60 @@ static void cfft(fftw_plan * p)
 
 static void sdr14_comp_obs_strategy(struct observation *obs)
 {
+	double bin_hz;
+	double side_rem;
+	double span;
+	double n_total;
+	double n_keep;
+
 	g_message(MSG "computing acquisition strategy for requested parameters");
 
 	/* we use radix-2 divs */
-	obs->blsize   = sdr14.bins >> obs->acq.bin_div;
-	printf("div is %d blsize %d\n", obs->acq.bin_div, obs->blsize);
+	obs->blsize = sdr14.bins >> obs->acq.bin_div;
+	bin_hz = (double)SDR14_RT_BW / (double)obs->blsize;
+	obs->bin_hz = bin_hz;
+
 	/* bins to discard on either side of a "raw" spectrum */
-	obs->disc_raw = (int) ((double) SDR14_SIDE_DISCARD_HZ / (SDR14_RT_BW / obs->blsize));
-	obs->bw_eff   = (double) SDR14_RT_BW - (double) obs->disc_raw * 2.0 * SDR14_RT_BW / obs->blsize;
-	obs->f0	      = obs->acq.freq_start_hz - SDR14_SIDE_DISCARD_HZ + SDR14_RT_BW / 2;
-	obs->f1	      = obs->acq.freq_stop_hz  + SDR14_SIDE_DISCARD_HZ + SDR14_RT_BW / 2;
-	obs->n_seq    = (gsize) ceil((obs->f1 - obs->f0) / obs->bw_eff);
-	/* bins to discard on last spectrum in sequence so the cut out is proper */
-	obs->disc_fin = (int) (obs->n_seq * obs->bw_eff -
-			      (obs->acq.freq_stop_hz - obs->acq.freq_start_hz)) / (SDR14_RT_BW / obs->blsize);
+	obs->disc_raw = (int)((double)SDR14_SIDE_DISCARD_HZ / bin_hz);
+	if (obs->disc_raw < 1)
+		obs->disc_raw = 1;
+	if (2 * obs->disc_raw >= (int)obs->blsize) {
+		g_warning(MSG "side discard of %d bins too large for %"
+			  G_GSIZE_FORMAT " bins, clamping",
+			  obs->disc_raw, obs->blsize);
+		obs->disc_raw = (int)obs->blsize / 2 - 1;
+	}
 
+	/* the first retained bin is not exactly at freq_start: it is freq_start - side_rem */
+	side_rem = (double)SDR14_SIDE_DISCARD_HZ - (double)obs->disc_raw * bin_hz;
+
+	obs->bw_eff = (double)SDR14_RT_BW - 2.0 * (double)obs->disc_raw * bin_hz;
+	obs->f0 = (double)obs->acq.freq_start_hz - SDR14_SIDE_DISCARD_HZ + (double)SDR14_RT_BW / 2.0;
+	obs->f1 = (double)obs->acq.freq_stop_hz + SDR14_SIDE_DISCARD_HZ + (double)SDR14_RT_BW / 2.0;
+
+	span = (double)obs->acq.freq_stop_hz - (double)obs->acq.freq_start_hz;
+	obs->n_seq = (gsize)ceil((obs->f1 - obs->f0) / obs->bw_eff);
+
+	/* keep only the bins whose centre lies at or below freq_stop, so
+	 * the last reported bin really is the last one inside the
+	 * requested range.
+	 */
+	obs->freq_first = (double)obs->acq.freq_start_hz - side_rem;
+	n_total = (double)obs->n_seq * ((double)obs->blsize - 2.0 * (double)obs->disc_raw);
+	n_keep = floor((span + side_rem) / bin_hz) + 1.0;
+
+	if (n_keep < 1.0)
+		n_keep = 1.0;
+	if (n_keep > n_total)
+		n_keep = n_total;
+
+	obs->disc_fin = (int)(n_total - n_keep);
 	if (obs->disc_fin < 0) {
-		g_warning("discard bins is %d, setting to 0\n", obs->disc_fin);
+		g_warning(MSG "discard bins is %d, setting to 0", obs->disc_fin);
 		obs->disc_fin = 0;
-	}	
+	}
 
-	g_message(MSG "observation requires acquisition of %u raw spectrae", obs->n_seq);
+	g_message(MSG "observation requires acquisition of %" G_GSIZE_FORMAT " raw spectrae", obs->n_seq);
 }
 
 
@@ -445,8 +600,16 @@ static void sdr14_apply_temp_calibration(struct spec_data *s)
 {
 	gsize i;
 
-	for (i = 0; i < s->n; i++)
-		s->spec[i] = (uint32_t) ((double) s->spec[i]) * sdr14.temp_cal_factor;
+	for (i = 0; i < s->n; i++) {
+		double v = (double)s->spec[i] * sdr14.temp_cal_factor;
+
+		if (!isfinite(v) || v >= (double)UINT32_MAX)
+			s->spec[i] = UINT32_MAX;
+		else if (v <= 0.0)
+			s->spec[i] = 0;
+		else
+			s->spec[i] = (uint32_t)v;
+	}
 }
 
 
@@ -464,7 +627,6 @@ static uint32_t sdr14_spec_acquire(struct observation *obs)
 	int i, j, k, l;
 
 	uint8_t oneshot_cmd[8] = {0x08, 0x00, 0x18, 0x00, 0x81, 0x02, 0x02, 0};
-	uint8_t ack[8];
 #if 0
 	uint8_t hbeat[3] = {0x03,0x60,0x00};
 #endif
@@ -482,6 +644,8 @@ static uint32_t sdr14_spec_acquire(struct observation *obs)
 
 	double freq;
 	double scale;
+	double fft_count;
+	double sum_w;
 
 	int len;
 
@@ -493,27 +657,40 @@ static uint32_t sdr14_spec_acquire(struct observation *obs)
 
 
 	/* prepare and send: allocate full length */
-	len = ((obs->blsize - 2 * obs->disc_raw) * obs->n_seq - obs->disc_fin);
-	if (len <= 0 ) {
+	len = (int)((obs->blsize - 2 * obs->disc_raw) * obs->n_seq -
+		    obs->disc_fin);
+	if (len <= 0) {
+		g_timer_destroy(timer);
 		g_usleep(10000);
 		goto noobs;
 	}
 
-	//printf("len %d %d %d %d %d\n", len, obs->blsize, obs->disc_raw, obs->n_seq, obs->disc_fin);
 	s = g_malloc0(sizeof(struct spec_data) + len * sizeof(uint32_t));
 
 	fft_init(obs->blsize, &p0, &reamin0, &reamout0);
+
+	/* precompute the window for this FFT size */
+	sum_w = 0.0;
+	for (i = 0; i < (int)obs->blsize; i++) {
+#if SDR14_USE_WINDOW
+		window[i] = 0.5 - 0.5 * cos(2.0 * M_PI * (double)i / (double)(obs->blsize - 1));
+#else
+		window[i] = 1.0;
+#endif
+		sum_w += window[i];
+	}
+	window_sum = sum_w;
 
 	/* update number of SDR14_NSAM sequences to record in the one shot command */
 	oneshot_cmd[7] = obs->acq.n_stack;
 
 	s_rec.busy = 1;
-	s_rec.eta_msec = (typeof(s_acq.eta_msec))(acq_time[obs->acq.bin_div] *  1000. * (double) obs->n_seq * obs->acq.n_stack * SDR14_NSAM / obs->blsize);
+	s_rec.eta_msec = (typeof(s_acq.eta_msec))(acq_time[obs->acq.bin_div] *  1000. * (double)obs->n_seq * (double)obs->acq.n_stack);
 	ack_status_rec(PKT_TRANS_ID_UNDEF, &s_rec);
 
 
 	freq = obs->f0 - RECV_LO_FREQ;
-	for (l = 0; l < obs->n_seq; l++) {
+	for (l = 0; l < (int)obs->n_seq; l++) {
 	
 
 		sdr14_serial_flush(sdr14_fd);
@@ -529,46 +706,82 @@ static uint32_t sdr14_spec_acquire(struct observation *obs)
 		g_mutex_unlock(&acq_abort);
 
 		write(sdr14_fd, oneshot_cmd, sizeof(oneshot_cmd));
-		read(sdr14_fd, ack, sizeof(ack));
+
+		/* read the start response as a proper ASCP message */
+		if (sdr14_read_msg(&pkt) < 0) {
+			g_warning(MSG "failed to read start response");
+			goto cleanup;
+		}
 
 
-		for (i = 0; i < obs->blsize; i++)
+		for (i = 0; i < (int)obs->blsize; i++)
 			spec[i] = 0;
 
-		s_acq.eta_msec = (typeof(s_acq.eta_msec))(acq_time[obs->acq.bin_div] * 1000. * (double) obs->acq.n_stack * SDR14_NSAM / obs->blsize);
+		s_acq.eta_msec = (typeof(s_acq.eta_msec))(acq_time[obs->acq.bin_div] * 1000. * (double)obs->acq.n_stack);
 		if (s_acq.eta_msec > MIN_MS_ACQ_STATUS) {
 			s_acq.busy = 1;
 			ack_status_acq(PKT_TRANS_ID_UNDEF, &s_acq);
 		}
 
-		for (k = 0; k < obs->acq.n_stack; k++) {
+		for (k = 0; k < (int)obs->acq.n_stack; k++) {
 
 			int z;
-
-			sdr14_read(&pkt);
+			int skipped = 0;
+			ssize_t nread;
 
 			g_timer_start(timer);
-			for (z = 0; z < SDR14_NSAM / obs->blsize; z++) {
 
-				for (j = 0; j < 2* obs->blsize; j++)
-					reamin0[j] = (double) (pkt.data[j + z * obs->blsize * 2 ]);
+			/* Read the next data-item-0 block, skipping any
+			 * interleaved status/ack messages.  The device sends
+			 * unsolicited RX-state and AD-overload messages while
+			 * streaming; consuming those as sample data would
+			 * desynchronise the whole stream.
+			 */
+			while (1) {
+				nread = sdr14_read_msg(&pkt);
+				if (nread < 0) {
+					g_warning(MSG "failed to read data block");
+					goto cleanup;
+				}
+
+				if (sdr14_is_data0(&pkt, nread))
+					break;
+
+				skipped++;
+
+				if (skipped > 16) {
+					g_warning(MSG "too many non-data messages, aborting");
+					goto cleanup;
+				}
+			}
+
+			for (z = 0; z < (int)(SDR14_NSAM / obs->blsize); z++) {
+
+				sdr14_fill_fft_input(&pkt,
+						     (gsize)z * obs->blsize * 2,
+						     obs->blsize,
+						     window,
+						     SDR14_SWAP_IQ,
+						     SDR14_REMOVE_DC);
 
 				cfft(&p0);
 
-				for (i = 0; i < obs->blsize -1; i++) {
+				/* plain fftshift: DC at blsize/2, ascending
+				 * frequency, no bin removed
+				 */
+				for (i = 0; i < (int)obs->blsize; i++) {
+					double re;
+					double im;
 
-					if (i < obs->blsize / 2)
-						j = i + obs->blsize / 2;
-					else
-						j = i - obs->blsize / 2 + 1; /* skip one for DC?? TOOD: VERIFY with sig gen */
-
-					spec[i] +=  sqrt((reamout0[2 * j] * reamout0[2 * j]
-						    + reamout0[2 * j + 1] * reamout0[2 * j + 1]) );
+					j = (int)(((gsize)i + obs->blsize / 2) % obs->blsize);
+					re = reamout0[2 * j];
+					im = reamout0[2 * j + 1];
+					spec[i] += re * re + im * im;
 				}
 			}
 
 			g_timer_stop(timer);
-			acq_time[obs->acq.bin_div] =(acq_time[obs->acq.bin_div] * (AVG_LEN - 1.0) +  g_timer_elapsed(timer, NULL)) / AVG_LEN;
+			acq_time[obs->acq.bin_div] = (acq_time[obs->acq.bin_div] * (AVG_LEN - 1.0) + g_timer_elapsed(timer, NULL)) / AVG_LEN;
 		}
 
 		if (s_acq.eta_msec > MIN_MS_ACQ_STATUS) {
@@ -577,32 +790,48 @@ static uint32_t sdr14_spec_acquire(struct observation *obs)
 			ack_status_acq(PKT_TRANS_ID_UNDEF, &s_acq);
 		}
 
-		scale = (double)obs->acq.n_stack * (double)SDR14_NSAM / (double)obs->blsize;
-		scale *= sqrt((double)obs->blsize);
-		scale = 1.0 / scale;
+		/* FFTW's forward transform is unnormalised.  With the
+		 * window w[], a coherent tone of amplitude A produces
+		 * |X| = A * sum(w), so dividing the accumulated power by
+		 * M * sum(w)^2 gives A^2, i.e. power per bin, independent
+		 * of the FFT size.  (Without a window sum(w) = N and this
+		 * reduces to the usual 1/(M*N^2) factor.)
+		 */
+		fft_count = (double)obs->acq.n_stack * ((double)SDR14_NSAM / (double)obs->blsize);
+		scale = 1.0 / (fft_count * window_sum * window_sum);
 
-		for (i = 0; i < obs->blsize - 2 * obs->disc_raw ; i++) {
+		for (i = 0; i < (int)(obs->blsize - 2 * obs->disc_raw); i++) {
 
-			double tmp;
+			double v = spec[i + obs->disc_raw] * scale;
 
-			tmp = (double)spec[i + obs->disc_raw] * scale;
-			tmp *= tmp;	/* ADC samples voltage, we want power-equivalent -> P ~ V^2 */
-			s->spec[s->n] = (uint32_t) tmp;
+			if (!isfinite(v) || v >= (double)UINT32_MAX)
+				s->spec[s->n] = UINT32_MAX;
+			else if (v <= 0.0)
+				s->spec[s->n] = 0;
+			else
+				s->spec[s->n] = (uint32_t)v;
 
-			if (s->n == (len - 1))	/* will skip final discarded bins */
-				goto done;
 			s->n++;
+			if (s->n >= (uint32_t)len)
+				goto done;
 		}
-		
+
 	}
 
 
 done:
-	s->freq_min_hz = (typeof(s->freq_min_hz)) obs->acq.freq_start_hz;
-	s->freq_max_hz = (typeof(s->freq_max_hz)) obs->acq.freq_stop_hz;
-	s->freq_inc_hz = (typeof(s->freq_inc_hz)) ((s->freq_max_hz - s->freq_min_hz) / s->n);
-
-	//printf("%d %d %d %d\n", s->freq_min_hz, s->freq_max_hz, s->freq_inc_hz,  s->n );
+	s->freq_min_hz = (typeof(s->freq_min_hz))llround(obs->freq_first);
+	if (s->n > 1) {
+		s->freq_max_hz = (typeof(s->freq_max_hz))llround(obs->freq_first + (double)(s->n - 1) * obs->bin_hz);
+		/* the payload carries an integer Hz increment, round it rather than truncating;
+		 * at the finest resolution the fractional part of the true bin width would otherwise
+		 * accumulate to several kHz over a wide observation.
+		 */
+		s->freq_inc_hz = (typeof(s->freq_inc_hz))llround((double)(s->freq_max_hz - s->freq_min_hz) / (double)(s->n - 1));
+	} else {
+		s->freq_max_hz = s->freq_min_hz;
+		s->freq_inc_hz = 0;
+	}
 
 	sdr14_apply_temp_calibration(s);
 
@@ -617,6 +846,12 @@ done:
 	ack_status_rec(PKT_TRANS_ID_UNDEF, &s_rec);
 
 cleanup:
+	if (s_rec.busy) {
+		s_rec.busy = 0;
+		s_rec.eta_msec = 0;
+		ack_status_rec(PKT_TRANS_ID_UNDEF, &s_rec);
+	}
+
 	g_timer_destroy(timer);
 
 	g_free(s);
@@ -637,20 +872,37 @@ noobs:
 static int sdr14_spec_check_param(struct spec_acq_cfg *acq)
 {
 	if (acq->freq_start_hz < sdr14.freq_min_hz) {
-		g_warning(MSG "start frequency %d too low, min %d",
-			  acq->freq_start_hz, sdr14.freq_min_hz);
+		g_warning(MSG "start frequency %" G_GUINT64_FORMAT " too low, min %g", acq->freq_start_hz, sdr14.freq_min_hz);
 		return -1;
 	}
 
 	if (acq->freq_stop_hz > sdr14.freq_max_hz) {
-		g_warning(MSG "stop frequency %d too low, max %d",
-			  acq->freq_stop_hz, sdr14.freq_max_hz);
+		g_warning(MSG "stop frequency %" G_GUINT64_FORMAT " too high, max %g", acq->freq_stop_hz, sdr14.freq_max_hz);
 		return -1;
 	}
 
-	if (acq->bin_div > sdr14.freq_bin_div_max) {
-		g_warning(MSG "bandwidth divider exponent %d too high, max %d",
-			  acq->bin_div, sdr14.freq_bin_div_max);
+	if (acq->freq_start_hz > sdr14.freq_max_hz ||
+	    acq->freq_stop_hz < sdr14.freq_min_hz) {
+		g_warning(MSG "requested frequency range is outside the tunable range");
+		return -1;
+	}
+
+	if (acq->freq_stop_hz <= acq->freq_start_hz) {
+		g_warning(MSG "stop frequency must be greater than start frequency");
+		return -1;
+	}
+
+	if (acq->bin_div > (uint32_t)sdr14.freq_bin_div_max) {
+		g_warning(MSG "bandwidth divider exponent %u too high, max %d", acq->bin_div, sdr14.freq_bin_div_max);
+		return -1;
+	}
+
+	/* 0 and 1 both mean "no stacking" */
+	if (acq->n_stack == 0)
+		acq->n_stack = 1;
+
+	if (acq->n_stack > SDR14_SPEC_STACK_MAX) {
+		g_warning(MSG "stack count %u too high, max %d", acq->n_stack, SDR14_SPEC_STACK_MAX);
 		return -1;
 	}
 
@@ -756,6 +1008,8 @@ static gpointer sdr14_spec_thread(gpointer data)
 
 		g_mutex_unlock(&acq_lock);
 	}
+
+	return NULL;
 }
 
 
@@ -795,6 +1049,8 @@ static gpointer sdr14_acquisition_update(gpointer data)
 	ack_spec_acq_cfg(PKT_TRANS_ID_UNDEF, &g_obs.acq);
 
 	g_free(data);
+
+	return NULL;
 }
 
 
